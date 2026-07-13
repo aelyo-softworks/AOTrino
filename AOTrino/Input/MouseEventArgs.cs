@@ -1,4 +1,4 @@
-namespace AOTrino;
+namespace AOTrino.Input;
 
 public class MouseEventArgs(POINT pt, MODIFIERKEYS_FLAGS vk)
     : HandledEventArgs

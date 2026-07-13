@@ -1,4 +1,4 @@
-namespace AOTrino;
+namespace AOTrino.Input;
 
 public class MouseButtonEventArgs(POINT pt, MODIFIERKEYS_FLAGS vk, MouseButton button)
     : MouseEventArgs(pt, vk)

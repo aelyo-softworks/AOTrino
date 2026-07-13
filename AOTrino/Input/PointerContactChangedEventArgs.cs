@@ -1,4 +1,4 @@
-namespace AOTrino;
+namespace AOTrino.Input;
 
 public class PointerContactChangedEventArgs(uint pointerId, POINT pt, POINTER_MESSAGE_FLAGS flags, bool up)
     : PointerUpdateEventArgs(pointerId, pt, flags)

@@ -1,4 +1,4 @@
-namespace AOTrino;
+namespace AOTrino.Input;
 
 public abstract class PointerPositionEventArgs(uint pointerId, POINT pt) : PointerEventArgs(pointerId)
 {

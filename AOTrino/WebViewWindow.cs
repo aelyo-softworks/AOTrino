@@ -1,6 +1,3 @@
-using WebView2;
-using WebView2.Utilities;
-
 namespace AOTrino;
 
 [System.Runtime.InteropServices.Marshalling.GeneratedComClass]
@@ -8,7 +5,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
 {
     private readonly bool[] _capturedButtons = new bool[Enum.GetNames<MouseButton>().Length];
     private readonly Dictionary<ulong, NavigationEventArgs> _navigationEvents = [];
-    private readonly HashSet<uint> _pointerIdsStartingInWebView = new();
+    private readonly HashSet<uint> _pointerIdsStartingInWebView = [];
     private ComObject<ICoreWebView2CompositionController>? _controller;
     private IComObject<ICoreWebView2CompositionController3>? _controller3;
     private ComObject<ICoreWebView2Environment12>? _environment;
@@ -175,17 +172,17 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
             if (value)
             {
                 // we need to ensure this as STAThread doesn't always call it for some reason
-                DirectN.Functions.OleInitialize(0); // don't check error
-                var hr = DirectN.Functions.RegisterDragDrop(Handle, this);
-                if (hr.IsError && hr != DirectN.Constants.DRAGDROP_E_ALREADYREGISTERED)
+                DirectNFunctions.OleInitialize(0); // don't check error
+                var hr = DirectNFunctions.RegisterDragDrop(Handle, this);
+                if (hr.IsError && hr != DirectNConstants.DRAGDROP_E_ALREADYREGISTERED)
                     throw new Exception("Cannot enable drag & drop operations. Make sure the thread is initialized as an STA thread.", Marshal.GetExceptionForHR((int)hr)!);
 
                 _isDropTarget = true;
             }
             else
             {
-                var hr = DirectN.Functions.RevokeDragDrop(Handle);
-                hr.ThrowOnErrorExcept(DirectN.Constants.DRAGDROP_E_NOTREGISTERED);
+                var hr = DirectNFunctions.RevokeDragDrop(Handle);
+                hr.ThrowOnErrorExcept(DirectNConstants.DRAGDROP_E_NOTREGISTERED);
                 _isDropTarget = false;
             }
         }
@@ -327,28 +324,28 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
     protected virtual HRESULT OnBeforeDragEnter(IDataObject dataObject, MODIFIERKEYS_FLAGS flags, POINTL point, ref DROPEFFECT effect, out bool handled)
     {
         handled = false;
-        return DirectN.Constants.S_OK;
+        return DirectNConstants.S_OK;
     }
 
     protected virtual void OnAfterDragOver(MODIFIERKEYS_FLAGS flags, POINTL point, DROPEFFECT effect) { }
     protected virtual HRESULT OnBeforeDragOver(MODIFIERKEYS_FLAGS flags, POINTL point, ref DROPEFFECT effect, out bool handled)
     {
         handled = false;
-        return DirectN.Constants.S_OK;
+        return DirectNConstants.S_OK;
     }
 
     protected virtual void OnAfterDragLeave() { }
     protected virtual HRESULT OnBeforeDragLeave(out bool handled)
     {
         handled = false;
-        return DirectN.Constants.S_OK;
+        return DirectNConstants.S_OK;
     }
 
     protected virtual void OnAfterDrop(IDataObject dataObject, MODIFIERKEYS_FLAGS flags, POINTL point, DROPEFFECT effect) { }
     protected virtual HRESULT OnBeforeDrop(IDataObject dataObject, MODIFIERKEYS_FLAGS flags, POINTL point, DROPEFFECT effect, out bool handled)
     {
         handled = false;
-        return DirectN.Constants.S_OK;
+        return DirectNConstants.S_OK;
     }
 
     protected virtual void ClearBrowsingDataAll()
@@ -428,7 +425,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
         var kind = e.Orientation == Orientation.Horizontal
             ? COREWEBVIEW2_MOUSE_EVENT_KIND.COREWEBVIEW2_MOUSE_EVENT_KIND_HORIZONTAL_WHEEL
             : COREWEBVIEW2_MOUSE_EVENT_KIND.COREWEBVIEW2_MOUSE_EVENT_KIND_WHEEL;
-        _controller?.Object.SendMouseInput(kind, keys, (uint)(e.Delta * DirectN.Constants.WHEEL_DELTA), e.Point).ThrowOnError();
+        _controller?.Object.SendMouseInput(kind, keys, (uint)(e.Delta * DirectNConstants.WHEEL_DELTA), e.Point).ThrowOnError();
     }
 
     protected override LRESULT? WindowProc(HWND hwnd, uint msg, WPARAM wParam, LPARAM lParam)
@@ -450,7 +447,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
                 margins.cxRightWidth = -1;
                 margins.cyBottomHeight = -1;
                 margins.cyTopHeight = -1;
-                DirectN.Functions.DwmExtendFrameIntoClientArea(Handle, margins);
+                DirectNFunctions.DwmExtendFrameIntoClientArea(Handle, margins);
                 break;
 
             case MessageDecoder.WM_NCCALCSIZE:
@@ -892,7 +889,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
     HRESULT IDropTarget.DragEnter(IDataObject pDataObj, MODIFIERKEYS_FLAGS grfKeyState, POINTL pt, ref DROPEFFECT pdwEffect)
     {
         if (_controller3 == null)
-            return DirectN.Constants.E_NOTIMPL;
+            return DirectNConstants.E_NOTIMPL;
 
         var hr = OnBeforeDragEnter(pDataObj, grfKeyState, pt, ref pdwEffect, out var handled);
         if (hr.IsError)
@@ -902,7 +899,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
         // it will mess up the internal state and we'll get errors like this:
         // 0x8007139F: The group or resource is not in the correct state to perform the requested operation.
         if (handled)
-            return DirectN.Constants.S_OK;
+            return DirectNConstants.S_OK;
 
         var effect = (uint)pdwEffect;
         hr = _controller3.Object.DragEnter(pDataObj, (uint)grfKeyState, ScreenToClient(new POINT(pt.x, pt.y)), ref effect);
@@ -917,14 +914,14 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
     HRESULT IDropTarget.DragOver(MODIFIERKEYS_FLAGS grfKeyState, POINTL pt, ref DROPEFFECT pdwEffect)
     {
         if (_controller3 == null)
-            return DirectN.Constants.E_NOTIMPL;
+            return DirectNConstants.E_NOTIMPL;
 
         var hr = OnBeforeDragOver(grfKeyState, pt, ref pdwEffect, out var handled);
         if (hr.IsError)
             return hr;
 
         if (handled)
-            return DirectN.Constants.S_OK;
+            return DirectNConstants.S_OK;
 
         var effect = (uint)pdwEffect;
         hr = _controller3.Object.DragOver((uint)grfKeyState, ScreenToClient(new POINT(pt.x, pt.y)), ref effect);
@@ -939,14 +936,14 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
     HRESULT IDropTarget.DragLeave()
     {
         if (_controller3 == null)
-            return DirectN.Constants.E_NOTIMPL;
+            return DirectNConstants.E_NOTIMPL;
 
         var hr = OnBeforeDragLeave(out var handled);
         if (hr.IsError)
             return hr;
 
         if (handled)
-            return DirectN.Constants.S_OK;
+            return DirectNConstants.S_OK;
 
         hr = _controller3.Object.DragLeave();
         if (hr.IsSuccess)
@@ -959,14 +956,14 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
     HRESULT IDropTarget.Drop(IDataObject pDataObj, MODIFIERKEYS_FLAGS grfKeyState, POINTL pt, ref DROPEFFECT pdwEffect)
     {
         if (_controller3 == null)
-            return DirectN.Constants.E_NOTIMPL;
+            return DirectNConstants.E_NOTIMPL;
 
         var hr = OnBeforeDrop(pDataObj, grfKeyState, pt, pdwEffect, out var handled);
         if (hr.IsError)
             return hr;
 
         if (handled)
-            return DirectN.Constants.S_OK;
+            return DirectNConstants.S_OK;
 
         var effect = (uint)pdwEffect;
         hr = _controller3.Object.Drop(pDataObj, (uint)grfKeyState, ScreenToClient(new POINT(pt.x, pt.y)), ref effect);

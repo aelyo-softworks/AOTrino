@@ -1,6 +1,4 @@
-using WebView2;
-
-namespace AOTrino;
+namespace AOTrino.Input;
 
 public class NavigationEventArgs(
     ulong id,

@@ -1,4 +1,4 @@
-namespace AOTrino;
+namespace AOTrino.Input;
 
 public class PointerActivateEventArgs(uint pointerId, HWND windowBeingActivated, HT hitTest)
     : PointerEventArgs(pointerId)

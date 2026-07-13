@@ -1,9 +1,10 @@
 namespace AOTrino.Samples.HelloWorld;
 
+[GeneratedComClass]
 public partial class MainWindow : WebViewWindow
 {
     public MainWindow()
-        : base("AOTrino — Hello World")
+        : base(Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()!.Title)
     {
     }
 

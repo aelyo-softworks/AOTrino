@@ -1,6 +1,16 @@
 <Solution>
-  <Project Path="AOTrino/AOTrino.csproj" />
+  <Configurations>
+    <Platform Name="ARM64" />
+    <Platform Name="x64" />
+  </Configurations>
   <Folder Name="/Samples/">
-    <Project Path="Samples/AOTrino.Samples.HelloWorld/AOTrino.Samples.HelloWorld.csproj" />
+    <Project Path="Samples/AOTrino.Samples.HelloWorld/AOTrino.Samples.HelloWorld.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
   </Folder>
+  <Project Path="AOTrino/AOTrino.csproj">
+    <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Solution="*|x64" Project="x64" />
+  </Project>
 </Solution>

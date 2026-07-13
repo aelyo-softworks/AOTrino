@@ -8,13 +8,27 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<PublishAot>true</PublishAot>
-		<Platforms>x64</Platforms>
+		<Platforms>x64;ARM64</Platforms>
 		<Configurations>Release;Debug</Configurations>
 		<ApplicationManifest>app.manifest</ApplicationManifest>
 		<RootNamespace>AOTrino.Samples.HelloWorld</RootNamespace>
 
 		<!-- opt in to AOTrino's WebRoot embedding (see Directory.Build.targets) -->
 		<AOTrinoEmbedWebRoot>true</AOTrinoEmbedWebRoot>
+
+
+		<Title>AOTrino Samples - Hello World</Title>
+		<AssemblyTitle>AOTrino Samples - Hello World</AssemblyTitle>
+		<Product>AOTrino</Product>
+		<Company>Aelyo Softworks</Company>
+		<Authors>Aelyo Softworks</Authors>
+		<Description>Electron-like desktop apps on .NET AOT + WebView2 — single-exe, Windows x64, front-end-framework-agnostic (React/Fluent layers optional).</Description>
+		<Copyright>Copyright (C) 2026-$([System.DateTime]::UtcNow.ToString("yyyy")) Aelyo Softworks. All rights reserved.</Copyright>
+		<Version>1.0.0</Version>
+		<ProductVersion>1.0.0</ProductVersion>
+		<FileVersion>1.0.0</FileVersion>
+		<InformationalVersion>1.0.0</InformationalVersion>
+		<SourceRevisionId>$([System.DateTime]::UtcNow.ToString("yyyyMMddHHmmss"))</SourceRevisionId>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -25,13 +39,14 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Using Include="System.Reflection" />
-		<Using Include="System.Threading.Tasks" />
 		<Using Include="AOTrino" />
 		<Using Include="DirectN" />
 		<Using Include="DirectN.Extensions" />
 		<Using Include="DirectN.Extensions.Utilities" />
 		<Using Include="WebView2.Utilities" />
+		<Using Include="System.Reflection" />
+		<Using Include="System.Threading.Tasks" />
+		<Using Include="System.Runtime.InteropServices.Marshalling" />
 	</ItemGroup>
 
 	<ItemGroup>

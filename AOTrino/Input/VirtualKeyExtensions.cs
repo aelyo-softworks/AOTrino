@@ -1,8 +1,8 @@
-namespace AOTrino;
+namespace AOTrino.Input;
 
 public static class VirtualKeyExtensions
 {
-    public static bool IsPressed(this VIRTUAL_KEY vk, bool async = true) => (async ? Functions.GetAsyncKeyState((int)vk) : Functions.GetKeyState((int)vk)) < 0;
+    public static bool IsPressed(this VIRTUAL_KEY vk, bool async = true) => (async ? DirectNFunctions.GetAsyncKeyState((int)vk) : DirectNFunctions.GetKeyState((int)vk)) < 0;
     public static bool IsDigit(this VIRTUAL_KEY vk) => (vk >= VIRTUAL_KEY.VK_0 && vk <= VIRTUAL_KEY.VK_9) || IsNumericKeypadKey(vk);
     public static bool IsLetter(this VIRTUAL_KEY vk) => vk >= VIRTUAL_KEY.VK_A && vk <= VIRTUAL_KEY.VK_Z;
     public static bool IsControlKey(this VIRTUAL_KEY vk) => vk == VIRTUAL_KEY.VK_CONTROL || vk == VIRTUAL_KEY.VK_LCONTROL || vk == VIRTUAL_KEY.VK_RCONTROL;

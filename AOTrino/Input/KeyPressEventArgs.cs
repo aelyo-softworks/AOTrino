@@ -1,4 +1,4 @@
-namespace AOTrino;
+namespace AOTrino.Input;
 
 public class KeyPressEventArgs : HandledEventArgs
 {

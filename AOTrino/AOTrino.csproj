@@ -7,15 +7,22 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<IsAotCompatible>true</IsAotCompatible>
-		<Platforms>x64</Platforms>
+		<Platforms>x64;ARM64</Platforms>
 		<Configurations>Release;Debug</Configurations>
 		<RootNamespace>AOTrino</RootNamespace>
 
+		<Title>AOTrino</Title>
+		<AssemblyTitle>AOTrino</AssemblyTitle>
 		<Product>AOTrino</Product>
 		<Company>Aelyo Softworks</Company>
 		<Authors>Aelyo Softworks</Authors>
-		<Description>Electron-like platform for single-exe Windows desktop apps on .NET AOT + WebView2.</Description>
+		<Description>Electron-like desktop apps on .NET AOT + WebView2 — single-exe, Windows x64, front-end-framework-agnostic (React/Fluent layers optional).</Description>
 		<Copyright>Copyright (C) 2026-$([System.DateTime]::UtcNow.ToString("yyyy")) Aelyo Softworks. All rights reserved.</Copyright>
+		<Version>1.0.0</Version>
+		<ProductVersion>1.0.0</ProductVersion>
+		<FileVersion>1.0.0</FileVersion>
+		<InformationalVersion>1.0.0</InformationalVersion>
+		<SourceRevisionId>$([System.DateTime]::UtcNow.ToString("yyyyMMddHHmmss"))</SourceRevisionId>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -26,6 +33,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<Using Include="AOTrino.Input" />
 		<Using Include="System.ComponentModel" />
 		<Using Include="System.Diagnostics" />
 		<Using Include="System.Diagnostics.CodeAnalysis" />
@@ -41,13 +49,19 @@
 		<Using Include="DirectN.Extensions" />
 		<Using Include="DirectN.Extensions.Com" />
 		<Using Include="DirectN.Extensions.Utilities" />
+		<Using Include="WebView2" />
+		<Using Include="WebView2.Utilities" />
 		<Using Include="Windows.Foundation" />
 		<Using Include="Windows.Graphics" />
 		<Using Include="Windows.UI" />
 		<Using Include="Windows.UI.Composition" />
 		<Using Include="Windows.UI.Composition.Core" />
+		<Using Include="Windows.UI.ViewManagement" />
 		<Using Include="WinRT" />
 		<Using Include="WinRT.Interop" />
+
+		<Using Alias="DirectNConstants" Include="DirectN.Constants" />
+		<Using Alias="DirectNFunctions" Include="DirectN.Functions" />
 	</ItemGroup>
 
 	<ItemGroup>

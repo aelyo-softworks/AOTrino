@@ -1,4 +1,4 @@
-namespace AOTrino;
+namespace AOTrino.Input;
 
 public class KeyEventArgs(VIRTUAL_KEY vk, uint states, string? character) : HandledEventArgs
 {
