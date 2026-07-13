@@ -13,6 +13,8 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
     private bool _mouseTracking;
     private bool _isDropTarget;
     private bool _hostObjectHelperInstalled;
+    private bool _sharedRuntimeReady;
+    private WebView2.EventRegistrationToken _webMessageReceivedToken;
     private ulong _lastPointerDownTime;
     private int _lastPointerDownPositionX = int.MinValue;
     private int _lastPointerDownPositionY = int.MinValue;
@@ -39,6 +41,8 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
     public event EventHandler? MonitorChanged;
     public event EventHandler<NavigationEventArgs>? NavigationStarting;
     public event EventHandler<NavigationEventArgs>? NavigationCompleted;
+    // raw JSON of messages posted from the page (window.__aotrino.post / chrome.webview.postMessage)
+    public event Action<string>? WebMessageJsonReceived;
 
     public WebViewWindow(
         string? title = null,
@@ -158,6 +162,10 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
     protected ComObject<ICoreWebView2_17>? WebView => _webView;
     protected ComObject<ICoreWebView2Environment12>? Environment => _environment;
 
+    // for SharedBuffer (same assembly) to reach the environment/webview without exposing them publicly
+    internal ComObject<ICoreWebView2Environment12>? SharedEnvironment => _environment;
+    internal ComObject<ICoreWebView2_17>? SharedWebView => _webView;
+
     public HMONITOR MonitorHandle { get; private set; }
     public bool IsFullScreen => GetFullScreenBounds() == WindowRect;
     public virtual bool CanChangeCursor { get; set; } = true;
@@ -272,6 +280,52 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
             DispatchObject.ContinueOnAsync = true;
             DispatchObject.OneStepInvoke = true;
         }
+    }
+
+    // creates a named shared-memory channel to the page (generic byte transport, .NET <-> JS).
+    // write to the returned SharedBuffer.Pointer; read it in JS via window.__aotrino.getBuffer(name).
+    // see AOTrino.Graphics for a Direct2D -> WebGL surface built on top of this.
+    public SharedBuffer CreateSharedBuffer(string name, SharedBufferAccess access = SharedBufferAccess.ReadOnly)
+    {
+        EnsureSharedRuntime();
+        return new SharedBuffer(this, name, access);
+    }
+
+    // runs a script at the start of every document (and immediately on the current one)
+    public void AddStartupScript(string script)
+    {
+        ArgumentNullException.ThrowIfNull(script);
+        var webView = _webView ?? throw new InvalidOperationException("The WebView2 controller is not ready yet.");
+        webView.Object.AddScriptToExecuteOnDocumentCreated(PWSTR.From(script),
+            new CoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler((error, id) => { })).ThrowOnError();
+        ExecuteScript(script, throwOnError: false);
+    }
+
+    protected virtual void OnWebMessageJsonReceived(string json) => WebMessageJsonReceived?.Invoke(json);
+
+    private void EnsureSharedRuntime()
+    {
+        if (_sharedRuntimeReady)
+            return;
+
+        var webView = _webView ?? throw new InvalidOperationException("The WebView2 controller is not ready yet.");
+        _sharedRuntimeReady = true;
+
+        // the generic __aotrino runtime, on every future document and the current one
+        AddStartupScript(SharedBuffer.Runtime);
+
+        webView.Object.add_WebMessageReceived(new CoreWebView2WebMessageReceivedEventHandler((sender, args) =>
+        {
+            if (args.get_WebMessageAsJson(out var json).IsError)
+                return;
+
+            using var pwstr = new Pwstr(json.Value);
+            var text = json.ToString();
+            if (!string.IsNullOrEmpty(text))
+            {
+                OnWebMessageJsonReceived(text);
+            }
+        }), ref _webMessageReceivedToken).ThrowOnError();
     }
 
     public virtual Task<T?> ExecuteScript<T>(string script, JsonTypeInfo<T> typeInfo, bool throwOnError = true)

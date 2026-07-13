@@ -11,10 +11,10 @@ public class KeyEventArgs(VIRTUAL_KEY vk, uint states, string? character) : Hand
     public bool IsDown => !IsUp;
     public bool IsExtendedKey { get; } = (states & 0x1000) != 0;
     public bool WasDown { get; } = (states & 0x40000000) != 0;
+    public bool WithoutAnyModifiers => !WithShift && !WithControl && !WithMenu;
     public virtual bool WithShift { get; set; } = VIRTUAL_KEY.VK_SHIFT.IsPressed();
     public virtual bool WithControl { get; set; } = VIRTUAL_KEY.VK_CONTROL.IsPressed();
     public virtual bool WithMenu { get; set; } = VIRTUAL_KEY.VK_MENU.IsPressed();
-    public bool WithoutAnyModifiers => !WithShift && !WithControl && !WithMenu;
 
     public override string ToString()
     {

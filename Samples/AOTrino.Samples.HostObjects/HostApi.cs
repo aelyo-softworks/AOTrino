@@ -43,7 +43,7 @@ public partial class HostApi(WebViewWindow window) : DispatchObject
                 primes.Add(n);
             }
         }
-        return primes.ToArray();
+        return [.. primes];
     }
 
     // complex data crosses as a JSON string (AOT-safe via source-gen); JS does JSON.parse

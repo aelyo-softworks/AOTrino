@@ -5,7 +5,7 @@ public class PointerActivateEventArgs(uint pointerId, HWND windowBeingActivated,
 {
     public HWND WindowBeingActivated { get; } = windowBeingActivated;
     public HT HitTest { get; } = hitTest;
-    public PA? Result { get; set; }
+    public virtual PA? Result { get; set; }
 
     public override string ToString() => base.ToString() + ",W=" + WindowBeingActivated + ",HT=" + HitTest;
 }

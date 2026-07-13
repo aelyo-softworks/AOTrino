@@ -1,4 +1,4 @@
-namespace AOTrino;
+namespace AOTrino.Utilities;
 
 // input & window helpers used by the composition WebView host.
 // the shell/wic icon helpers from the source app are intentionally left out of core.

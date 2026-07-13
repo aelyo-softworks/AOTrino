@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<PublishAot>true</PublishAot>
+		<ApplicationManifest>app.manifest</ApplicationManifest>
+		<RootNamespace>AOTrino.Samples.Direct2D</RootNamespace>
+
+		<!-- opt in to AOTrino's WebRoot embedding (see Directory.Build.targets) -->
+		<AOTrinoEmbedWebRoot>true</AOTrinoEmbedWebRoot>
+
+		<Title>AOTrino Samples - Direct2D</Title>
+		<AssemblyTitle>AOTrino Samples - Direct2D</AssemblyTitle>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Using Include="AOTrino" />
+		<Using Include="AOTrino.Graphics" />
+		<Using Include="DirectN" />
+		<Using Include="DirectN.Extensions" />
+		<Using Include="DirectN.Extensions.Com" />
+		<Using Include="System" />
+		<Using Include="System.IO" />
+		<Using Include="System.Linq" />
+		<Using Include="System.Reflection" />
+		<Using Include="System.Threading" />
+		<Using Include="System.Threading.Tasks" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\AOTrino\AOTrino.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="DirectN">
+			<HintPath>..\..\External\DirectN.dll</HintPath>
+		</Reference>
+		<Reference Include="DirectN.Extensions">
+			<HintPath>..\..\External\DirectN.Extensions.dll</HintPath>
+		</Reference>
+		<Reference Include="WebView2">
+			<HintPath>..\..\External\WebView2.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+
+</Project>

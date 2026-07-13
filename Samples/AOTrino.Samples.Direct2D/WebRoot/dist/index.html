@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="AOTrino.png" />
+    <title>AOTrino — Direct2D</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            background: #0d1117;
+            overflow: hidden;
+        }
+
+        canvas {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        .caption {
+            position: fixed;
+            left: 18px;
+            bottom: 14px;
+            pointer-events: none;
+            font: 13px "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+            color: #8b949e;
+        }
+
+            .caption b {
+                color: #58a6ff;
+            }
+    </style>
+</head>
+<body>
+    <!-- the entire front-end: AOTrino auto-attaches this canvas to the .NET Direct2D surface named "scene" -->
+    <canvas data-aotrino-surface="scene"></canvas>
+    <div class="caption"><b>Direct2D</b> rendered in .NET → WebView2 shared buffer → WebGL canvas (zero-copy)</div>
+</body>
+</html>

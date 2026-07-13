@@ -11,6 +11,7 @@
 		<Using Include="AOTrino" />
 		<Using Include="AOTrino.Input" />
 		<Using Include="AOTrino.Resources" />
+		<Using Include="AOTrino.Utilities" />
 		<Using Include="System" />
 		<Using Include="System.Collections" />
 		<Using Include="System.Collections.Concurrent" />
@@ -72,6 +73,16 @@
 		<EmbeddedResource Update="Resources\Res.resx">
 			<Generator>ResXFileCodeGenerator</Generator>
 			<LastGenOutput>Res.Designer.cs</LastGenOutput>
+		</EmbeddedResource>
+	</ItemGroup>
+
+	<!-- the __aotrino JS runtimes, loaded from the assembly by EmbeddedScript.Load(name) -->
+	<ItemGroup>
+		<EmbeddedResource Include="Resources\SharedBuffer.Runtime.js">
+			<LogicalName>SharedBuffer.Runtime.js</LogicalName>
+		</EmbeddedResource>
+		<EmbeddedResource Include="Resources\Direct2DSurface.Runtime.js">
+			<LogicalName>Direct2DSurface.Runtime.js</LogicalName>
 		</EmbeddedResource>
 	</ItemGroup>
 
