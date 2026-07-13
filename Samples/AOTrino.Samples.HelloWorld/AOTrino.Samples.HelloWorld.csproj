@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+		<WindowsSdkPackageVersion>10.0.26100.57</WindowsSdkPackageVersion>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<PublishAot>true</PublishAot>
+		<Platforms>x64</Platforms>
+		<Configurations>Release;Debug</Configurations>
+		<ApplicationManifest>app.manifest</ApplicationManifest>
+		<RootNamespace>AOTrino.Samples.HelloWorld</RootNamespace>
+
+		<!-- opt in to AOTrino's WebRoot embedding (see Directory.Build.targets) -->
+		<AOTrinoEmbedWebRoot>true</AOTrinoEmbedWebRoot>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Runtime.CompilerServices.DisableRuntimeMarshallingAttribute" />
+		<AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
+			<_Parameter1>Windows10.0.19041.0</_Parameter1>
+		</AssemblyAttribute>
+	</ItemGroup>
+
+	<ItemGroup>
+		<Using Include="System.Reflection" />
+		<Using Include="System.Threading.Tasks" />
+		<Using Include="AOTrino" />
+		<Using Include="DirectN" />
+		<Using Include="DirectN.Extensions" />
+		<Using Include="DirectN.Extensions.Utilities" />
+		<Using Include="WebView2.Utilities" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\AOTrino\AOTrino.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="DirectN">
+			<HintPath>..\..\External\DirectN.dll</HintPath>
+		</Reference>
+		<Reference Include="DirectN.Extensions">
+			<HintPath>..\..\External\DirectN.Extensions.dll</HintPath>
+		</Reference>
+		<Reference Include="WebView2">
+			<HintPath>..\..\External\WebView2.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+
+	<!-- the native WebView2 loader, extracted at runtime by WebView2Utilities.Initialize -->
+	<ItemGroup>
+		<EmbeddedResource Include="runtimes\win-x64\native\WebView2Loader.dll" />
+	</ItemGroup>
+
+</Project>

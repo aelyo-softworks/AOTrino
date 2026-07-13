@@ -1,1 +1,6 @@
-<Solution />
+<Solution>
+  <Project Path="AOTrino/AOTrino.csproj" />
+  <Folder Name="/Samples/">
+    <Project Path="Samples/AOTrino.Samples.HelloWorld/AOTrino.Samples.HelloWorld.csproj" />
+  </Folder>
+</Solution>

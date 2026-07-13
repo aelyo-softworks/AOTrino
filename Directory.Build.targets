@@ -1,0 +1,34 @@
+<Project>
+
+	<!--
+	  AOTrino WebRoot embedding.
+
+	  A host project opts in with <AOTrinoEmbedWebRoot>true</AOTrinoEmbedWebRoot>. Every file under
+	  $(AOTrinoWebRootDir) (default: WebRoot\dist) is collected into @(WebRootResource) and embedded as a
+	  manifest resource whose logical name is its project-relative path (e.g. "WebRoot\dist\index.html").
+	  AOTrino's runtime WebRoot extractor finds every resource starting with "WebRoot\", strips that prefix,
+	  and writes the rest to disk so the WebView can navigate to the local index.html. This generalizes the
+	  per-file <WebRootResource> list that the reference app maintained by hand into a single glob.
+
+	  When AOTrino ships as a NuGet package this file moves to the package's build\ folder and is imported
+	  automatically; today it lives at the repo root so every sample picks it up.
+	-->
+	<PropertyGroup Condition="'$(AOTrinoEmbedWebRoot)' == 'true'">
+		<AOTrinoWebRootDir Condition="'$(AOTrinoWebRootDir)' == ''">WebRoot\dist</AOTrinoWebRootDir>
+	</PropertyGroup>
+
+	<ItemGroup Condition="'$(AOTrinoEmbedWebRoot)' == 'true'">
+		<WebRootResource Include="$(AOTrinoWebRootDir)\**\*" />
+	</ItemGroup>
+
+	<Target Name="AOTrinoEmbedWebRoot"
+			BeforeTargets="BeforeBuild"
+			Condition="'$(AOTrinoEmbedWebRoot)' == 'true'">
+		<ItemGroup>
+			<EmbeddedResource Include="@(WebRootResource)">
+				<LogicalName>%(Identity)</LogicalName>
+			</EmbeddedResource>
+		</ItemGroup>
+	</Target>
+
+</Project>
