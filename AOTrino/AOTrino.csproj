@@ -1,50 +1,34 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
-		<WindowsSdkPackageVersion>10.0.26100.57</WindowsSdkPackageVersion>
-		<Nullable>enable</Nullable>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<IsAotCompatible>true</IsAotCompatible>
-		<Platforms>x64;ARM64</Platforms>
-		<Configurations>Release;Debug</Configurations>
 		<RootNamespace>AOTrino</RootNamespace>
-
 		<Title>AOTrino</Title>
 		<AssemblyTitle>AOTrino</AssemblyTitle>
-		<Product>AOTrino</Product>
-		<Company>Aelyo Softworks</Company>
-		<Authors>Aelyo Softworks</Authors>
-		<Description>Electron-like desktop apps on .NET AOT + WebView2 — single-exe, Windows x64, front-end-framework-agnostic (React/Fluent layers optional).</Description>
-		<Copyright>Copyright (C) 2026-$([System.DateTime]::UtcNow.ToString("yyyy")) Aelyo Softworks. All rights reserved.</Copyright>
-		<Version>1.0.0</Version>
-		<ProductVersion>1.0.0</ProductVersion>
-		<FileVersion>1.0.0</FileVersion>
-		<InformationalVersion>1.0.0</InformationalVersion>
-		<SourceRevisionId>$([System.DateTime]::UtcNow.ToString("yyyyMMddHHmmss"))</SourceRevisionId>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<AssemblyAttribute Include="System.Runtime.CompilerServices.DisableRuntimeMarshallingAttribute" />
-		<AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
-			<_Parameter1>Windows10.0.19041.0</_Parameter1>
-		</AssemblyAttribute>
-	</ItemGroup>
-
-	<ItemGroup>
+		<Using Include="AOTrino" />
 		<Using Include="AOTrino.Input" />
+		<Using Include="AOTrino.Resources" />
+		<Using Include="System" />
+		<Using Include="System.Collections.Generic" />
 		<Using Include="System.ComponentModel" />
 		<Using Include="System.Diagnostics" />
 		<Using Include="System.Diagnostics.CodeAnalysis" />
 		<Using Include="System.Globalization" />
+		<Using Include="System.IO" />
+		<Using Include="System.Linq" />
 		<Using Include="System.Numerics" />
 		<Using Include="System.Reflection" />
 		<Using Include="System.Runtime.CompilerServices" />
 		<Using Include="System.Runtime.InteropServices" />
+		<Using Include="System.Security.Cryptography" />
 		<Using Include="System.Text" />
 		<Using Include="System.Text.Json" />
 		<Using Include="System.Text.Json.Serialization.Metadata" />
+		<Using Include="System.Threading" />
+		<Using Include="System.Threading.Tasks" />
 		<Using Include="DirectN" />
 		<Using Include="DirectN.Extensions" />
 		<Using Include="DirectN.Extensions.Com" />
@@ -74,6 +58,26 @@
 		<Reference Include="WebView2">
 			<HintPath>..\External\WebView2.dll</HintPath>
 		</Reference>
+	</ItemGroup>
+
+	<!-- end-user-facing strings (Res.resx → strongly-typed Res); VS nests the designer and regenerates it when the resx changes -->
+	<ItemGroup>
+		<Compile Update="Resources\Res.Designer.cs">
+			<DesignTime>True</DesignTime>
+			<AutoGen>True</AutoGen>
+			<DependentUpon>Res.resx</DependentUpon>
+		</Compile>
+		<EmbeddedResource Update="Resources\Res.resx">
+			<Generator>ResXFileCodeGenerator</Generator>
+			<LastGenOutput>Res.Designer.cs</LastGenOutput>
+		</EmbeddedResource>
+	</ItemGroup>
+
+	<!-- native WebView2 loaders, embedded here in the SDK; WebView2Utilities.Initialize extracts the one matching the process architecture -->
+	<ItemGroup>
+		<EmbeddedResource Include="runtimes\win-x86\native\WebView2Loader.dll" />
+		<EmbeddedResource Include="runtimes\win-x64\native\WebView2Loader.dll" />
+		<EmbeddedResource Include="runtimes\win-arm64\native\WebView2Loader.dll" />
 	</ItemGroup>
 
 </Project>

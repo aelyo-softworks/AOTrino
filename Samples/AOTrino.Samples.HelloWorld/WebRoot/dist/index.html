@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="AOTrino.png" />
     <title>AOTrino — Hello World</title>
     <style>
         :root {
@@ -65,14 +66,17 @@
 <body>
     <div class="card">
         <h1>Hello from AOTrino</h1>
-        <p>Native <strong>.NET AOT</strong> · <strong>WebView2</strong> · single-exe · Windows x64</p>
-        <p>Served from an embedded <code>WebRoot\dist</code>, extracted at runtime.</p>
-        <div class="meta" id="meta">initializing…</div>
+        <p>Native <strong>.NET AOT</strong> · <strong>WebView2</strong> · single-exe · Windows x64/x86/ARM64</p>
+        <div class="meta">
+            WebView2 <code id="webview2">…</code> · AOTrino <code id="aotrino">…</code>
+        </div>
     </div>
     <script>
-        const ua = navigator.userAgent.match(/Edg?\/([\d.]+)/);
-        document.getElementById("meta").textContent =
-            "Chromium " + (ua ? ua[1] : "unknown") + " · rendered " + new Date().toLocaleTimeString();
+        // called by the .NET host (MainWindow.OnNavigationCompleted) with the real versions
+        window.setVersions = function (webview2, aotrino) {
+            document.getElementById("webview2").textContent = webview2;
+            document.getElementById("aotrino").textContent = aotrino;
+        };
     </script>
 </body>
 </html>

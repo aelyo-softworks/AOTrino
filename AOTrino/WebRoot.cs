@@ -1,24 +1,33 @@
 namespace AOTrino;
 
-// extracts the embedded front-end (resources whose logical name starts with "WebRoot\")
-// from the entry assembly to a versioned folder on disk, so the WebView can navigate to it
-// as a local file. see the WebRoot embedding target for how these resources are produced.
-public static class WebRoot
+// extracts the embedded front-end (resources whose logical name starts with "WebRoot\") from an
+// assembly to a versioned folder on disk, so the WebView can navigate to it as a local file.
+// instance (not static) so two apps in one process don't share extraction state — owned by AOTrinoApplication.
+public class WebRoot
 {
     private const string _prefix = @"WebRoot\";
     private const string _indexFileName = "index.html";
+    private const string _signatureFileName = ".webroot";
 
-    private static Task? _task;
-    private static bool _done;
-    private static readonly Lock _lock = new();
+    private readonly Assembly _assembly;
+    private readonly AOTrinoPaths _paths;
+    private readonly Lock _lock = new();
+    private Task? _task;
+    private bool _done;
 
-    public static string DistPath => AOTrinoPaths.WebRootDistPath;
-    public static string IndexFilePath => Path.Combine(AOTrinoPaths.WebRootDistPath, _indexFileName);
-
-    public static Task EnsureFilesAsync(bool forceRefresh = false) => EnsureFilesAsync(Assembly.GetEntryAssembly()!, forceRefresh);
-    public static Task EnsureFilesAsync(Assembly assembly, bool forceRefresh = false)
+    public WebRoot(Assembly assembly, AOTrinoPaths paths)
     {
         ArgumentNullException.ThrowIfNull(assembly);
+        ArgumentNullException.ThrowIfNull(paths);
+        _assembly = assembly;
+        _paths = paths;
+    }
+
+    public string DistPath => _paths.WebRootDistPath;
+    public string IndexFilePath => Path.Combine(_paths.WebRootDistPath, _indexFileName);
+
+    public Task EnsureFilesAsync(bool forceRefresh = false)
+    {
         if (_done)
             return Task.CompletedTask;
 
@@ -27,14 +36,14 @@ public static class WebRoot
 
         lock (_lock)
         {
-            _task ??= Task.Run(() => EnsureFiles(assembly, forceRefresh));
+            _task ??= Task.Run(() => EnsureFiles(forceRefresh));
             return _task;
         }
     }
 
-    private static void EnsureFiles(Assembly assembly, bool forceRefresh)
+    protected virtual void EnsureFiles(bool forceRefresh)
     {
-        var names = assembly.GetManifestResourceNames().Where(n => n.StartsWith(_prefix)).Order().ToArray();
+        var names = _assembly.GetManifestResourceNames().Where(n => n.StartsWith(_prefix)).Order().ToArray();
         if (names.Length == 0)
         {
             _done = true;
@@ -42,19 +51,20 @@ public static class WebRoot
             return;
         }
 
-        if (!forceRefresh)
+        // the cache key is a hash of the embedded content itself, not the folder/version name: an incremental
+        // build that re-embeds a changed WebRoot (same assembly version) still produces a new signature, so the
+        // edit is always re-extracted. keying on the version folder alone served a stale copy without a full rebuild.
+        var signature = ComputeSignature(names);
+        var signaturePath = Path.Combine(_paths.WebRootPath, _signatureFileName);
+        if (!forceRefresh && File.Exists(signaturePath) && File.ReadAllText(signaturePath) == signature)
         {
-            // the last file (ordered) existing with content is our "extraction complete" marker
-            var lastPath = Path.Combine(AOTrinoPaths.WebRootPath, names[^1][_prefix.Length..]);
-            if (File.Exists(lastPath) && new FileInfo(lastPath).Length > 0)
-            {
-                _done = true;
-                _task = null;
-                return;
-            }
+            _done = true;
+            _task = null;
+            return;
         }
 
-        var parent = Path.GetDirectoryName(AOTrinoPaths.WebRootPath);
+        // wipe every extracted version, then extract the current one
+        var parent = Path.GetDirectoryName(_paths.WebRootPath);
         if (parent != null && Directory.Exists(parent))
         {
             try { Directory.Delete(parent, true); } catch { /* best effort cleanup of stale versions */ }
@@ -62,14 +72,34 @@ public static class WebRoot
 
         foreach (var name in names)
         {
-            using var stream = assembly.GetManifestResourceStream(name) ?? throw new InvalidOperationException();
-            var path = Path.Combine(AOTrinoPaths.WebRootPath, name[_prefix.Length..]);
+            using var stream = _assembly.GetManifestResourceStream(name) ?? throw new InvalidOperationException();
+            var path = Path.Combine(_paths.WebRootPath, name[_prefix.Length..]);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             using var fs = new FileStream(path, FileMode.Create, FileAccess.Write);
             stream.CopyTo(fs);
         }
 
+        Directory.CreateDirectory(_paths.WebRootPath);
+        File.WriteAllText(signaturePath, signature);
+
         _done = true;
         _task = null;
+    }
+
+    private string ComputeSignature(IEnumerable<string> names)
+    {
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.MD5);
+        var buffer = new byte[81920];
+        foreach (var name in names)
+        {
+            hash.AppendData(Encoding.UTF8.GetBytes(name + "\n"));
+            using var stream = _assembly.GetManifestResourceStream(name) ?? throw new InvalidOperationException();
+            int read;
+            while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                hash.AppendData(buffer.AsSpan(0, read));
+            }
+        }
+        return Convert.ToHexString(hash.GetHashAndReset());
     }
 }

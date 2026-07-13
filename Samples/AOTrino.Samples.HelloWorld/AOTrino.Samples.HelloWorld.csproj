@@ -2,51 +2,23 @@
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
-		<WindowsSdkPackageVersion>10.0.26100.57</WindowsSdkPackageVersion>
-		<Nullable>enable</Nullable>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<PublishAot>true</PublishAot>
-		<Platforms>x64;ARM64</Platforms>
-		<Configurations>Release;Debug</Configurations>
 		<ApplicationManifest>app.manifest</ApplicationManifest>
 		<RootNamespace>AOTrino.Samples.HelloWorld</RootNamespace>
 
 		<!-- opt in to AOTrino's WebRoot embedding (see Directory.Build.targets) -->
 		<AOTrinoEmbedWebRoot>true</AOTrinoEmbedWebRoot>
 
-
 		<Title>AOTrino Samples - Hello World</Title>
 		<AssemblyTitle>AOTrino Samples - Hello World</AssemblyTitle>
-		<Product>AOTrino</Product>
-		<Company>Aelyo Softworks</Company>
-		<Authors>Aelyo Softworks</Authors>
-		<Description>Electron-like desktop apps on .NET AOT + WebView2 — single-exe, Windows x64, front-end-framework-agnostic (React/Fluent layers optional).</Description>
-		<Copyright>Copyright (C) 2026-$([System.DateTime]::UtcNow.ToString("yyyy")) Aelyo Softworks. All rights reserved.</Copyright>
-		<Version>1.0.0</Version>
-		<ProductVersion>1.0.0</ProductVersion>
-		<FileVersion>1.0.0</FileVersion>
-		<InformationalVersion>1.0.0</InformationalVersion>
-		<SourceRevisionId>$([System.DateTime]::UtcNow.ToString("yyyyMMddHHmmss"))</SourceRevisionId>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<AssemblyAttribute Include="System.Runtime.CompilerServices.DisableRuntimeMarshallingAttribute" />
-		<AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
-			<_Parameter1>Windows10.0.19041.0</_Parameter1>
-		</AssemblyAttribute>
-	</ItemGroup>
-
-	<ItemGroup>
 		<Using Include="AOTrino" />
-		<Using Include="DirectN" />
-		<Using Include="DirectN.Extensions" />
-		<Using Include="DirectN.Extensions.Utilities" />
-		<Using Include="WebView2.Utilities" />
+		<Using Include="AOTrino.Input" />
+		<Using Include="System" />
 		<Using Include="System.Reflection" />
-		<Using Include="System.Threading.Tasks" />
-		<Using Include="System.Runtime.InteropServices.Marshalling" />
+		<Using Include="System.Runtime.InteropServices" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -63,11 +35,6 @@
 		<Reference Include="WebView2">
 			<HintPath>..\..\External\WebView2.dll</HintPath>
 		</Reference>
-	</ItemGroup>
-
-	<!-- the native WebView2 loader, extracted at runtime by WebView2Utilities.Initialize -->
-	<ItemGroup>
-		<EmbeddedResource Include="runtimes\win-x64\native\WebView2Loader.dll" />
 	</ItemGroup>
 
 </Project>

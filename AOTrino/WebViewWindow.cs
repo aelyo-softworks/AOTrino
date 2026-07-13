@@ -57,7 +57,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
         }
 
         var options = GetEnvironmentOptions();
-        WebView2.Functions.CreateCoreWebView2EnvironmentWithOptions(PWSTR.Null, PWSTR.From(AOTrinoPaths.WebView2UserDataPath), options!,
+        WebView2.Functions.CreateCoreWebView2EnvironmentWithOptions(PWSTR.Null, PWSTR.From(AOTrinoApplication.Current?.Paths.WebView2UserDataPath), options!,
             new CoreWebView2CreateCoreWebView2EnvironmentCompletedHandler((result, envObj) =>
             {
                 try

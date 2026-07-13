@@ -17,8 +17,15 @@
 		<AOTrinoWebRootDir Condition="'$(AOTrinoWebRootDir)' == ''">WebRoot\dist</AOTrinoWebRootDir>
 	</PropertyGroup>
 
+	<!-- default application icon (the brand icon at the repo root) for every executable project; a project can override with its own <ApplicationIcon> -->
+	<PropertyGroup Condition="'$(ApplicationIcon)' == '' and ('$(OutputType)' == 'WinExe' or '$(OutputType)' == 'Exe')">
+		<ApplicationIcon>$(MSBuildThisFileDirectory)AOTrino.ico</ApplicationIcon>
+	</PropertyGroup>
+
 	<ItemGroup Condition="'$(AOTrinoEmbedWebRoot)' == 'true'">
 		<WebRootResource Include="$(AOTrinoWebRootDir)\**\*" />
+		<!-- so Visual Studio's fast up-to-date check rebuilds (re-embeds) when a WebRoot file changes, instead of skipping to a stale build -->
+		<UpToDateCheckInput Include="@(WebRootResource)" />
 	</ItemGroup>
 
 	<Target Name="AOTrinoEmbedWebRoot"

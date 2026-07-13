@@ -1,24 +1,21 @@
 namespace AOTrino.Samples.HelloWorld;
 
-[GeneratedComClass]
-public partial class MainWindow : WebViewWindow
+[System.Runtime.InteropServices.Marshalling.GeneratedComClass]
+public partial class MainWindow : AOTrinoWindow
 {
     public MainWindow()
         : base(Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()!.Title)
     {
     }
 
-    protected override void ControllerCreated()
+    protected override void OnNavigationCompleted(object? sender, NavigationEventArgs e)
     {
-        base.ControllerCreated();
-        _ = NavigateToWebRootAsync();
-    }
+        base.OnNavigationCompleted(sender, e);
+        if (!e.IsSuccess)
+            return;
 
-    private async Task NavigateToWebRootAsync()
-    {
-        // extraction runs on a worker thread; the continuation resumes on the window's
-        // synchronization context, so Navigate is called back on the UI thread
-        await WebRoot.EnsureFilesAsync();
-        Navigate(WebRoot.IndexFilePath);
+        // push the WebView2 runtime version and the AOTrino SDK version into the page
+        var app = AOTrinoApplication.Current!;
+        ExecuteScript($"window.setVersions && window.setVersions('{app.WebView2Version}', '{app.AOTrinoVersion}');");
     }
 }

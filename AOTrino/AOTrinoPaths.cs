@@ -1,14 +1,16 @@
 namespace AOTrino;
 
-// per-application paths derived from the entry assembly (title + informational version).
+// per-application paths derived from the app assembly (title + informational version).
 // generalizes what a host app would otherwise hardcode in its own Settings class.
-public static class AOTrinoPaths
+// instance (not static) so it carries no process-global state — owned by AOTrinoApplication.
+public class AOTrinoPaths
 {
-    static AOTrinoPaths()
+    public AOTrinoPaths(Assembly appAssembly)
     {
-        var entry = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
-        AppName = entry.GetTitle().Nullify() ?? entry.GetName().Name ?? "AOTrino";
-        var version = entry.GetInformationalVersion().Nullify() ?? entry.GetName().Version?.ToString() ?? "1.0.0";
+        ArgumentNullException.ThrowIfNull(appAssembly);
+        AppName = appAssembly.GetName().Name ?? nameof(AOTrino);
+        AppTitle = appAssembly.GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? AppName;
+        var version = appAssembly.GetInformationalVersion().Nullify() ?? appAssembly.GetName().Version?.ToString() ?? "1.0.0";
 
         ConfigurationDirectoryPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppName);
         WebView2UserDataPath = Path.Combine(ConfigurationDirectoryPath, "WebView2");
@@ -16,11 +18,12 @@ public static class AOTrinoPaths
         WebRootDistPath = Path.Combine(WebRootPath, "dist");
     }
 
-    public static string AppName { get; }
-    public static string ConfigurationDirectoryPath { get; }
-    public static string WebView2UserDataPath { get; }
+    public string AppName { get; }
+    public string AppTitle { get; }
+    public string ConfigurationDirectoryPath { get; }
+    public string WebView2UserDataPath { get; }
 
     // WebRoot resources are versioned so an app update re-extracts a fresh copy
-    public static string WebRootPath { get; }
-    public static string WebRootDistPath { get; }
+    public string WebRootPath { get; }
+    public string WebRootDistPath { get; }
 }
