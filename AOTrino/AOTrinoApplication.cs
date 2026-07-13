@@ -48,10 +48,10 @@ public partial class AOTrinoApplication : CompositionApplication
 
     // application-level tracing. default forwards to DirectN's static Application.Trace*;
     // override to redirect logs (file, telemetry, on-screen console, ...). captured JS console output routes here.
-    public virtual void TraceInfo(object? message = null) => Application.TraceInfo(message);
-    public virtual void TraceWarning(object? message = null) => Application.TraceWarning(message);
-    public virtual void TraceError(object? message = null) => Application.TraceError(message);
-    public virtual void TraceVerbose(object? message = null) => Application.TraceVerbose(message);
+    public virtual new void TraceInfo(object? message = null, [CallerMemberName] string? methodName = null) => Application.TraceInfo(message, methodName);
+    public virtual new void TraceWarning(object? message = null, [CallerMemberName] string? methodName = null) => Application.TraceWarning(message, methodName);
+    public virtual new void TraceError(object? message = null, [CallerMemberName] string? methodName = null) => Application.TraceError(message, methodName);
+    public virtual new void TraceVerbose(object? message = null, [CallerMemberName] string? methodName = null) => Application.TraceVerbose(message, methodName);
 
     // called at startup with the detected WebView2 runtime version (null/empty when absent).
     // default behavior: show a task dialog with a download link, then force-close the process.

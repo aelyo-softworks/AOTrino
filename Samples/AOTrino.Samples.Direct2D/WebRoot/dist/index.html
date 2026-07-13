@@ -33,11 +33,34 @@
             .caption b {
                 color: #58a6ff;
             }
+
+        .close {
+            position: fixed;
+            top: 10px;
+            right: 12px;
+            z-index: 10;
+            width: 30px;
+            height: 30px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.06);
+            color: #c9d1d9;
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+            .close:hover {
+                background: #da3633;
+                color: #fff;
+            }
     </style>
 </head>
-<body>
+<!-- data-aotrino-drag: dragging anywhere moves the window (handled natively by WebViewWindow) -->
+<body data-aotrino-drag>
     <!-- the entire front-end: AOTrino auto-attaches this canvas to the .NET Direct2D surface named "scene" -->
     <canvas data-aotrino-surface="scene"></canvas>
-    <div class="caption"><b>Direct2D</b> rendered in .NET → WebView2 shared buffer → WebGL canvas (zero-copy)</div>
+    <button class="close" data-aotrino-nodrag title="Close" onclick="window.__aotrino.closeWindow()">×</button>
+    <div class="caption"><b>Direct2D</b> in .NET → WebView2 shared buffer → WebGL (zero-copy) · drag anywhere to move</div>
 </body>
 </html>

@@ -13,10 +13,28 @@
     var cbs = subs[name];
     if (cbs) for (var i = 0; i < cbs.length; i++) { try { cbs[i](buffers[name], e.additionalData); } catch (x) {} }
   });
+  function post(msg) { try { window.chrome.webview.postMessage(msg); } catch (x) {} }
+  function command(c) { post({ __aotrino: "window-command", command: c }); }
+
   window.__aotrino = {
     getBuffer: function (name) { return buffers[name] || null; },
     getMeta: function (name) { return meta[name] || null; },
     onBuffer: function (name, cb) { (subs[name] = subs[name] || []).push(cb); if (buffers[name]) { try { cb(buffers[name], meta[name]); } catch (x) {} } },
-    post: function (msg) { try { window.chrome.webview.postMessage(msg); } catch (x) {} }
+    post: post,
+    // window controls (handled natively by WebViewWindow)
+    dragWindow: function () { command("drag"); },
+    closeWindow: function () { command("close"); },
+    minimizeWindow: function () { command("minimize"); },
+    maximizeWindow: function () { command("maximize"); }
   };
+
+  // any element (or ancestor) marked [data-aotrino-drag] drags the window on left-mousedown;
+  // mark interactive children [data-aotrino-nodrag] to keep them clickable.
+  document.addEventListener("mousedown", function (e) {
+    if (e.button !== 0) return;
+    for (var t = e.target; t && t.getAttribute; t = t.parentElement) {
+      if (t.hasAttribute("data-aotrino-nodrag")) return;
+      if (t.hasAttribute("data-aotrino-drag")) { window.__aotrino.dragWindow(); return; }
+    }
+  });
 })();

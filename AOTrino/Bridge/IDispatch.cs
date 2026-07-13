@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices.Marshalling;
 
-namespace AOTrino;
+namespace AOTrino.Bridge;
 
 // note we can't reuse the one from DirectN because of desing issues with COM interop on .NET core source generators,
 // so we need to define our own IDispatch interface here

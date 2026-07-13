@@ -1,4 +1,4 @@
-namespace AOTrino;
+namespace AOTrino.Bridge;
 
 [System.Runtime.InteropServices.Marshalling.GeneratedComClass]
 public partial class WebViewHostObjectHelper : ICoreWebView2PrivateHostObjectHelper, ICoreWebView2PrivateHostObjectHelper2
@@ -12,10 +12,10 @@ public partial class WebViewHostObjectHelper : ICoreWebView2PrivateHostObjectHel
         value = false;
         var disp = GetDispatchObject(ref @object);
         if (disp == null)
-            return DirectN.Constants.DISP_E_TYPEMISMATCH;
+            return DirectNConstants.DISP_E_TYPEMISMATCH;
 
         value = disp.IsMethod(memberName.ToString());
-        return DirectN.Constants.S_OK;
+        return DirectNConstants.S_OK;
     }
 
     HRESULT ICoreWebView2PrivateHostObjectHelper2.IsAsyncMethod(
@@ -27,10 +27,10 @@ public partial class WebViewHostObjectHelper : ICoreWebView2PrivateHostObjectHel
         value = false;
         var disp = GetDispatchObject(ref @object);
         if (disp == null)
-            return DirectN.Constants.DISP_E_TYPEMISMATCH;
+            return DirectNConstants.DISP_E_TYPEMISMATCH;
 
         value = disp.IsAsync(methodName.ToString());
-        return DirectN.Constants.S_OK;
+        return DirectNConstants.S_OK;
     }
 
     HRESULT ICoreWebView2PrivateHostObjectHelper2.SetAsyncMethodContinuation(
@@ -42,13 +42,13 @@ public partial class WebViewHostObjectHelper : ICoreWebView2PrivateHostObjectHel
     {
         var disp = GetDispatchObject(ref @object);
         if (disp == null)
-            return DirectN.Constants.DISP_E_TYPEMISMATCH;
+            return DirectNConstants.DISP_E_TYPEMISMATCH;
 
         if (ComObject.ComWrappers.GetOrCreateObjectForComInstance(methodResult.Anonymous.Anonymous.Anonymous.pdispVal, CreateObjectFlags.Unwrap) is not DispatchObject.TaskFunction func)
-            return DirectN.Constants.DISP_E_TYPEMISMATCH;
+            return DirectNConstants.DISP_E_TYPEMISMATCH;
 
         func.Continue((hr, result) => continuation.Invoke(hr, ref result));
-        return DirectN.Constants.S_OK;
+        return DirectNConstants.S_OK;
     }
 
     protected virtual DispatchObject? GetDispatchObject(ref VARIANT obj)

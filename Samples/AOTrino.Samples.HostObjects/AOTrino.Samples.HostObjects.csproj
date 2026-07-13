@@ -15,6 +15,7 @@
 
 	<ItemGroup>
 		<Using Include="AOTrino" />
+		<Using Include="AOTrino.Bridge" />
 		<Using Include="AOTrino.Input" />
 		<Using Include="System" />
 		<Using Include="System.Collections.Generic" />

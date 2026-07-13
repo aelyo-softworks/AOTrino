@@ -6,23 +6,23 @@ public static class WindowsExtensions
 {
     public const float USER_DEFAULT_SCREEN_DPI = 96f;
 
-    private readonly static Lazy<int> _borderWidth = new(() => DirectN.Functions.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXFRAME) + DirectN.Functions.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXPADDEDBORDER));
+    private readonly static Lazy<int> _borderWidth = new(() => DirectNFunctions.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXFRAME) + DirectNFunctions.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXPADDEDBORDER));
     public static int BorderWidth => _borderWidth.Value;
 
-    private readonly static Lazy<int> _borderHeight = new(() => DirectN.Functions.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CYFRAME) + DirectN.Functions.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXPADDEDBORDER));
+    private readonly static Lazy<int> _borderHeight = new(() => DirectNFunctions.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CYFRAME) + DirectNFunctions.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXPADDEDBORDER));
     public static int BorderHeight => _borderHeight.Value;
 
-    private readonly static Lazy<int> _buttonWidth = new(() => DirectN.Functions.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXSIZE));
+    private readonly static Lazy<int> _buttonWidth = new(() => DirectNFunctions.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXSIZE));
     public static int ButtonWidth => _buttonWidth.Value;
 
-    private readonly static Lazy<int> _buttonHeight = new(() => DirectN.Functions.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CYSIZE));
+    private readonly static Lazy<int> _buttonHeight = new(() => DirectNFunctions.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CYSIZE));
     public static int ButtonHeight => _buttonHeight.Value;
 
     public static int PixelsToDips(this Window window, int pixels) => (int)(pixels * USER_DEFAULT_SCREEN_DPI / window.Dpi.width);
 
     public static POINT ToPOINT(this LPARAM lParam) => new(lParam.Value.SignedLOWORD(), lParam.Value.SignedHIWORD());
-    public static POINT ScreenToClient(this POINT pt, HWND hwnd) { DirectN.Functions.ScreenToClient(hwnd, ref pt); return pt; }
-    public static POINT ClientToScreen(this POINT pt, HWND hwnd) { DirectN.Functions.ClientToScreen(hwnd, ref pt); return pt; }
+    public static POINT ScreenToClient(this POINT pt, HWND hwnd) { DirectNFunctions.ScreenToClient(hwnd, ref pt); return pt; }
+    public static POINT ClientToScreen(this POINT pt, HWND hwnd) { DirectNFunctions.ClientToScreen(hwnd, ref pt); return pt; }
 
     public static MODIFIERKEYS_FLAGS ToFlags(this MouseButton button) => button switch
     {

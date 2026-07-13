@@ -56,6 +56,14 @@
     new ResizeObserver(report).observe(canvas); report();
     (function frame() { try { draw(s); } catch (e) {} requestAnimationFrame(frame); })();
   }
+  // .NET reuses the same shared buffer across a resize and only sends new dimensions (a light message)
+  // instead of re-handing the whole buffer; keep the texture size in sync from it.
+  window.chrome.webview.addEventListener("message", function (e) {
+    var d = e.data;
+    if (!d || d.__aotrino !== "surface-dims") return;
+    var s = surfaces[d.name];
+    if (s) { s.bufW = d.width | 0; s.bufH = d.height | 0; }
+  });
   function autoAttach() { var els = document.querySelectorAll("canvas[data-aotrino-surface]"); for (var i = 0; i < els.length; i++) { attach(els[i].getAttribute("data-aotrino-surface"), els[i]); } }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", autoAttach); else autoAttach();
   window.__aotrinoGL = {

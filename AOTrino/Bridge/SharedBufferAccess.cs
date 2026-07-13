@@ -1,4 +1,4 @@
-namespace AOTrino;
+namespace AOTrino.Bridge;
 
 // who may write the shared buffer once posted to the page
 public enum SharedBufferAccess

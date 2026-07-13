@@ -9,13 +9,13 @@ public partial class AOTrinoWindow(
     WINDOW_EX_STYLE extendedStyle = WINDOW_EX_STYLE.WS_EX_NOREDIRECTIONBITMAP,
     RECT? rect = null) : WebViewWindow(title, style, extendedStyle, rect)
 {
-
     // navigated to once the controller is created; defaults to the app's WebRoot index.html
     protected virtual string? StartUrl => AOTrinoApplication.Current?.WebRoot.IndexFilePath;
 
     protected override void ControllerCreated()
     {
         base.ControllerCreated();
+        EnsureSharedRuntime(); // window.__aotrino (window controls + shared buffers) available on every AOTrino app
         RegisterHostObjects();
         _ = NavigateToStartAsync();
     }

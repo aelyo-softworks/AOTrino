@@ -1,4 +1,4 @@
-namespace AOTrino;
+namespace AOTrino.Bridge;
 
 [System.Runtime.InteropServices.Marshalling.GeneratedComClass]
 public partial class DispatchKeyValue : DispatchObject

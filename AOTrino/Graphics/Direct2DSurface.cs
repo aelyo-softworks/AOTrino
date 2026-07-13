@@ -23,6 +23,8 @@ public sealed class Direct2DSurface : IDisposable
     private int _width;
     private int _height;
     private CancellationTokenSource? _animation;
+    private Action<IComObject<ID2D1RenderTarget>, int, int, float>? _draw;
+    private long _startTick;
 
     public Direct2DSurface(WebViewWindow window, string name)
     {
@@ -44,8 +46,10 @@ public sealed class Direct2DSurface : IDisposable
     {
         ArgumentNullException.ThrowIfNull(draw);
         StopAnimation();
+        _draw = draw;
+        _startTick = Environment.TickCount64;
         _animation = new CancellationTokenSource();
-        _ = RunAsync(draw, _animation.Token);
+        _ = RunAsync(_animation.Token);
     }
 
     public void StopAnimation()
@@ -54,11 +58,11 @@ public sealed class Direct2DSurface : IDisposable
         _animation = null;
     }
 
-    private void OnWebMessage(string json)
+    private void OnWebMessage(object? sender, ValueEventArgs<string> json)
     {
         try
         {
-            using var doc = JsonDocument.Parse(json);
+            using var doc = JsonDocument.Parse(json.Value ?? string.Empty);
             var root = doc.RootElement;
             if (root.ValueKind != JsonValueKind.Object)
                 return;
@@ -69,23 +73,32 @@ public sealed class Direct2DSurface : IDisposable
             if (!root.TryGetProperty("name", out var n) || n.GetString() != _name)
                 return;
 
-            _requestedWidth = root.GetProperty("width").GetInt32();
-            _requestedHeight = root.GetProperty("height").GetInt32();
+            var width = root.GetProperty("width").GetInt32();
+            var height = root.GetProperty("height").GetInt32();
+            var changed = width != _requestedWidth || height != _requestedHeight;
+            _requestedWidth = width;
+            _requestedHeight = height;
+
+            // re-render on the spot so a resize shows fresh pixels immediately instead of after the next frame tick
+            if (changed)
+            {
+                RenderFrame();
+            }
         }
-        catch
+        catch (Exception ex)
         {
+            AOTrinoApplication.Current?.TraceWarning($"Direct2DSurface '{_name}' message error: {ex.Message}");
             // not one of our messages
         }
     }
 
-    private async Task RunAsync(Action<IComObject<ID2D1RenderTarget>, int, int, float> draw, CancellationToken token)
+    private async Task RunAsync(CancellationToken token)
     {
-        var start = Environment.TickCount64;
         while (!token.IsCancellationRequested)
         {
             try
             {
-                RenderFrame(draw, (Environment.TickCount64 - start) / 1000f);
+                RenderFrame();
             }
             catch (Exception ex)
             {
@@ -97,13 +110,18 @@ public sealed class Direct2DSurface : IDisposable
         }
     }
 
-    private void RenderFrame(Action<IComObject<ID2D1RenderTarget>, int, int, float> draw, float seconds)
+    private void RenderFrame()
     {
+        var draw = _draw;
+        if (draw == null)
+            return;
+
         var width = _requestedWidth;
         var height = _requestedHeight;
         if (width <= 0 || height <= 0)
             return;
 
+        var seconds = (Environment.TickCount64 - _startTick) / 1000f;
         EnsureTarget(width, height);
         var dc = _dc!;
         dc.SetTarget(_target!);
@@ -140,8 +158,26 @@ public sealed class Direct2DSurface : IDisposable
         _width = width;
         _height = height;
 
-        _buffer.EnsureSize(width * height * _bytesPerPixel);
-        _buffer.Post($"\"width\":{width},\"height\":{height}");
+        // during a resize the buffer only actually reallocates when it outgrows its (power-of-two) capacity.
+        // re-handing the whole buffer to the page is a heavy cross-process op, so only do it on a real realloc;
+        // otherwise just tell the page the new dimensions with a light message (the memory is unchanged).
+        if (_buffer.EnsureSize(width * height * _bytesPerPixel))
+        {
+            _buffer.Post($"\"width\":{width},\"height\":{height}");
+        }
+        else
+        {
+            PostDimensions(width, height);
+        }
+    }
+
+    private void PostDimensions(int width, int height)
+    {
+        var webView = _window.SharedWebView;
+        if (webView == null)
+            return;
+
+        webView.Object.PostWebMessageAsJson(PWSTR.From($"{{\"__aotrino\":\"surface-dims\",\"name\":\"{_name}\",\"width\":{width},\"height\":{height}}}"));
     }
 
     private unsafe void CopyToBuffer(int width, int height)

@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices.Marshalling;
 
-namespace AOTrino;
+namespace AOTrino.Bridge;
 
 // A generic base host object for the WebView2 control must implement IDispatch
 // when we have say, this in javascript:

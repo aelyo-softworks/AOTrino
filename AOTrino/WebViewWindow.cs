@@ -42,7 +42,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
     public event EventHandler<NavigationEventArgs>? NavigationStarting;
     public event EventHandler<NavigationEventArgs>? NavigationCompleted;
     // raw JSON of messages posted from the page (window.__aotrino.post / chrome.webview.postMessage)
-    public event Action<string>? WebMessageJsonReceived;
+    public event EventHandler<ValueEventArgs<string>>? WebMessageJsonReceived;
 
     public WebViewWindow(
         string? title = null,
@@ -51,7 +51,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
         RECT? rect = null)
         : base(title, style: style, extendedStyle: extendedStyle, rect: rect)
     {
-        MonitorHandle = DirectN.Functions.MonitorFromWindow(Handle, MONITOR_FROM_FLAGS.MONITOR_DEFAULTTONULL);
+        MonitorHandle = DirectNFunctions.MonitorFromWindow(Handle, MONITOR_FROM_FLAGS.MONITOR_DEFAULTTONULL);
         if (IsFullScreen)
         {
             SetCorner(DWM_WINDOW_CORNER_PREFERENCE.DWMWCP_DONOTROUND);
@@ -285,25 +285,69 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
     // creates a named shared-memory channel to the page (generic byte transport, .NET <-> JS).
     // write to the returned SharedBuffer.Pointer; read it in JS via window.__aotrino.getBuffer(name).
     // see AOTrino.Graphics for a Direct2D -> WebGL surface built on top of this.
-    public SharedBuffer CreateSharedBuffer(string name, SharedBufferAccess access = SharedBufferAccess.ReadOnly)
+    public virtual SharedBuffer CreateSharedBuffer(string name, SharedBufferAccess access = SharedBufferAccess.ReadOnly)
     {
         EnsureSharedRuntime();
         return new SharedBuffer(this, name, access);
     }
 
     // runs a script at the start of every document (and immediately on the current one)
-    public void AddStartupScript(string script)
+    public virtual void AddStartupScript(string script)
     {
         ArgumentNullException.ThrowIfNull(script);
         var webView = _webView ?? throw new InvalidOperationException("The WebView2 controller is not ready yet.");
-        webView.Object.AddScriptToExecuteOnDocumentCreated(PWSTR.From(script),
-            new CoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler((error, id) => { })).ThrowOnError();
+        webView.Object.AddScriptToExecuteOnDocumentCreated(PWSTR.From(script), new CoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler((error, id) => { })).ThrowOnError();
         ExecuteScript(script, throwOnError: false);
     }
 
-    protected virtual void OnWebMessageJsonReceived(string json) => WebMessageJsonReceived?.Invoke(json);
+    protected virtual void OnWebMessageJsonReceived(object sender, ValueEventArgs<string> json)
+    {
+        HandleWindowCommand(json.Value);
+        WebMessageJsonReceived?.Invoke(this, json);
+    }
 
-    private void EnsureSharedRuntime()
+    // starts a native window move (as if the title bar was grabbed). call while a mouse button is down,
+    // e.g. from a JS drag region via window.__aotrino.dragWindow().
+    public void BeginDrag()
+    {
+        DirectNFunctions.ReleaseCapture();
+        DirectNFunctions.SendMessageW(Handle, MessageDecoder.WM_NCLBUTTONDOWN, new WPARAM { Value = (nuint)HT.HTCAPTION }, new LPARAM());
+    }
+
+    // built-in window controls, driven from JS by window.__aotrino.dragWindow()/closeWindow()/minimizeWindow()/maximizeWindow()
+    private void HandleWindowCommand(string? json)
+    {
+        if (string.IsNullOrEmpty(json))
+            return;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+                return;
+
+            if (!root.TryGetProperty("__aotrino", out var kind) || kind.GetString() != "window-command")
+                return;
+
+            if (!root.TryGetProperty("command", out var cmd))
+                return;
+
+            switch (cmd.GetString())
+            {
+                case "drag": BeginDrag(); break;
+                case "close": Close(); break;
+                case "minimize": Show(SHOW_WINDOW_CMD.SW_MINIMIZE); break;
+                case "maximize": MaximizeOrRestore(); break;
+            }
+        }
+        catch
+        {
+            // not a window command
+        }
+    }
+
+    protected virtual void EnsureSharedRuntime()
     {
         if (_sharedRuntimeReady)
             return;
@@ -323,7 +367,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
             var text = json.ToString();
             if (!string.IsNullOrEmpty(text))
             {
-                OnWebMessageJsonReceived(text);
+                OnWebMessageJsonReceived(this, new ValueEventArgs<string>(text));
             }
         }), ref _webMessageReceivedToken).ThrowOnError();
     }
@@ -396,7 +440,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
 
     protected virtual void UpdateMonitor()
     {
-        var monitor = DirectN.Functions.MonitorFromWindow(Handle, MONITOR_FROM_FLAGS.MONITOR_DEFAULTTONULL);
+        var monitor = DirectNFunctions.MonitorFromWindow(Handle, MONITOR_FROM_FLAGS.MONITOR_DEFAULTTONULL);
         if (monitor.Value == MonitorHandle.Value)
             return;
 
@@ -407,7 +451,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
     protected unsafe internal virtual void SetCorner(DWM_WINDOW_CORNER_PREFERENCE corner)
     {
         // works only on Windows 11, does nothing on Windows 10, so we don't check error
-        DirectN.Functions.DwmSetWindowAttribute(Handle, (uint)DWMWINDOWATTRIBUTE.DWMWA_WINDOW_CORNER_PREFERENCE, (nint)(&corner), 4);
+        DirectNFunctions.DwmSetWindowAttribute(Handle, (uint)DWMWINDOWATTRIBUTE.DWMWA_WINDOW_CORNER_PREFERENCE, (nint)(&corner), 4);
     }
 
     protected virtual void OnAfterDragEnter(IDataObject dataObject, MODIFIERKEYS_FLAGS flags, POINTL point, DROPEFFECT effect) { }
@@ -626,7 +670,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
                             dwFlags = TRACKMOUSEEVENT_FLAGS.TME_LEAVE | TRACKMOUSEEVENT_FLAGS.TME_HOVER,
                             hwndTrack = hwnd,
                         };
-                        _mouseTracking = DirectN.Functions.TrackMouseEvent(ref tme);
+                        _mouseTracking = DirectNFunctions.TrackMouseEvent(ref tme);
                     }
                 }
 
@@ -648,7 +692,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
             case MessageDecoder.WM_XBUTTONDOWN:
                 button = WindowsExtensions.MessageToButton(msg, wParam);
                 _capturedButtons[(int)button] = true;
-                DirectN.Functions.SetCapture(hwnd);
+                DirectNFunctions.SetCapture(hwnd);
                 OnMouseButtonDown(new MouseButtonEventArgs(lParam.ToPOINT(), (MODIFIERKEYS_FLAGS)wParam.Value.LOWORD(), button));
                 break;
 
@@ -658,7 +702,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
             case MessageDecoder.WM_XBUTTONUP:
                 button = WindowsExtensions.MessageToButton(msg, wParam);
                 _capturedButtons[(int)button] = false;
-                DirectN.Functions.ReleaseCapture();
+                DirectNFunctions.ReleaseCapture();
                 OnMouseButtonUp(new MouseButtonEventArgs(lParam.ToPOINT(), (MODIFIERKEYS_FLAGS)wParam.Value.LOWORD(), button));
                 break;
 
@@ -808,11 +852,11 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
                 // determine double click
                 if (!isUp)
                 {
-                    var cx = DirectN.Functions.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXDOUBLECLK);
-                    var cy = DirectN.Functions.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CYDOUBLECLK);
+                    var cx = DirectNFunctions.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXDOUBLECLK);
+                    var cy = DirectNFunctions.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CYDOUBLECLK);
 
                     var pt = pce.Point;
-                    pce.IsDoubleClick = _lastPointerDownTime + DirectN.Functions.GetDoubleClickTime() * 10000 > info.PerformanceCount
+                    pce.IsDoubleClick = _lastPointerDownTime + DirectNFunctions.GetDoubleClickTime() * 10000 > info.PerformanceCount
                         && Math.Abs(_lastPointerDownPositionX - pt.x) < cx
                         && Math.Abs(_lastPointerDownPositionY - pt.y) < cy;
 
@@ -869,7 +913,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
             case MessageDecoder.WM_SYSKEYDOWN:
             case MessageDecoder.WM_SYSKEYUP:
                 var vk = (VIRTUAL_KEY)wParam.Value.ToUInt32();
-                var e2 = new KeyEventArgs(vk, (uint)lParam.Value.ToInt64(), ((char)DirectN.Functions.MapVirtualKeyW((uint)vk, MAP_VIRTUAL_KEY_TYPE.MAPVK_VK_TO_CHAR)).ToString());
+                var e2 = new KeyEventArgs(vk, (uint)lParam.Value.ToInt64(), ((char)DirectNFunctions.MapVirtualKeyW((uint)vk, MAP_VIRTUAL_KEY_TYPE.MAPVK_VK_TO_CHAR)).ToString());
                 if (e2.IsUp)
                 {
                     OnKeyUp(this, e2);
