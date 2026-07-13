@@ -46,6 +46,13 @@ public partial class AOTrinoApplication : CompositionApplication
     protected virtual AOTrinoPaths CreatePaths() => new(Assembly.GetEntryAssembly() ?? typeof(AOTrinoApplication).Assembly);
     protected virtual WebRoot CreateWebRoot(Assembly assembly, AOTrinoPaths paths) => new(assembly, paths);
 
+    // application-level tracing. default forwards to DirectN's static Application.Trace*;
+    // override to redirect logs (file, telemetry, on-screen console, ...). captured JS console output routes here.
+    public virtual void TraceInfo(object? message = null) => Application.TraceInfo(message);
+    public virtual void TraceWarning(object? message = null) => Application.TraceWarning(message);
+    public virtual void TraceError(object? message = null) => Application.TraceError(message);
+    public virtual void TraceVerbose(object? message = null) => Application.TraceVerbose(message);
+
     // called at startup with the detected WebView2 runtime version (null/empty when absent).
     // default behavior: show a task dialog with a download link, then force-close the process.
     // override to change how a missing runtime is handled.

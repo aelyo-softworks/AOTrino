@@ -12,6 +12,8 @@
 		<Using Include="AOTrino.Input" />
 		<Using Include="AOTrino.Resources" />
 		<Using Include="System" />
+		<Using Include="System.Collections" />
+		<Using Include="System.Collections.Concurrent" />
 		<Using Include="System.Collections.Generic" />
 		<Using Include="System.ComponentModel" />
 		<Using Include="System.Diagnostics" />

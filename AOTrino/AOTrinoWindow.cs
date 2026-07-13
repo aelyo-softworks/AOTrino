@@ -3,16 +3,12 @@ namespace AOTrino;
 // a WebViewWindow that navigates to the application's extracted WebRoot once the controller is ready.
 // host apps derive from this and typically only set a title (or override StartUrl).
 [System.Runtime.InteropServices.Marshalling.GeneratedComClass]
-public partial class AOTrinoWindow : WebViewWindow
+public partial class AOTrinoWindow(
+    string? title = null,
+    WINDOW_STYLE style = WINDOW_STYLE.WS_THICKFRAME,
+    WINDOW_EX_STYLE extendedStyle = WINDOW_EX_STYLE.WS_EX_NOREDIRECTIONBITMAP,
+    RECT? rect = null) : WebViewWindow(title, style, extendedStyle, rect)
 {
-    public AOTrinoWindow(
-        string? title = null,
-        WINDOW_STYLE style = WINDOW_STYLE.WS_THICKFRAME,
-        WINDOW_EX_STYLE extendedStyle = WINDOW_EX_STYLE.WS_EX_NOREDIRECTIONBITMAP,
-        RECT? rect = null)
-        : base(title, style, extendedStyle, rect)
-    {
-    }
 
     // navigated to once the controller is created; defaults to the app's WebRoot index.html
     protected virtual string? StartUrl => AOTrinoApplication.Current?.WebRoot.IndexFilePath;
@@ -20,7 +16,13 @@ public partial class AOTrinoWindow : WebViewWindow
     protected override void ControllerCreated()
     {
         base.ControllerCreated();
+        RegisterHostObjects();
         _ = NavigateToStartAsync();
+    }
+
+    // override to expose JS-callable host objects (via AddHostObject) before the page navigates
+    protected virtual void RegisterHostObjects()
+    {
     }
 
     private async Task NavigateToStartAsync()

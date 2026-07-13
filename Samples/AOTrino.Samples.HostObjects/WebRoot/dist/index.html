@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="AOTrino.png" />
+    <title>AOTrino — Host Objects</title>
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            background: radial-gradient(120% 120% at 50% 0%, #16202c 0%, #0d1117 55%);
+            color: #e6edf3;
+            font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        header {
+            padding: 1.4rem 1.8rem 0.6rem;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #58a6ff;
+            letter-spacing: -0.01em;
+        }
+
+        header p {
+            margin: 0.25rem 0 0;
+            color: #8b949e;
+            font-size: 0.9rem;
+        }
+
+        header code {
+            color: #79c0ff;
+            font-family: "Cascadia Code", "Consolas", monospace;
+        }
+
+        main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.4rem;
+            padding: 1rem 1.8rem;
+            min-height: 0;
+        }
+
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+            overflow: auto;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 10.5rem 1fr;
+            align-items: center;
+            gap: 0.7rem;
+        }
+
+        button {
+            font: inherit;
+            font-size: 0.85rem;
+            padding: 0.42rem 0.6rem;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+            background: #21262d;
+            color: #e6edf3;
+            cursor: pointer;
+            text-align: left;
+        }
+
+            button:hover {
+                border-color: #58a6ff;
+                background: #262c34;
+            }
+
+        button.danger {
+            border-color: #5a2a2a;
+            color: #ffb4ac;
+        }
+
+            button.danger:hover {
+                border-color: #ff7b72;
+                background: #2d1f1f;
+            }
+
+        .out {
+            color: #8b949e;
+            font-size: 0.82rem;
+            font-family: "Cascadia Code", "Consolas", monospace;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .console {
+            background: #0b0f14;
+            border: 1px solid #21262d;
+            border-radius: 12px;
+            padding: 0.9rem 1rem;
+            overflow: auto;
+            font-family: "Cascadia Code", "Consolas", monospace;
+            font-size: 0.8rem;
+            line-height: 1.5;
+        }
+
+            .console .call {
+                color: #79c0ff;
+            }
+
+            .console .ret {
+                color: #7ee787;
+            }
+
+            .console .err {
+                color: #ff7b72;
+            }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>AOTrino · Host Objects</h1>
+        <p>Every button calls native <strong>.NET</strong> from JS via <code>chrome.webview.hostObjects.dotnet</code>. WebView2 <code id="webview2">…</code> · AOTrino <code id="aotrino">…</code></p>
+    </header>
+    <main>
+        <div class="actions">
+            <div class="row"><button data-act="props">Read properties (getters)</button><span class="out" id="o-props"></span></div>
+            <div class="row"><button data-act="sync">Ping · Add(2,3) · Upper (sync)</button><span class="out" id="o-sync"></span></div>
+            <div class="row"><button data-act="array">GetPrimes(12) → JS array</button><span class="out" id="o-array"></span></div>
+            <div class="row"><button data-act="json">GetSystemInfo() → JSON object</button><span class="out" id="o-json"></span></div>
+            <div class="row"><button data-act="echo">EchoAsync('AOTrino') → Promise&lt;string&gt;</button><span class="out" id="o-echo"></span></div>
+            <div class="row"><button data-act="fact">FactorialAsync(6) → Promise&lt;int&gt;</button><span class="out" id="o-fact"></span></div>
+            <div class="row"><button data-act="fail">Fail() → exception → JS catch</button><span class="out" id="o-fail"></span></div>
+            <div class="row"><button data-act="count">CountdownAsync(5) → .NET pushes to JS</button><span class="out" id="o-count"></span></div>
+            <div class="row"><button data-act="open">OpenUrl() → native default browser</button><span class="out" id="o-open"></span></div>
+            <div class="row"><button data-act="clog">console.log() → .NET trace</button><span class="out" id="o-clog"></span></div>
+            <div class="row"><button class="danger" data-act="quit">Quit() → close the app from JS</button><span class="out" id="o-quit"></span></div>
+        </div>
+        <div class="console" id="log"></div>
+    </main>
+    <script>
+        // capture JS console.* into .NET → routes to AOTrinoApplication.Trace* (see HostApi.OnConsoleLog)
+        if (window.chrome && chrome.webview && chrome.webview.hostObjects) {
+            const dotnet = chrome.webview.hostObjects.dotnet; // async proxy, fire-and-forget
+            for (const level of ["log", "info", "warn", "error", "debug"]) {
+                const orig = console[level].bind(console);
+                console[level] = (...args) => {
+                    try { dotnet.OnConsoleLog(level, args.map(a => typeof a === "string" ? a : JSON.stringify(a)).join(" ")); } catch { }
+                    orig(...args);
+                };
+            }
+        }
+
+        const logEl = document.getElementById("log");
+        function log(kind, text) {
+            const line = document.createElement("div");
+            line.className = kind;
+            line.textContent = (kind === "call" ? "» " : kind === "err" ? "✗ " : "« ") + text;
+            logEl.appendChild(line);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        // .NET → JS: setVersions is pushed from MainWindow.OnNavigationCompleted
+        window.setVersions = (webview2, aotrino) => {
+            document.getElementById("webview2").textContent = webview2;
+            document.getElementById("aotrino").textContent = aotrino;
+        };
+        // .NET → JS: CountdownAsync pushes ticks here
+        window.aotrinoTick = (n) => {
+            const el = document.getElementById("o-count");
+            el.textContent = n > 0 ? `tick ${n}` : "done ✓";
+            log("ret", `aotrinoTick(${n})  ← .NET`);
+        };
+
+        const sync = () => chrome.webview.hostObjects.sync.dotnet;
+        const async = () => chrome.webview.hostObjects.dotnet;
+
+        const actions = {
+            props() {
+                const d = sync();
+                const v = `${d.MachineName} · ${d.Architecture} · ${d.Framework}`;
+                log("call", "dotnet.MachineName / .Architecture / .Framework");
+                log("ret", v);
+                document.getElementById("o-props").textContent = v;
+            },
+            sync() {
+                const d = sync();
+                const v = `${d.Ping()} · Add(2,3)=${d.Add(2, 3)} · Upper('aotrino')=${d.Upper("aotrino")}`;
+                log("call", "dotnet.Ping() / Add(2,3) / Upper('aotrino')");
+                log("ret", v);
+                document.getElementById("o-sync").textContent = v;
+            },
+            array() {
+                const primes = sync().GetPrimes(12);
+                const v = "[" + Array.from(primes).join(", ") + "]";
+                log("call", "dotnet.GetPrimes(12)");
+                log("ret", v);
+                document.getElementById("o-array").textContent = v;
+            },
+            json() {
+                const info = JSON.parse(sync().GetSystemInfo());
+                const v = `${info.Processors} CPUs · ${(info.WorkingSet / 1048576) | 0} MB · ${info.Os}`;
+                log("call", "dotnet.GetSystemInfo()");
+                log("ret", JSON.stringify(info));
+                document.getElementById("o-json").textContent = v;
+            },
+            async echo() {
+                log("call", "await dotnet.EchoAsync('AOTrino')");
+                const v = await async().EchoAsync("AOTrino");
+                log("ret", v);
+                document.getElementById("o-echo").textContent = v;
+            },
+            async fact() {
+                log("call", "await dotnet.FactorialAsync(6)");
+                const v = await async().FactorialAsync(6);
+                log("ret", "6! = " + v);
+                document.getElementById("o-fact").textContent = "6! = " + v;
+            },
+            fail() {
+                log("call", "dotnet.Fail('demo error')");
+                try {
+                    sync().Fail("demo error");
+                } catch (e) {
+                    const v = "caught: " + String(e).split("\n")[0];
+                    log("err", v);
+                    document.getElementById("o-fail").textContent = v;
+                }
+            },
+            count() {
+                log("call", "dotnet.CountdownAsync(5)");
+                document.getElementById("o-count").textContent = "counting…";
+                async().CountdownAsync(5);
+            },
+            open() {
+                log("call", "dotnet.OpenUrl('https://learn.microsoft.com/microsoft-edge/webview2/')");
+                sync().OpenUrl("https://learn.microsoft.com/microsoft-edge/webview2/");
+                document.getElementById("o-open").textContent = "opened in default browser";
+            },
+            clog() {
+                const msg = "console.log from JS at " + new Date().toLocaleTimeString();
+                log("call", `console.log("${msg}")  → .NET trace`);
+                console.log(msg); // ← captured by the console override → dotnet.OnConsoleLog → AOTrinoApplication.TraceInfo
+                document.getElementById("o-clog").textContent = "sent to .NET trace";
+            },
+            quit() {
+                log("call", "dotnet.Quit()  → closing the app");
+                document.getElementById("o-quit").textContent = "closing…";
+                sync().Quit();
+            },
+        };
+
+        for (const btn of document.querySelectorAll("button[data-act]")) {
+            btn.addEventListener("click", () => { try { actions[btn.dataset.act](); } catch (e) { log("err", String(e)); } });
+        }
+
+        // headless self-test (verified by the batch harness when launched with --selftest)
+        async function selfTest() {
+            const d = sync(), a = async();
+            // JS console → .NET trace capture (the async awaits below give the fire-and-forget calls time to land)
+            console.log("AOTRINO_SELFTEST console.log");
+            console.warn("AOTRINO_SELFTEST console.warn");
+            console.error("AOTRINO_SELFTEST console.error");
+            const r = {
+                ping: d.Ping(),
+                add: d.Add(2, 3),
+                upper: d.Upper("aotrino"),
+                machineName: d.MachineName,
+                primes: Array.from(d.GetPrimes(5)),
+                systemInfo: JSON.parse(d.GetSystemInfo()),
+                echo: await a.EchoAsync("AOTrino"),
+                factorial: await a.FactorialAsync(5),
+            };
+            try { d.Fail("x"); r.failCaught = false; } catch { r.failCaught = true; }
+            // in --selftest mode this returns true; then prove Quit() closes the app from JS
+            if (d.WriteSelfTest(JSON.stringify(r))) {
+                d.Quit();
+            }
+        }
+
+        if (window.chrome && chrome.webview && chrome.webview.hostObjects) {
+            log("ret", "host objects ready — click any action");
+            selfTest().catch((e) => log("err", "selftest: " + e));
+        } else {
+            log("err", "chrome.webview.hostObjects not available");
+        }
+    </script>
+</body>
+</html>

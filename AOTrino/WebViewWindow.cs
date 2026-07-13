@@ -12,6 +12,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
     private ComObject<ICoreWebView2_17>? _webView;
     private bool _mouseTracking;
     private bool _isDropTarget;
+    private bool _hostObjectHelperInstalled;
     private ulong _lastPointerDownTime;
     private int _lastPointerDownPositionX = int.MinValue;
     private int _lastPointerDownPositionY = int.MinValue;
@@ -236,6 +237,41 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
         ArgumentNullException.ThrowIfNull(html);
         var webView = _webView ?? throw new InvalidOperationException();
         webView.Object.NavigateToString(PWSTR.From(html)).ThrowOnError();
+    }
+
+    // registers a JS-callable host object: AddHostObject("dotnet", obj) exposes it as
+    // chrome.webview.hostObjects.dotnet (async) and chrome.webview.hostObjects.sync.dotnet (sync).
+    // call after the controller is created (e.g. from AOTrinoWindow.RegisterHostObjects), before navigation.
+    public virtual void AddHostObject(string name, DispatchObject hostObject)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+        ArgumentNullException.ThrowIfNull(hostObject);
+        var webView = _webView ?? throw new InvalidOperationException("The WebView2 controller is not ready yet.");
+
+        EnsureHostObjectHelper(webView);
+
+        // wrap the host object's IUnknown in a VARIANT and register it under 'name'
+        ComObject.WithComInstance(hostObject, unk =>
+        {
+            using var variant = new Variant(unk, VARENUM.VT_UNKNOWN);
+            var detached = variant.Detached;
+            webView.Object.AddHostObjectToScript(PWSTR.From(name), ref detached).ThrowOnError();
+        }, true);
+    }
+
+    // full .NET Task / Task<T> support for host objects, via undocumented private WebView2 interfaces (best effort)
+    private void EnsureHostObjectHelper(ComObject<ICoreWebView2_17> webView)
+    {
+        if (_hostObjectHelperInstalled)
+            return;
+
+        _hostObjectHelperInstalled = true;
+        if (webView.Object is ICoreWebView2PrivatePartial partial)
+        {
+            partial.AddHostObjectHelper(new WebViewHostObjectHelper()).ThrowOnError();
+            DispatchObject.ContinueOnAsync = true;
+            DispatchObject.OneStepInvoke = true;
+        }
     }
 
     public virtual Task<T?> ExecuteScript<T>(string script, JsonTypeInfo<T> typeInfo, bool throwOnError = true)

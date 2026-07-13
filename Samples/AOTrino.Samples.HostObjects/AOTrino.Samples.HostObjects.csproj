@@ -4,20 +4,28 @@
 		<OutputType>WinExe</OutputType>
 		<PublishAot>true</PublishAot>
 		<ApplicationManifest>app.manifest</ApplicationManifest>
-		<RootNamespace>AOTrino.Samples.HelloWorld</RootNamespace>
+		<RootNamespace>AOTrino.Samples.HostObjects</RootNamespace>
 
 		<!-- opt in to AOTrino's WebRoot embedding (see Directory.Build.targets) -->
 		<AOTrinoEmbedWebRoot>true</AOTrinoEmbedWebRoot>
 
-		<Title>AOTrino Samples - Hello World</Title>
-		<AssemblyTitle>AOTrino Samples - Hello World</AssemblyTitle>
+		<Title>AOTrino Samples - Host Objects</Title>
+		<AssemblyTitle>AOTrino Samples - Host Objects</AssemblyTitle>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<Using Include="AOTrino" />
 		<Using Include="AOTrino.Input" />
 		<Using Include="System" />
+		<Using Include="System.Collections.Generic" />
+		<Using Include="System.Diagnostics" />
+		<Using Include="System.IO" />
+		<Using Include="System.Linq" />
 		<Using Include="System.Reflection" />
+		<Using Include="System.Runtime.InteropServices" />
+		<Using Include="System.Text.Json" />
+		<Using Include="System.Text.Json.Serialization" />
+		<Using Include="System.Threading.Tasks" />
 	</ItemGroup>
 
 	<ItemGroup>
