@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="AOTrino.png" />
+    <title>AOTrino — Composition</title>
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.4rem;
+            padding: 2rem;
+            color: #e6edf3;
+            font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+            background: linear-gradient(135deg, #1b2735 0%, #0d1117 55%, #241b2f 100%);
+            overflow: hidden;
+        }
+
+        .glow {
+            position: fixed;
+            inset: -20% -20% auto auto;
+            width: 60vmax;
+            height: 60vmax;
+            background: radial-gradient(closest-side, rgba(88, 166, 255, 0.22), transparent);
+            filter: blur(10px);
+            pointer-events: none;
+            animation: drift 14s ease-in-out infinite alternate;
+        }
+
+        @keyframes drift {
+            from {
+                transform: translate(0, 0);
+            }
+
+            to {
+                transform: translate(-14vmax, 12vmax);
+            }
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(2.2rem, 6vw, 3.4rem);
+            letter-spacing: -0.03em;
+            background: linear-gradient(90deg, #58a6ff, #a371f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        p {
+            margin: 0;
+            max-width: 30rem;
+            text-align: center;
+            color: #b6c2cf;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .cards {
+            display: flex;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .card {
+            width: 7.5rem;
+            height: 5rem;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+        }
+
+        .hint {
+            font-size: 0.85rem;
+            color: #8b949e;
+            text-align: center;
+            max-width: 30rem;
+        }
+
+        .actions {
+            display: flex;
+            gap: 0.6rem;
+        }
+
+        button {
+            font: inherit;
+            font-size: 0.9rem;
+            padding: 0.55rem 1rem;
+            border-radius: 10px;
+            border: 1px solid #30363d;
+            background: #21262d;
+            color: #e6edf3;
+            cursor: pointer;
+        }
+
+            button:hover {
+                border-color: #58a6ff;
+                background: #262c34;
+            }
+
+            button.close {
+                color: #ffb4ac;
+                border-color: #5a2a2a;
+            }
+
+                button.close:hover {
+                    border-color: #ff7b72;
+                    background: #2d1f1f;
+                    color: #fff;
+                }
+    </style>
+</head>
+<body>
+    <div class="glow"></div>
+    <h1>AOTrino</h1>
+    <p>This exact page is running in both windows. The difference is entirely in .NET: the left window hosts this WebView as one <strong>composition visual</strong>; the right window hosts it as a classic child <strong>HWND</strong>.</p>
+    <div class="cards">
+        <div class="card">🧩</div>
+        <div class="card">⚡</div>
+        <div class="card">🎛️</div>
+    </div>
+    <div class="actions">
+        <button class="close" onclick="window.__aotrino && window.__aotrino.closeWindow()">Close ✕</button>
+    </div>
+    <p class="hint">The left (composition) window paints three live .NET layers <em>over this page</em>: a glow that follows your mouse, a <strong>Direct2D-drawn HUD</strong> (top-right) and a pulsing status bar — while the page stays fully clickable. The right (HWND) window shows none of it: its WebView is an opaque child window, so native code can't draw over it. Close either window to exit.</p>
+</body>
+</html>

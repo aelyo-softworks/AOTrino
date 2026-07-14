@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<PublishAot>true</PublishAot>
+		<ApplicationManifest>app.manifest</ApplicationManifest>
+		<RootNamespace>AOTrino.Samples.Composition</RootNamespace>
+
+		<!-- opt in to AOTrino's WebRoot embedding (see Directory.Build.targets) -->
+		<AOTrinoEmbedWebRoot>true</AOTrinoEmbedWebRoot>
+
+		<Title>AOTrino Samples - Composition</Title>
+		<AssemblyTitle>AOTrino Samples - Composition</AssemblyTitle>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Using Include="AOTrino" />
+		<Using Include="AOTrino.Input" />
+		<Using Include="AOTrino.Utilities" />
+		<Using Include="System" />
+		<Using Include="System.Numerics" />
+		<Using Include="System.Reflection" />
+		<Using Include="System.Runtime.InteropServices" />
+		<Using Include="System.Text.Json" />
+		<Using Include="System.Threading.Tasks" />
+		<Using Include="DirectN" />
+		<Using Alias="DirectNFunctions" Include="DirectN.Functions" />
+		<Using Include="DirectN.Extensions" />
+		<Using Include="DirectN.Extensions.Utilities" />
+		<Using Include="Windows.Foundation" />
+		<Using Include="Windows.Graphics.DirectX" />
+		<Using Include="Windows.UI" />
+		<Using Include="Windows.UI.Composition" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\AOTrino\AOTrino.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="DirectN">
+			<HintPath>..\..\External\DirectN.dll</HintPath>
+		</Reference>
+		<Reference Include="DirectN.Extensions">
+			<HintPath>..\..\External\DirectN.Extensions.dll</HintPath>
+		</Reference>
+		<Reference Include="WebView2">
+			<HintPath>..\..\External\WebView2.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+
+</Project>

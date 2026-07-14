@@ -105,8 +105,6 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     public virtual bool CanChangeCursor { get; set; } = true;
     public virtual bool SendDoubleClicks { get; set; } // WebView2 doesn't seem to care (chrome uses UP & DOWN events by itself)
 
-    // === hosting hooks: the only things that differ between composition and HWND ===
-
     // create the WebView2 controller (composition or HWND). the implementation must, once its controller is
     // ready, call SetWebViewController(controller, coreWebView2) and then invoke onControllerReady.
     protected abstract void CreateController(ICoreWebView2Environment12 environment, Action onControllerReady);
@@ -124,6 +122,10 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         _baseController = controller;
         _webView = new ComObject<ICoreWebView2_17>(webView);
     }
+
+    // stop routing bounds/focus to the controller. a subclass MUST call this before disposing its controller,
+    // because disposing it raises teardown focus/size messages that would otherwise hit a disposed COM object.
+    protected void DetachController() => _baseController = null;
 
     private void WireNavigationEvents()
     {
@@ -181,6 +183,21 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     protected virtual RECT? GetCaptionRect() => null;
     protected virtual void ControllerCreated()
     {
+    }
+
+    public virtual async Task NavigateToWebRootAsync()
+    {
+        var app = AOTrinoApplication.Current;
+        if (app != null)
+        {
+            await app.WebRoot.EnsureFilesAsync();
+        }
+
+        var url = app?.WebRoot.IndexFilePath;
+        if (!string.IsNullOrEmpty(url))
+        {
+            Navigate(url);
+        }
     }
 
     public virtual RECT GetFullScreenBounds()
@@ -439,6 +456,15 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         DirectNFunctions.DwmSetWindowAttribute(Handle, (uint)DWMWINDOWATTRIBUTE.DWMWA_WINDOW_CORNER_PREFERENCE, (nint)(&corner), 4);
     }
 
+    // apply a Windows 11 system backdrop material (Mica / Acrylic / Tabbed) behind the window. it shows through
+    // wherever the window is transparent (a composition-hosted, transparent WebView); it makes no visible
+    // difference behind an opaque HWND-hosted WebView. no-op / ignored on Windows 10.
+    public unsafe void SetSystemBackdrop(DWM_SYSTEMBACKDROP_TYPE type)
+    {
+        var value = (int)type;
+        DirectNFunctions.DwmSetWindowAttribute(Handle, (uint)DWMWINDOWATTRIBUTE.DWMWA_SYSTEMBACKDROP_TYPE, (nint)(&value), 4);
+    }
+
     protected virtual void ClearBrowsingDataAll()
     {
         var wv = _webView.As<ICoreWebView2_13>();
@@ -456,7 +482,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         if (e.Handled)
             return;
 
-        var keys = WindowsExtensions.GetKeys(e.Keys, null);
+        var keys = AOTrinoExtensions.GetKeys(e.Keys, null);
         ForwardMouseInput(COREWEBVIEW2_MOUSE_EVENT_KIND.COREWEBVIEW2_MOUSE_EVENT_KIND_MOVE, keys, 0, e.Point);
     }
 
@@ -481,8 +507,8 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         if (e.Handled)
             return;
 
-        var keys = WindowsExtensions.GetKeys(e.Keys, e.Button);
-        var kind = e.Button.GetKind(WindowsExtensions.ButtonAction.Down);
+        var keys = AOTrinoExtensions.GetKeys(e.Keys, e.Button);
+        var kind = e.Button.GetKind(AOTrinoExtensions.ButtonAction.Down);
         ForwardMouseInput(kind, keys, XButtonData(e.Button), e.Point);
     }
 
@@ -492,8 +518,8 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         if (e.Handled)
             return;
 
-        var keys = WindowsExtensions.GetKeys(e.Keys, e.Button);
-        var kind = e.Button.GetKind(WindowsExtensions.ButtonAction.Up);
+        var keys = AOTrinoExtensions.GetKeys(e.Keys, e.Button);
+        var kind = e.Button.GetKind(AOTrinoExtensions.ButtonAction.Up);
         ForwardMouseInput(kind, keys, XButtonData(e.Button), e.Point);
     }
 
@@ -503,8 +529,8 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         if (e.Handled)
             return;
 
-        var keys = WindowsExtensions.GetKeys(e.Keys, e.Button);
-        var kind = e.Button.GetKind(WindowsExtensions.ButtonAction.DoubleClick);
+        var keys = AOTrinoExtensions.GetKeys(e.Keys, e.Button);
+        var kind = e.Button.GetKind(AOTrinoExtensions.ButtonAction.DoubleClick);
         ForwardMouseInput(kind, keys, XButtonData(e.Button), e.Point);
     }
 
@@ -514,7 +540,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         if (e.Handled)
             return;
 
-        var keys = WindowsExtensions.GetKeys(e.Keys, null);
+        var keys = AOTrinoExtensions.GetKeys(e.Keys, null);
         var kind = e.Orientation == Orientation.Horizontal
             ? COREWEBVIEW2_MOUSE_EVENT_KIND.COREWEBVIEW2_MOUSE_EVENT_KIND_HORIZONTAL_WHEEL
             : COREWEBVIEW2_MOUSE_EVENT_KIND.COREWEBVIEW2_MOUSE_EVENT_KIND_WHEEL;
@@ -575,32 +601,32 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
                     var cliy = ncy - rc.top;
                     if (clix >= 0 && clix < rc.Width && cliy >= 0 && cliy <= rc.Height)
                     {
-                        if (clix < WindowsExtensions.BorderWidth)
+                        if (clix < AOTrinoExtensions.BorderWidth)
                         {
-                            if (cliy <= WindowsExtensions.BorderHeight)
+                            if (cliy <= AOTrinoExtensions.BorderHeight)
                                 return HT.HTTOPLEFT;
 
-                            if (cliy >= rc.Height - WindowsExtensions.BorderHeight)
+                            if (cliy >= rc.Height - AOTrinoExtensions.BorderHeight)
                                 return HT.HTBOTTOMLEFT;
 
                             return HT.HTLEFT;
                         }
 
-                        if (clix > rc.Width - WindowsExtensions.BorderWidth)
+                        if (clix > rc.Width - AOTrinoExtensions.BorderWidth)
                         {
-                            if (cliy <= WindowsExtensions.BorderHeight)
+                            if (cliy <= AOTrinoExtensions.BorderHeight)
                                 return HT.HTTOPRIGHT;
 
-                            if (cliy >= rc.Height - WindowsExtensions.BorderHeight)
+                            if (cliy >= rc.Height - AOTrinoExtensions.BorderHeight)
                                 return HT.HTBOTTOMRIGHT;
 
                             return HT.HTRIGHT;
                         }
 
-                        if (cliy < WindowsExtensions.BorderHeight)
+                        if (cliy < AOTrinoExtensions.BorderHeight)
                             return HT.HTTOP;
 
-                        if (cliy > rc.Height - WindowsExtensions.BorderHeight)
+                        if (cliy > rc.Height - AOTrinoExtensions.BorderHeight)
                             return HT.HTBOTTOM;
 
                         var caption = GetCaptionRect();
@@ -643,7 +669,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
             case MessageDecoder.WM_RBUTTONDOWN:
             case MessageDecoder.WM_MBUTTONDOWN:
             case MessageDecoder.WM_XBUTTONDOWN:
-                button = WindowsExtensions.MessageToButton(msg, wParam);
+                button = AOTrinoExtensions.MessageToButton(msg, wParam);
                 _capturedButtons[(int)button] = true;
                 DirectNFunctions.SetCapture(hwnd);
                 OnMouseButtonDown(new MouseButtonEventArgs(lParam.ToPOINT(), (MODIFIERKEYS_FLAGS)wParam.Value.LOWORD(), button));
@@ -653,7 +679,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
             case MessageDecoder.WM_RBUTTONUP:
             case MessageDecoder.WM_MBUTTONUP:
             case MessageDecoder.WM_XBUTTONUP:
-                button = WindowsExtensions.MessageToButton(msg, wParam);
+                button = AOTrinoExtensions.MessageToButton(msg, wParam);
                 _capturedButtons[(int)button] = false;
                 DirectNFunctions.ReleaseCapture();
                 OnMouseButtonUp(new MouseButtonEventArgs(lParam.ToPOINT(), (MODIFIERKEYS_FLAGS)wParam.Value.LOWORD(), button));
@@ -666,7 +692,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
                 if (!SendDoubleClicks)
                     break;
 
-                button = WindowsExtensions.MessageToButton(msg, wParam);
+                button = AOTrinoExtensions.MessageToButton(msg, wParam);
                 var e3 = new MouseButtonEventArgs(lParam.ToPOINT(), (MODIFIERKEYS_FLAGS)wParam.Value.LOWORD(), button);
                 OnMouseButtonDoubleClick(e3);
                 break;
@@ -689,7 +715,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
                 if (!SendDoubleClicks)
                     break;
 
-                button = WindowsExtensions.MessageToButton(msg, wParam);
+                button = AOTrinoExtensions.MessageToButton(msg, wParam);
                 var flags = button.ToFlags();
                 if (VIRTUAL_KEY.VK_SHIFT.IsPressed())
                 {

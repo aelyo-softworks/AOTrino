@@ -25,7 +25,6 @@
             '<button data-a="close" class="x" title="Close">&#10005;</button>';
         document.documentElement.appendChild(bar);
         document.body.style.paddingTop = "44px";
-        location.href = "https://github.com/aelyo-softworks/AOTrino";
 
         var url = document.getElementById("__aotrinoUrl");
         url.value = location.href;

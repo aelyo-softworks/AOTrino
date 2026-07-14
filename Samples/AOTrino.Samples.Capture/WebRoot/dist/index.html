@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="AOTrino.png" />
+    <title>AOTrino — Capture</title>
+    <style>
+        :root { color-scheme: dark; }
+        * { box-sizing: border-box; }
+        html, body { height: 100%; margin: 0; }
+
+        body {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.2rem;
+            padding: 2rem;
+            color: #e6edf3;
+            font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+            background: radial-gradient(120% 120% at 50% 0%, #16202c 0%, #0d1117 55%);
+            overflow: hidden;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 2rem;
+            color: #58a6ff;
+            letter-spacing: -0.02em;
+        }
+
+        p {
+            margin: 0;
+            max-width: 34rem;
+            text-align: center;
+            color: #b6c2cf;
+            font-size: 1rem;
+            line-height: 1.55;
+        }
+
+        .arrow {
+            position: fixed;
+            top: 6px;
+            right: 24px;
+            color: #8b949e;
+            font-size: 0.8rem;
+        }
+
+        button {
+            font: inherit;
+            font-size: 0.9rem;
+            padding: 0.55rem 1rem;
+            border-radius: 10px;
+            border: 1px solid #5a2a2a;
+            background: #21262d;
+            color: #ffb4ac;
+            cursor: pointer;
+        }
+
+        button:hover { border-color: #ff7b72; background: #2d1f1f; color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="arrow">↑ live screen capture, drawn by .NET</div>
+    <h1>AOTrino · Capture</h1>
+    <p>The thumbnail in the top-right corner is a <strong>live capture of your screen</strong> (Windows.Graphics.Capture), rendered with Direct2D and composited by .NET <em>on top of this web page</em>. A web page can't capture and show other OS windows — this is native-only, possible because the WebView is just one composition layer.</p>
+    <button onclick="window.__aotrino && window.__aotrino.closeWindow()">Close ✕</button>
+</body>
+</html>

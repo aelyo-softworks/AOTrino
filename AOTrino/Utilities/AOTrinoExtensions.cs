@@ -2,7 +2,7 @@ namespace AOTrino.Utilities;
 
 // input & window helpers used by the composition WebView host.
 // the shell/wic icon helpers from the source app are intentionally left out of core.
-public static class WindowsExtensions
+public static class AOTrinoExtensions
 {
     public const float USER_DEFAULT_SCREEN_DPI = 96f;
 
@@ -23,6 +23,18 @@ public static class WindowsExtensions
     public static POINT ToPOINT(this LPARAM lParam) => new(lParam.Value.SignedLOWORD(), lParam.Value.SignedHIWORD());
     public static POINT ScreenToClient(this POINT pt, HWND hwnd) { DirectNFunctions.ScreenToClient(hwnd, ref pt); return pt; }
     public static POINT ClientToScreen(this POINT pt, HWND hwnd) { DirectNFunctions.ClientToScreen(hwnd, ref pt); return pt; }
+
+    // WinRT object -> IComObject<T>. replaces WinRT's (2.0 at least) As<T>, which misbehaves under AOT in Release builds.
+    [return: NotNullIfNotNull(nameof(winRTObject))]
+    public static IComObject<T>? AsComObject<T>(this object? winRTObject, CreateObjectFlags flags = CreateObjectFlags.UniqueInstance)
+    {
+        if (winRTObject == null)
+            return null;
+
+        var ptr = MarshalInspectable<object>.FromManaged(winRTObject);
+        var obj = DirectN.Extensions.Com.ComObject.FromPointer<T>(ptr, flags);
+        return obj ?? throw new InvalidCastException($"Object of type '{winRTObject.GetType().FullName}' is not of type '{typeof(T).FullName}'.");
+    }
 
     public static MODIFIERKEYS_FLAGS ToFlags(this MouseButton button) => button switch
     {
