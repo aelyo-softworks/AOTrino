@@ -21,6 +21,7 @@ export const appWindow = {
         }
     },
 
+    // toggles: the native side maximizes a normal window and restores a maximized one
     maximize(): void {
         if (isHosted()) {
             runtime().maximizeWindow();

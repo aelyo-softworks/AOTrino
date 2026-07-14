@@ -56,13 +56,16 @@
 	<Target Name="AOTrinoNpmBuild"
 			BeforeTargets="AOTrinoEmbedWebRoot"
 			Condition="'$(AOTrinoNpmBuild)' == 'true'">
-		<Exec Command="npm install"
-			  WorkingDirectory="$(MSBuildThisFileDirectory)"
-			  Condition="!Exists('$(MSBuildThisFileDirectory)node_modules')" />
-		<!-- installing runs the client's prepare script, but only the first time: rebuild it explicitly so
-		     an edit to the client is picked up by the app that consumes it -->
-		<Exec Command="npm run build -w @aotrino/client"
-			  WorkingDirectory="$(MSBuildThisFileDirectory)" />
+		<!--
+		  node_modules and the @aotrino/* libraries belong to the whole solution, not to this project, so they
+		  live in AOTrino.Npm.proj. Calling it through the MSBuild task (rather than a ProjectReference) runs it
+		  at exactly this point in the build, and MSBuild still caches the result per project+targets, so with
+		  several npm samples building in parallel it executes once. Doing the npm work per-project raced: two
+		  installs collided on the workspace symlinks (EEXIST) and two compilers wrote one dist.
+		-->
+		<MSBuild Projects="$(MSBuildThisFileDirectory)npm\AOTrino.Npm.proj" Targets="Build" />
+
+		<!-- ...and then only this project's own front end -->
 		<Exec Command="npm run build"
 			  WorkingDirectory="$(MSBuildProjectDirectory)\$(AOTrinoNpmDir)" />
 	</Target>

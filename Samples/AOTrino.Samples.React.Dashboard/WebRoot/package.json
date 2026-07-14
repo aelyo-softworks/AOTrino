@@ -1,9 +1,9 @@
 {
-  "name": "aotrino-samples-react-helloworld",
+  "name": "aotrino-samples-react-dashboard",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "React + TypeScript front end for the AOTrino React Hello World sample; consumes @aotrino/client through npm workspaces.",
+  "description": "React front end for the AOTrino dashboard sample; consumes @aotrino/react through npm workspaces.",
   "license": "MIT",
   "scripts": {
     "dev": "vite",

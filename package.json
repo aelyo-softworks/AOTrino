@@ -5,10 +5,13 @@
   "description": "npm workspaces for AOTrino: the @aotrino/* front-end packages and the JS-based samples that consume them. Nothing here is published to a registry - samples resolve @aotrino/* through workspace symlinks.",
   "license": "MIT",
   "workspaces": [
-    "npm/client",
+    "npm/*",
     "Samples/AOTrino.Samples.React.*/WebRoot"
   ],
   "scripts": {
+    "//build:libs": "the @aotrino/* libraries, in dependency order. react's types come from client's dist, so client must be built first — npm does not guarantee an order for workspace prepare scripts, which is why this list is explicit and lives here rather than in a prepare script.",
+    "build:libs": "npm run build -w @aotrino/client && npm run build -w @aotrino/react",
+    "postinstall": "npm run build:libs",
     "build": "npm run build --if-present --workspaces",
     "typecheck": "npm run typecheck --if-present --workspaces"
   }

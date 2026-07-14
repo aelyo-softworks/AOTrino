@@ -21,7 +21,7 @@ Both are plain globals. You can use them directly, and a zero-build page should.
 | Package | Status | What it adds |
 | --- | --- | --- |
 | `@aotrino/client` | built (`npm/client`) | TypeScript types over `window.__aotrino` and the host-object bridge |
-| `@aotrino/react` | planned | hooks and components over the client |
+| `@aotrino/react` | built (`npm/react`) | headless hooks and components over the client — behaviour and class names, no CSS |
 | `@aotrino/fluent` | planned | a FluentUI starter — a template choice, never a platform mandate |
 
 `@aotrino/client` deliberately **ships no runtime**. The C# side owns the runtime and it travels inside the
@@ -92,9 +92,16 @@ throws only if something actually calls it — so a module-scope `const api = ho
 React samples are named `AOTrino.Samples.React.*`, and the repo-root `workspaces` glob
 (`Samples/AOTrino.Samples.React.*/WebRoot`) picks up a new one with no edit.
 
-`Samples/AOTrino.Samples.React.HelloWorld` is the reference: a React + TypeScript front end, a `DemoApi` host
-object, a custom title bar that drags the window through `data-aotrino-drag`, and a typed call for each shape
-the bridge supports (property, sync method, async method).
+Both React samples use `@aotrino/react`, because in a React app that is the recommended path. The raw
+`window.__aotrino` / `chrome.webview.hostObjects` surface is still demonstrated — by the samples that aren't
+React at all (`HelloWorld`, `HostObjects`, `FileExplorer`), which use it directly with no npm anywhere.
+
+`Samples/AOTrino.Samples.React.HelloWorld` is the minimal one: a `TitleBar`, the four host properties, and a
+typed call for each shape the bridge supports (property, sync method, async method).
+
+`Samples/AOTrino.Samples.React.Dashboard` is the fuller tour: live .NET process state (uptime, working set,
+managed heap, collections, threads) with manual `refresh()` and auto-refresh, alongside a slow call
+(`pending`) and a throwing one (`error`). Same split as `HelloWorld` vs `HostObjects` on the C# side.
 
 ### Serve it from a virtual host
 

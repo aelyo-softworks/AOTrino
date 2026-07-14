@@ -1,0 +1,43 @@
+<!--
+  Installs the npm workspaces and builds the @aotrino/* libraries - once per build, for the whole solution.
+
+  Every npm-backed sample depends on this project (Directory.Build.targets adds the reference automatically
+  when AOTrinoNpmBuild is set) rather than running npm itself. MSBuild builds projects in parallel, so with
+  more than one npm sample each of them ran `npm install` against the same node_modules and `tsc` against the
+  same dist at the same time: the installs collided on the workspace symlinks (EEXIST) and two compilers wrote
+  one output folder. A project reference makes MSBuild run this exactly once, before any dependent.
+-->
+<Project>
+
+	<PropertyGroup>
+		<AOTrinoRepoRoot>$(MSBuildThisFileDirectory)..\</AOTrinoRepoRoot>
+	</PropertyGroup>
+
+	<!--
+	  Incremental on npm's own record of the installed tree. Checking whether node_modules merely exists was
+	  wrong twice over: an empty or half-written folder counted as installed, and adding a dependency to any
+	  manifest never reinstalled. Both surfaced later as "'tsc' is not recognized".
+	-->
+	<Target Name="AOTrinoNpmInstall"
+			Inputs="$(AOTrinoRepoRoot)package.json;$(AOTrinoRepoRoot)package-lock.json;$(AOTrinoRepoRoot)npm\*\package.json;$(AOTrinoRepoRoot)Samples\*\WebRoot\package.json"
+			Outputs="$(AOTrinoRepoRoot)node_modules\.package-lock.json">
+		<Exec Command="npm install" WorkingDirectory="$(AOTrinoRepoRoot)" />
+	</Target>
+
+	<Target Name="Build" DependsOnTargets="AOTrinoNpmInstall">
+		<!-- install already runs this through postinstall; run it again for the case where install was skipped
+		     but a library's source changed. it's just tsc, and it keeps the dependency order in one place. -->
+		<Exec Command="npm run build:libs" WorkingDirectory="$(AOTrinoRepoRoot)" />
+	</Target>
+
+	<Target Name="Rebuild" DependsOnTargets="Build" />
+	<Target Name="Clean" />
+
+	<!-- a referencing csproj (and NuGet's restore) ask for these; there is nothing to hand back -->
+	<Target Name="GetTargetPath" />
+	<Target Name="GetNativeManifest" />
+	<Target Name="GetCopyToOutputDirectoryItems" />
+	<Target Name="Restore" />
+	<Target Name="_IsProjectRestoreSupported" Returns="@(_ValidProjectsForRestore)" />
+
+</Project>

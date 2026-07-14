@@ -25,8 +25,8 @@ body {
     height: 100vh;
 }
 
-/* @aotrino/react's <TitleBar> ships no styling at all, only these class names: the whole look below is
-   this app's. */
+/* @aotrino/react's <TitleBar> ships no styling at all, only these class names: the whole look below
+   is this app's. a design system (@aotrino/fluent) would style the same hooks differently. */
 .aotrino-titlebar {
     display: flex;
     align-items: center;
@@ -36,7 +36,7 @@ body {
     flex: 0 0 auto;
     background: var(--panel);
     border-bottom: 1px solid var(--border);
-    /* the whole bar is a drag region, so don't let a drag (or the double-click gesture) select the caption */
+    /* the whole bar is a drag region, so don't let a drag select the caption text */
     user-select: none;
 }
 
@@ -60,9 +60,13 @@ body {
     cursor: pointer;
 }
 
-    .aotrino-titlebar-close:hover {
-        background: #da3633;
+    .aotrino-titlebar-button:hover {
+        background: #21262d;
     }
+
+.aotrino-titlebar-close:hover {
+    background: #da3633;
+}
 
 main {
     flex: 1 1 auto;
@@ -159,6 +163,11 @@ dl {
     margin: 0;
 }
 
+    /* the dl has no margin of its own, so anything following it in a card would sit right against the last value */
+    dl + .row {
+        margin-top: 16px;
+    }
+
 dt {
     font-family: Consolas, monospace;
     font-size: 13px;
@@ -176,4 +185,28 @@ code {
     background: #21262d;
     border-radius: 4px;
     font-size: 12px;
+}
+
+.hint {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+output.error {
+    color: #ff7b72;
+}
+
+.card output {
+    display: block;
+    margin-top: 10px;
+}
+
+.check {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    user-select: none;
+    cursor: pointer;
 }

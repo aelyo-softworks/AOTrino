@@ -1,5 +1,3 @@
-using System.Runtime.InteropServices.Marshalling;
-
 namespace AOTrino.Bridge;
 
 // A generic base host object for the WebView2 control must implement IDispatch
@@ -13,7 +11,7 @@ namespace AOTrino.Bridge;
 // 2) call this returned object's to do the function call (with 0 or more parameters). so only Invoke(0) should be called on this
 //
 // that's why we have two implementations of IDispatch here
-[GeneratedComClass]
+[System.Runtime.InteropServices.Marshalling.GeneratedComClass]
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicProperties)]
 public partial class DispatchObject : IDispatch
 {
@@ -204,7 +202,7 @@ public partial class DispatchObject : IDispatch
         return window ?? throw new InvalidAsynchronousStateException();
     }
 
-    [GeneratedComClass]
+    [System.Runtime.InteropServices.Marshalling.GeneratedComClass]
     public partial class TaskFunction(DispatchObject obj, MethodInfo method, object?[]? arguments) : IUnknown
     {
         public virtual unsafe void Continue(Func<HRESULT, VARIANT, HRESULT> continuation)
@@ -385,7 +383,7 @@ public partial class DispatchObject : IDispatch
         public static bool IsAsync(MethodInfo method) => typeof(Task).IsAssignableFrom(method.ReturnType);
     }
 
-    [GeneratedComClass]
+    [System.Runtime.InteropServices.Marshalling.GeneratedComClass]
     private partial class Function(DispatchObject obj, MethodInfo method) : IDispatch
     {
 #pragma warning disable IDE1006 // Naming Styles

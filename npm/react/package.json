@@ -1,9 +1,9 @@
 {
-  "name": "@aotrino/client",
+  "name": "@aotrino/react",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Typed client for AOTrino apps: window controls, host objects and shared buffers.",
+  "description": "React hooks and components for AOTrino apps, over @aotrino/client.",
   "license": "MIT",
   "author": "Aelyo Softworks",
   "types": "./dist/index.d.ts",
@@ -23,7 +23,14 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prepack": "npm run build"
   },
+  "peerDependencies": {
+    "@aotrino/client": "*",
+    "react": ">=18"
+  },
   "devDependencies": {
+    "@aotrino/client": "*",
+    "@types/react": "^19.2.14",
+    "react": "^19.2.5",
     "typescript": "~6.0.3"
   }
 }
