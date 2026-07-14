@@ -16,6 +16,7 @@
 	<ItemGroup>
 		<Using Include="AOTrino" />
 		<Using Include="AOTrino.Graphics" />
+		<Using Include="AOTrino.Input" />
 		<Using Include="DirectN" />
 		<Using Include="DirectN.Extensions" />
 		<Using Include="DirectN.Extensions.Com" />

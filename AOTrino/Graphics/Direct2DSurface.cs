@@ -10,7 +10,7 @@ public sealed class Direct2DSurface : IDisposable
     private const int _bytesPerPixel = 4;
     private const int _defaultFrameIntervalMs = 16; // ~60 fps
 
-    private readonly WebViewWindow _window;
+    private readonly CompositionWebViewWindow _window; // needs the window's Direct2D device (composition hosting)
     private readonly string _name;
     private readonly SharedBuffer _buffer;
 
@@ -25,7 +25,7 @@ public sealed class Direct2DSurface : IDisposable
     private Action<IComObject<ID2D1RenderTarget>, int, int, float>? _draw;
     private long _startTick;
 
-    public Direct2DSurface(WebViewWindow window, string name)
+    public Direct2DSurface(CompositionWebViewWindow window, string name)
     {
         ArgumentNullException.ThrowIfNull(window);
         ArgumentException.ThrowIfNullOrEmpty(name);

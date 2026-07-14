@@ -1,24 +1,26 @@
 namespace AOTrino;
 
-[System.Runtime.InteropServices.Marshalling.GeneratedComClass]
-public partial class WebViewWindow : CompositionWindow, IDropTarget
+// hosting-agnostic WebView2 window base. it owns the environment, the WebView, navigation, host objects,
+// scripts, the shared-buffer transport and all window/input plumbing — everything except HOW the WebView is
+// hosted. the two hosting models are concrete subclasses: CompositionWebViewWindow (the WebView is one visual
+// in a Windows.UI.Composition tree) and HwndWebViewWindow (the WebView is a classic child window). the only
+// differences are CreateController (below), input forwarding and the window's redirection style.
+public abstract partial class WebViewWindow : D3D11SwapChainWindow
 {
     private readonly bool[] _capturedButtons = new bool[Enum.GetNames<MouseButton>().Length];
     private readonly Dictionary<ulong, NavigationEventArgs> _navigationEvents = [];
-    private readonly HashSet<uint> _pointerIdsStartingInWebView = [];
-    private ComObject<ICoreWebView2CompositionController>? _controller;
-    private IComObject<ICoreWebView2CompositionController3>? _controller3;
+    // pointer ids whose gesture started over the WebView; read by the composition host to keep forwarding them
+    private protected readonly HashSet<uint> _pointerIdsStartingInWebView = [];
     private ComObject<ICoreWebView2Environment12>? _environment;
     private ComObject<ICoreWebView2_17>? _webView;
+    private ICoreWebView2Controller? _baseController; // the controller as its common base type (bounds/focus); owned/disposed by the subclass
     private bool _mouseTracking;
-    private bool _isDropTarget;
     private bool _hostObjectHelperInstalled;
     private bool _sharedRuntimeReady;
     private WebView2.EventRegistrationToken _webMessageReceivedToken;
     private ulong _lastPointerDownTime;
     private int _lastPointerDownPositionX = int.MinValue;
     private int _lastPointerDownPositionY = int.MinValue;
-    private WebView2.EventRegistrationToken _cursorChangedToken;
     private WebView2.EventRegistrationToken _navigationStarting;
     private WebView2.EventRegistrationToken _navigationCompleted;
 
@@ -44,13 +46,15 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
     // raw JSON of messages posted from the page (window.__aotrino.post / chrome.webview.postMessage)
     public event EventHandler<ValueEventArgs<string>>? WebMessageJsonReceived;
 
-    public WebViewWindow(
+    protected WebViewWindow(
         string? title = null,
         WINDOW_STYLE style = WINDOW_STYLE.WS_THICKFRAME,
-        WINDOW_EX_STYLE extendedStyle = WINDOW_EX_STYLE.WS_EX_NOREDIRECTIONBITMAP,
+        WINDOW_EX_STYLE extendedStyle = 0,
         RECT? rect = null)
         : base(title, style: style, extendedStyle: extendedStyle, rect: rect)
     {
+        InvalidateOnTick = false; // the WebView renders itself; we don't tick a swap chain
+
         MonitorHandle = DirectNFunctions.MonitorFromWindow(Handle, MONITOR_FROM_FLAGS.MONITOR_DEFAULTTONULL);
         if (IsFullScreen)
         {
@@ -70,86 +74,14 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
                     options?.Dispose();
                     var env3 = (ICoreWebView2Environment12)envObj;
                     _environment = new ComObject<ICoreWebView2Environment12>(env3);
-                    env3.CreateCoreWebView2CompositionController(Handle, new CoreWebView2CreateCoreWebView2CompositionControllerCompletedHandler((result, controller) =>
+
+                    // the one hosting-specific step: create the composition or HWND controller. the subclass
+                    // sets the WebView + base controller (SetWebViewController) then calls onReady.
+                    CreateController(env3, () =>
                     {
-                        try
-                        {
-                            _controller = new ComObject<ICoreWebView2CompositionController>(controller);
-                            _controller3 = ComExtensions.As<ICoreWebView2CompositionController3>(_controller);
-                            _controller.Object.add_CursorChanged(new CoreWebView2CursorChangedEventHandler((sender, args) =>
-                            {
-                                var cursor = new HCURSOR();
-                                if (sender.get_Cursor(ref cursor).IsSuccess && CanChangeCursor)
-                                {
-                                    Cursor = cursor;
-                                }
-                            }), ref _cursorChangedToken).ThrowOnError();
-
-                            var cb = RootVisual.As<IUnknown>();
-                            _controller.Object.put_RootVisualTarget(cb).ThrowOnError();
-
-                            var ctrl = (ICoreWebView2Controller)controller;
-                            ctrl.put_Bounds(ClientRect).ThrowOnError();
-                            ctrl.get_CoreWebView2(out var webView2).ThrowOnError();
-                            _webView = new ComObject<ICoreWebView2_17>(webView2);
-
-                            _webView.Object.add_NavigationStarting(new CoreWebView2NavigationStartingEventHandler((sender, args) =>
-                            {
-                                var id = 0UL;
-                                args.get_NavigationId(ref id).ThrowOnError();
-                                args.get_Uri(out var uri).ThrowOnError();
-                                using var pwstr = new Pwstr(uri.Value);
-
-                                var isUserInitiated = BOOL.FALSE;
-                                args.get_IsUserInitiated(ref isUserInitiated).ThrowOnError();
-
-                                var isRedirected = BOOL.FALSE;
-                                args.get_IsRedirected(ref isRedirected).ThrowOnError();
-
-                                var e = new NavigationEventArgs(
-                                    id,
-                                    uri.ToString()!,
-                                    isUserInitiated,
-                                    isRedirected
-                                    );
-                                _navigationEvents[id] = e;
-
-                                OnNavigationStarting(this, e);
-                                if (e.Cancel)
-                                {
-                                    args.put_Cancel(true).ThrowOnError();
-                                }
-                            }), ref _navigationStarting).ThrowOnError();
-
-                            _webView.Object.add_NavigationCompleted(new CoreWebView2NavigationCompletedEventHandler((sender, args) =>
-                            {
-                                var id = 0UL;
-                                args.get_NavigationId(ref id).ThrowOnError();
-
-                                var status = COREWEBVIEW2_WEB_ERROR_STATUS.COREWEBVIEW2_WEB_ERROR_STATUS_UNKNOWN;
-                                args.get_WebErrorStatus(ref status).ThrowOnError();
-
-                                var success = BOOL.FALSE;
-                                args.get_IsSuccess(ref success).ThrowOnError();
-
-                                if (_navigationEvents.TryGetValue(id, out var e))
-                                {
-                                    e.Type = NavigationEventType.NavigationCompleted;
-                                    e.WebErrorStatus = status;
-                                    e.IsSuccess = success;
-
-                                    _navigationEvents.Remove(id);
-                                    OnNavigationCompleted(this, e);
-                                }
-                            }), ref _navigationCompleted).ThrowOnError();
-
-                            ControllerCreated();
-                        }
-                        catch (Exception ex)
-                        {
-                            Application.AddError(ex, true);
-                        }
-                    })).ThrowOnError();
+                        WireNavigationEvents();
+                        ControllerCreated();
+                    });
                 }
                 catch (Exception ex)
                 {
@@ -158,9 +90,11 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
             })).ThrowOnError();
     }
 
-    protected ComObject<ICoreWebView2CompositionController>? Controller => _controller;
+    protected override bool NeedsSwapChain => false;
+
     protected ComObject<ICoreWebView2_17>? WebView => _webView;
     protected ComObject<ICoreWebView2Environment12>? Environment => _environment;
+    protected ICoreWebView2Controller? BaseController => _baseController;
 
     // for SharedBuffer (same assembly) to reach the environment/webview without exposing them publicly
     internal ComObject<ICoreWebView2Environment12>? SharedEnvironment => _environment;
@@ -170,31 +104,77 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
     public bool IsFullScreen => GetFullScreenBounds() == WindowRect;
     public virtual bool CanChangeCursor { get; set; } = true;
     public virtual bool SendDoubleClicks { get; set; } // WebView2 doesn't seem to care (chrome uses UP & DOWN events by itself)
-    public bool IsDropTarget
+
+    // === hosting hooks: the only things that differ between composition and HWND ===
+
+    // create the WebView2 controller (composition or HWND). the implementation must, once its controller is
+    // ready, call SetWebViewController(controller, coreWebView2) and then invoke onControllerReady.
+    protected abstract void CreateController(ICoreWebView2Environment12 environment, Action onControllerReady);
+
+    // forward a mouse event to a composition-hosted WebView (which gets no OS input). the HWND host leaves this
+    // a no-op — its child window receives input directly.
+    protected virtual void ForwardMouseInput(COREWEBVIEW2_MOUSE_EVENT_KIND kind, COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS keys, uint data, POINT point) { }
+
+    // forward a pointer event to a composition-hosted WebView. return true if handled (consumed). HWND: no-op.
+    protected virtual bool TryForwardPointerInput(uint msg, WPARAM wParam, LPARAM lParam) => false;
+
+    // called by a subclass from CreateController once its controller and core WebView are available
+    protected void SetWebViewController(ICoreWebView2Controller controller, ICoreWebView2 webView)
     {
-        get => _isDropTarget;
-        set
+        _baseController = controller;
+        _webView = new ComObject<ICoreWebView2_17>(webView);
+    }
+
+    private void WireNavigationEvents()
+    {
+        var webView = _webView;
+        if (webView == null)
+            return;
+
+        webView.Object.add_NavigationStarting(new CoreWebView2NavigationStartingEventHandler((sender, args) =>
         {
-            if (value == _isDropTarget)
-                return;
+            var id = 0UL;
+            args.get_NavigationId(ref id).ThrowOnError();
+            args.get_Uri(out var uri).ThrowOnError();
+            using var pwstr = new Pwstr(uri.Value);
 
-            if (value)
-            {
-                // we need to ensure this as STAThread doesn't always call it for some reason
-                DirectNFunctions.OleInitialize(0); // don't check error
-                var hr = DirectNFunctions.RegisterDragDrop(Handle, this);
-                if (hr.IsError && hr != DirectNConstants.DRAGDROP_E_ALREADYREGISTERED)
-                    throw new Exception("Cannot enable drag & drop operations. Make sure the thread is initialized as an STA thread.", Marshal.GetExceptionForHR((int)hr)!);
+            var isUserInitiated = BOOL.FALSE;
+            args.get_IsUserInitiated(ref isUserInitiated).ThrowOnError();
 
-                _isDropTarget = true;
-            }
-            else
+            var isRedirected = BOOL.FALSE;
+            args.get_IsRedirected(ref isRedirected).ThrowOnError();
+
+            var e = new NavigationEventArgs(id, uri.ToString()!, isUserInitiated, isRedirected);
+            _navigationEvents[id] = e;
+
+            OnNavigationStarting(this, e);
+            if (e.Cancel)
             {
-                var hr = DirectNFunctions.RevokeDragDrop(Handle);
-                hr.ThrowOnErrorExcept(DirectNConstants.DRAGDROP_E_NOTREGISTERED);
-                _isDropTarget = false;
+                args.put_Cancel(true).ThrowOnError();
             }
-        }
+        }), ref _navigationStarting).ThrowOnError();
+
+        webView.Object.add_NavigationCompleted(new CoreWebView2NavigationCompletedEventHandler((sender, args) =>
+        {
+            var id = 0UL;
+            args.get_NavigationId(ref id).ThrowOnError();
+
+            var status = COREWEBVIEW2_WEB_ERROR_STATUS.COREWEBVIEW2_WEB_ERROR_STATUS_UNKNOWN;
+            args.get_WebErrorStatus(ref status).ThrowOnError();
+
+            var success = BOOL.FALSE;
+            args.get_IsSuccess(ref success).ThrowOnError();
+
+            if (_navigationEvents.TryGetValue(id, out var e))
+            {
+                e.Type = NavigationEventType.NavigationCompleted;
+                e.WebErrorStatus = status;
+                e.IsSuccess = success;
+
+                _navigationEvents.Remove(id);
+                OnNavigationCompleted(this, e);
+            }
+        }), ref _navigationCompleted).ThrowOnError();
     }
 
     protected virtual CoreWebView2EnvironmentOptions? GetEnvironmentOptions() => null;
@@ -215,7 +195,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
     {
         if (setOrKill)
         {
-            _controller?.As<ICoreWebView2Controller>()?.Object.MoveFocus(COREWEBVIEW2_MOVE_FOCUS_REASON.COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC);
+            _baseController?.MoveFocus(COREWEBVIEW2_MOVE_FOCUS_REASON.COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC);
             return true;
         }
         return base.OnFocusChanged(setOrKill);
@@ -459,34 +439,6 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
         DirectNFunctions.DwmSetWindowAttribute(Handle, (uint)DWMWINDOWATTRIBUTE.DWMWA_WINDOW_CORNER_PREFERENCE, (nint)(&corner), 4);
     }
 
-    protected virtual void OnAfterDragEnter(IDataObject dataObject, MODIFIERKEYS_FLAGS flags, POINTL point, DROPEFFECT effect) { }
-    protected virtual HRESULT OnBeforeDragEnter(IDataObject dataObject, MODIFIERKEYS_FLAGS flags, POINTL point, ref DROPEFFECT effect, out bool handled)
-    {
-        handled = false;
-        return DirectNConstants.S_OK;
-    }
-
-    protected virtual void OnAfterDragOver(MODIFIERKEYS_FLAGS flags, POINTL point, DROPEFFECT effect) { }
-    protected virtual HRESULT OnBeforeDragOver(MODIFIERKEYS_FLAGS flags, POINTL point, ref DROPEFFECT effect, out bool handled)
-    {
-        handled = false;
-        return DirectNConstants.S_OK;
-    }
-
-    protected virtual void OnAfterDragLeave() { }
-    protected virtual HRESULT OnBeforeDragLeave(out bool handled)
-    {
-        handled = false;
-        return DirectNConstants.S_OK;
-    }
-
-    protected virtual void OnAfterDrop(IDataObject dataObject, MODIFIERKEYS_FLAGS flags, POINTL point, DROPEFFECT effect) { }
-    protected virtual HRESULT OnBeforeDrop(IDataObject dataObject, MODIFIERKEYS_FLAGS flags, POINTL point, DROPEFFECT effect, out bool handled)
-    {
-        handled = false;
-        return DirectNConstants.S_OK;
-    }
-
     protected virtual void ClearBrowsingDataAll()
     {
         var wv = _webView.As<ICoreWebView2_13>();
@@ -505,7 +457,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
             return;
 
         var keys = WindowsExtensions.GetKeys(e.Keys, null);
-        _controller?.Object.SendMouseInput(COREWEBVIEW2_MOUSE_EVENT_KIND.COREWEBVIEW2_MOUSE_EVENT_KIND_MOVE, keys, 0, e.Point).ThrowOnError();
+        ForwardMouseInput(COREWEBVIEW2_MOUSE_EVENT_KIND.COREWEBVIEW2_MOUSE_EVENT_KIND_MOVE, keys, 0, e.Point);
     }
 
     private void OnMouseLeave(MouseEventArgs e)
@@ -514,12 +466,14 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
         if (e.Handled)
             return;
 
-        _controller?.Object.SendMouseInput(
+        ForwardMouseInput(
             COREWEBVIEW2_MOUSE_EVENT_KIND.COREWEBVIEW2_MOUSE_EVENT_KIND_LEAVE,
             COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS.COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS_NONE,
             0,
-            POINT.Zero).ThrowOnError();
+            POINT.Zero);
     }
+
+    private static uint XButtonData(MouseButton button) => button == MouseButton.X1 ? 1u : button == MouseButton.X2 ? 2u : 0u;
 
     private void OnMouseButtonDown(MouseButtonEventArgs e)
     {
@@ -529,7 +483,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
 
         var keys = WindowsExtensions.GetKeys(e.Keys, e.Button);
         var kind = e.Button.GetKind(WindowsExtensions.ButtonAction.Down);
-        _controller?.Object.SendMouseInput(kind, keys, e.Button == MouseButton.X1 ? 1u : e.Button == MouseButton.X2 ? 2u : 0, e.Point).ThrowOnError();
+        ForwardMouseInput(kind, keys, XButtonData(e.Button), e.Point);
     }
 
     private void OnMouseButtonUp(MouseButtonEventArgs e)
@@ -540,7 +494,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
 
         var keys = WindowsExtensions.GetKeys(e.Keys, e.Button);
         var kind = e.Button.GetKind(WindowsExtensions.ButtonAction.Up);
-        _controller?.Object.SendMouseInput(kind, keys, e.Button == MouseButton.X1 ? 1u : e.Button == MouseButton.X2 ? 2u : 0, e.Point).ThrowOnError();
+        ForwardMouseInput(kind, keys, XButtonData(e.Button), e.Point);
     }
 
     private void OnMouseButtonDoubleClick(MouseButtonEventArgs e)
@@ -551,7 +505,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
 
         var keys = WindowsExtensions.GetKeys(e.Keys, e.Button);
         var kind = e.Button.GetKind(WindowsExtensions.ButtonAction.DoubleClick);
-        _controller?.Object.SendMouseInput(kind, keys, e.Button == MouseButton.X1 ? 1u : e.Button == MouseButton.X2 ? 2u : 0, e.Point).ThrowOnError();
+        ForwardMouseInput(kind, keys, XButtonData(e.Button), e.Point);
     }
 
     private void OnMouseWheel(MouseWheelEventArgs e)
@@ -564,17 +518,11 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
         var kind = e.Orientation == Orientation.Horizontal
             ? COREWEBVIEW2_MOUSE_EVENT_KIND.COREWEBVIEW2_MOUSE_EVENT_KIND_HORIZONTAL_WHEEL
             : COREWEBVIEW2_MOUSE_EVENT_KIND.COREWEBVIEW2_MOUSE_EVENT_KIND_WHEEL;
-        _controller?.Object.SendMouseInput(kind, keys, (uint)(e.Delta * DirectNConstants.WHEEL_DELTA), e.Point).ThrowOnError();
+        ForwardMouseInput(kind, keys, (uint)(e.Delta * DirectNConstants.WHEEL_DELTA), e.Point);
     }
 
     protected override LRESULT? WindowProc(HWND hwnd, uint msg, WPARAM wParam, LPARAM lParam)
     {
-        //if (msg != MessageDecoder.WM_SETCURSOR && msg != MessageDecoder.WM_MOUSEMOVE &&
-        //    msg != MessageDecoder.WM_NCHITTEST && msg != MessageDecoder.WM_NCMOUSEMOVE && msg != MessageDecoder.WM_GETICON)
-        //{
-        //    Application.TraceInfo("msg: " + MessageDecoder.Decode(hwnd, msg, wParam, lParam));
-        //}
-
         MouseButton button;
         switch (msg)
         {
@@ -935,65 +883,21 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
         return base.WindowProc(hwnd, msg, wParam, lParam);
     }
 
-    private bool TryForwardPointerInput(uint msg, WPARAM wParam, LPARAM lParam)
-    {
-        if (Controller == null)
-            return false;
-
-        var pointerId = wParam.GetPointerId();
-        var point = lParam.ToPOINT().ScreenToClient(Handle);
-        var pointerStartedInWebView = _pointerIdsStartingInWebView.Contains(pointerId);
-        if (!pointerStartedInWebView && !ClientRect.Contains(point))
-            return false;
-
-        if (!pointerStartedInWebView && (msg == MessageDecoder.WM_POINTERENTER || msg == MessageDecoder.WM_POINTERDOWN))
-        {
-            _pointerIdsStartingInWebView.Add(pointerId);
-        }
-        else if (msg == MessageDecoder.WM_POINTERLEAVE)
-        {
-            _pointerIdsStartingInWebView.Remove(pointerId);
-        }
-
-        var ctrl4 = Controller.As<ICoreWebView2ExperimentalCompositionController4>();
-        if (ctrl4 == null)
-            return false;
-
-        var matrix = D2D_MATRIX_4X4_F.Identity();
-        // this is needed to adjust pointer coordinates from screen to webview's root visual target, which may be different if the window is moved, etc.
-        //matrix._41 += webViewBounds left
-        //matrix._42 += m_webViewBounds top
-        if (ctrl4.Object.CreateCoreWebView2PointerInfoFromPointerId(pointerId, Handle, matrix, out var infoObj).IsError)
-            return false;
-
-        using var info = new ComObject<ICoreWebView2PointerInfo>(infoObj);
-        return Controller.Object.SendPointerInput((COREWEBVIEW2_POINTER_EVENT_KIND)msg, info.Object).IsSuccess;
-    }
-
     protected override bool OnMoving(ref RECT rc)
     {
-        if (_controller?.Object is ICoreWebView2Controller c)
-        {
-            c.NotifyParentWindowPositionChanged().ThrowOnError();
-        }
+        _baseController?.NotifyParentWindowPositionChanged().ThrowOnError();
         return base.OnMoving(ref rc);
     }
 
     protected override bool OnMoved()
     {
-        if (_controller?.Object is ICoreWebView2Controller c)
-        {
-            c.NotifyParentWindowPositionChanged().ThrowOnError();
-        }
+        _baseController?.NotifyParentWindowPositionChanged().ThrowOnError();
         return base.OnMoved();
     }
 
     protected override bool OnResized(WindowResizedType type, SIZE size)
     {
-        if (_controller?.Object is ICoreWebView2Controller c)
-        {
-            c.put_Bounds(ClientRect).ThrowOnError();
-        }
+        _baseController?.put_Bounds(ClientRect).ThrowOnError();
         return base.OnResized(type, size);
     }
 
@@ -1001,12 +905,6 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
     {
         if (disposing)
         {
-            if (_cursorChangedToken.value != 0)
-            {
-                _controller?.Object.remove_CursorChanged(_cursorChangedToken);
-                _cursorChangedToken.value = 0;
-            }
-
             if (_navigationCompleted.value != 0)
             {
                 WebView?.Object.remove_NavigationCompleted(_navigationCompleted);
@@ -1020,97 +918,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
             }
 
             _environment?.Dispose();
-            _controller?.Dispose();
         }
         base.Dispose(disposing);
-    }
-
-    HRESULT IDropTarget.DragEnter(IDataObject pDataObj, MODIFIERKEYS_FLAGS grfKeyState, POINTL pt, ref DROPEFFECT pdwEffect)
-    {
-        if (_controller3 == null)
-            return DirectNConstants.E_NOTIMPL;
-
-        var hr = OnBeforeDragEnter(pDataObj, grfKeyState, pt, ref pdwEffect, out var handled);
-        if (hr.IsError)
-            return hr;
-
-        // note: if handled is true, we must not call other DragEnter/DragOver/Drop methods on the webview2 or
-        // it will mess up the internal state and we'll get errors like this:
-        // 0x8007139F: The group or resource is not in the correct state to perform the requested operation.
-        if (handled)
-            return DirectNConstants.S_OK;
-
-        var effect = (uint)pdwEffect;
-        hr = _controller3.Object.DragEnter(pDataObj, (uint)grfKeyState, ScreenToClient(new POINT(pt.x, pt.y)), ref effect);
-        if (hr.IsSuccess)
-        {
-            pdwEffect = (DROPEFFECT)effect;
-            OnAfterDragEnter(pDataObj, grfKeyState, pt, pdwEffect);
-        }
-        return hr;
-    }
-
-    HRESULT IDropTarget.DragOver(MODIFIERKEYS_FLAGS grfKeyState, POINTL pt, ref DROPEFFECT pdwEffect)
-    {
-        if (_controller3 == null)
-            return DirectNConstants.E_NOTIMPL;
-
-        var hr = OnBeforeDragOver(grfKeyState, pt, ref pdwEffect, out var handled);
-        if (hr.IsError)
-            return hr;
-
-        if (handled)
-            return DirectNConstants.S_OK;
-
-        var effect = (uint)pdwEffect;
-        hr = _controller3.Object.DragOver((uint)grfKeyState, ScreenToClient(new POINT(pt.x, pt.y)), ref effect);
-        if (hr.IsSuccess)
-        {
-            pdwEffect = (DROPEFFECT)effect;
-            OnAfterDragOver(grfKeyState, pt, pdwEffect);
-        }
-        return hr;
-    }
-
-    HRESULT IDropTarget.DragLeave()
-    {
-        if (_controller3 == null)
-            return DirectNConstants.E_NOTIMPL;
-
-        var hr = OnBeforeDragLeave(out var handled);
-        if (hr.IsError)
-            return hr;
-
-        if (handled)
-            return DirectNConstants.S_OK;
-
-        hr = _controller3.Object.DragLeave();
-        if (hr.IsSuccess)
-        {
-            OnAfterDragLeave();
-        }
-        return hr;
-    }
-
-    HRESULT IDropTarget.Drop(IDataObject pDataObj, MODIFIERKEYS_FLAGS grfKeyState, POINTL pt, ref DROPEFFECT pdwEffect)
-    {
-        if (_controller3 == null)
-            return DirectNConstants.E_NOTIMPL;
-
-        var hr = OnBeforeDrop(pDataObj, grfKeyState, pt, pdwEffect, out var handled);
-        if (hr.IsError)
-            return hr;
-
-        if (handled)
-            return DirectNConstants.S_OK;
-
-        var effect = (uint)pdwEffect;
-        hr = _controller3.Object.Drop(pDataObj, (uint)grfKeyState, ScreenToClient(new POINT(pt.x, pt.y)), ref effect);
-        if (hr.IsSuccess)
-        {
-            pdwEffect = (DROPEFFECT)effect;
-            OnAfterDrop(pDataObj, grfKeyState, pt, pdwEffect);
-        }
-        return hr;
     }
 }

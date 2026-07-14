@@ -7,7 +7,7 @@ public partial class AOTrinoWindow(
     string? title = null,
     WINDOW_STYLE style = WINDOW_STYLE.WS_THICKFRAME,
     WINDOW_EX_STYLE extendedStyle = WINDOW_EX_STYLE.WS_EX_NOREDIRECTIONBITMAP,
-    RECT? rect = null) : WebViewWindow(title, style, extendedStyle, rect)
+    RECT? rect = null) : CompositionWebViewWindow(title, style, extendedStyle, rect)
 {
     // navigated to once the controller is created; defaults to the app's WebRoot index.html
     protected virtual string? StartUrl => AOTrinoApplication.Current?.WebRoot.IndexFilePath;
