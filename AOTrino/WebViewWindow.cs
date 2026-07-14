@@ -300,6 +300,11 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
         ExecuteScript(script, throwOnError: false);
     }
 
+    // AddStartupScript from an embedded text resource (a .js file). keeps scripts out of C# string literals:
+    // drop the file under the project's Scripts\ folder and pass its bare file name, e.g.
+    // AddStartupScriptResource(typeof(MyWindow).Assembly, "BrowserChrome.js").
+    public void AddStartupScriptResource(Assembly assembly, string resourceName) => AddStartupScript(EmbeddedResource.Load(assembly, resourceName));
+
     protected virtual void OnWebMessageJsonReceived(object sender, ValueEventArgs<string> json)
     {
         HandleWindowCommand(json.Value);
@@ -308,7 +313,7 @@ public partial class WebViewWindow : CompositionWindow, IDropTarget
 
     // starts a native window move (as if the title bar was grabbed). call while a mouse button is down,
     // e.g. from a JS drag region via window.__aotrino.dragWindow().
-    public void BeginDrag()
+    public virtual void BeginDrag()
     {
         DirectNFunctions.ReleaseCapture();
         DirectNFunctions.SendMessageW(Handle, MessageDecoder.WM_NCLBUTTONDOWN, new WPARAM { Value = (nuint)HT.HTCAPTION }, new LPARAM());

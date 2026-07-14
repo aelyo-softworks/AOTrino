@@ -19,11 +19,6 @@ public partial class MainWindow : AOTrinoWindow
         _surface.StartAnimation(DrawScene);
 
         base.ControllerCreated();
-
-        if (System.Environment.GetCommandLineArgs().Contains("--selftest"))
-        {
-            _ = SelfTestAsync();
-        }
     }
 
     // a self-contained animated scene: orbiting, pulsing, hue-cycling circles on a dark field
@@ -45,15 +40,6 @@ public partial class MainWindow : AOTrinoWindow
             using var brush = rt.CreateSolidColorBrush(new Hsv(360 * (i / (float)electrons + t * 0.05f), 360 * 0.65f, 1).ToD3DCOLORVALUE());
             rt.FillEllipse(new D2D1_ELLIPSE { point = new D2D_POINT_2F { x = px, y = py }, radiusX = r, radiusY = r }, brush);
         }
-    }
-
-    private async Task SelfTestAsync()
-    {
-        await Task.Delay(2500);
-        // read the WebGL canvas back: proves D2D -> shared buffer -> WebGL -> canvas end to end
-        var json = await ExecuteScriptAsJson("({frames: (window.__aotrinoGL && window.__aotrinoGL.frames('scene')) || 0, px: (window.__aotrinoGL && window.__aotrinoGL.readPixel('scene', 8, 8)) || null})");
-        File.WriteAllText(Path.Combine(Path.GetTempPath(), "aotrino-direct2d-selftest.json"), json ?? "null");
-        Close();
     }
 
     protected override void Dispose(bool disposing)

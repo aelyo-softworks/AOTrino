@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="AOTrino.png" />
+    <title>AOTrino — File Explorer</title>
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            background: #0d1117;
+            color: #e6edf3;
+            font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.6rem 0.8rem;
+            border-bottom: 1px solid #21262d;
+            background: #11161d;
+        }
+
+            .toolbar button {
+                font: inherit;
+                font-size: 0.85rem;
+                padding: 0.4rem 0.7rem;
+                border-radius: 8px;
+                border: 1px solid #30363d;
+                background: #21262d;
+                color: #e6edf3;
+                cursor: pointer;
+            }
+
+                .toolbar button:hover:not(:disabled) {
+                    border-color: #58a6ff;
+                    background: #262c34;
+                }
+
+                .toolbar button:disabled {
+                    opacity: 0.4;
+                    cursor: default;
+                }
+
+        .path {
+            flex: 1;
+            min-width: 0;
+            font-family: "Cascadia Code", "Consolas", monospace;
+            font-size: 0.85rem;
+            color: #79c0ff;
+            padding: 0.4rem 0.6rem;
+            background: #0b0f14;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            outline: none;
+        }
+
+            .path:focus {
+                border-color: #58a6ff;
+            }
+
+        .toolbar .close {
+            color: #c9d1d9;
+        }
+
+            .toolbar .close:hover {
+                border-color: #ff7b72;
+                background: #2d1f1f;
+                color: #fff;
+            }
+
+        .error {
+            margin: 0;
+            padding: 0.5rem 0.9rem;
+            background: #2d1f1f;
+            color: #ffb4ac;
+            font-size: 0.85rem;
+            border-bottom: 1px solid #5a2a2a;
+        }
+
+        /* two panes with a draggable divider between them */
+        .split {
+            flex: 1;
+            display: flex;
+            min-height: 0;
+        }
+
+        .list {
+            flex: 0 0 46%;
+            overflow: auto;
+            min-width: 0;
+        }
+
+        .divider {
+            flex: 0 0 6px;
+            cursor: col-resize;
+            background: #161b22;
+            border-left: 1px solid #21262d;
+            border-right: 1px solid #21262d;
+        }
+
+            .divider:hover {
+                background: #1f2b3a;
+            }
+
+        .preview {
+            flex: 1;
+            position: relative;
+            min-width: 0;
+            background: #0b0f14;
+        }
+
+            .preview iframe {
+                width: 100%;
+                height: 100%;
+                border: 0;
+                display: none;
+                background: #fff;
+            }
+
+            .preview .ph {
+                position: absolute;
+                inset: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 1.5rem;
+                text-align: center;
+                color: #8b949e;
+                font-size: 0.9rem;
+            }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 7rem 11rem;
+            align-items: center;
+            gap: 0.8rem;
+            padding: 0.4rem 0.9rem;
+            border-bottom: 1px solid #161b22;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+            .row:hover {
+                background: #161b22;
+            }
+
+            .row.sel {
+                background: #1f6feb2e;
+            }
+
+            .row .name {
+                display: flex;
+                align-items: center;
+                gap: 0.55rem;
+                overflow: hidden;
+            }
+
+                .row .name span {
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+
+            .row .size, .row .mod {
+                color: #8b949e;
+                font-size: 0.82rem;
+                font-family: "Cascadia Code", "Consolas", monospace;
+            }
+
+            .row .size {
+                text-align: right;
+            }
+
+        footer {
+            padding: 0.5rem 0.9rem;
+            border-top: 1px solid #21262d;
+            background: #11161d;
+            color: #8b949e;
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+            footer a {
+                color: #58a6ff;
+                text-decoration: none;
+            }
+
+                footer a:hover {
+                    text-decoration: underline;
+                }
+
+            footer code {
+                color: #79c0ff;
+                font-family: "Cascadia Code", "Consolas", monospace;
+            }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button id="up" title="Parent folder">↑ Up</button>
+        <button id="home" title="Home folder">⌂ Home</button>
+        <button id="drives" title="This PC (drives)">🖥 This&nbsp;PC</button>
+        <input class="path" id="path" spellcheck="false" placeholder="This PC — type a path and press Enter" />
+        <button id="close" class="close" title="Close">✕</button>
+    </div>
+    <p class="error" id="error" style="display:none"></p>
+
+    <div class="split" id="split">
+        <div class="list" id="list"></div>
+        <div class="divider" id="divider" title="Drag to resize"></div>
+        <div class="preview">
+            <iframe id="preview" title="Preview"></iframe>
+            <div class="ph" id="ph">Select a file to preview</div>
+        </div>
+    </div>
+
+    <footer>
+        <span>Left: local files via <code>chrome.webview.hostObjects.fs</code> · Right: preview (an <code>&lt;iframe&gt;</code>). The window is <code>NavigationMode.Local</code>.</span>
+        <!-- a real web link: the Local nav-lock cancels it and opens it in the system browser instead -->
+        <a href="https://github.com/aelyo-softworks/AOTrino">AOTrino on GitHub ↗</a>
+    </footer>
+
+    <script>
+        const fs = () => chrome.webview.hostObjects.sync.fs;
+        const listEl = document.getElementById("list");
+        const pathEl = document.getElementById("path");
+        const errEl = document.getElementById("error");
+        const upBtn = document.getElementById("up");
+        const preview = document.getElementById("preview");
+        const ph = document.getElementById("ph");
+        let current = null;
+
+        // file types the WebView can render directly in the preview iframe (images / pdf / text & code)
+        const PREVIEWABLE = /\.(png|jpe?g|gif|webp|bmp|svg|ico|avif|pdf|txt|log|md|json|xml|csv|html?|css|js|ts|ini|yml|yaml|c|cpp|h|hpp|cs|py)$/i;
+
+        function fmtSize(n) {
+            if (!n) return "";
+            const u = ["B", "KB", "MB", "GB", "TB"];
+            let i = 0, v = n;
+            while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+            return (i === 0 ? v : v.toFixed(1)) + " " + u[i];
+        }
+
+        function fileUrl(p) { return encodeURI("file:///" + p.replace(/\\/g, "/")); }
+
+        function showPreview(entry) {
+            if (entry && !entry.IsDirectory && PREVIEWABLE.test(entry.Name)) {
+                preview.src = fileUrl(entry.Path);
+                preview.style.display = "block";
+                ph.style.display = "none";
+            } else {
+                preview.removeAttribute("src");
+                preview.style.display = "none";
+                ph.textContent = entry && !entry.IsDirectory
+                    ? "No preview for this file type — double-click to open it"
+                    : "Select a file to preview";
+                ph.style.display = "flex";
+            }
+        }
+
+        function render(listing) {
+            current = listing;
+            pathEl.value = listing.Path || "";
+            upBtn.disabled = listing.Parent === null;
+            errEl.style.display = listing.Error ? "block" : "none";
+            errEl.textContent = listing.Error || "";
+            showPreview(null);
+
+            listEl.innerHTML = "";
+            for (const e of listing.Entries) {
+                const row = document.createElement("div");
+                row.className = "row" + (e.IsDirectory ? " dir" : "");
+                const icon = e.IsDirectory ? "📁" : "📄";
+                row.innerHTML =
+                    `<div class="name">${icon}<span></span></div>` +
+                    `<div class="size">${e.IsDirectory ? "" : fmtSize(e.Size)}</div>` +
+                    `<div class="mod">${e.Modified || ""}</div>`;
+                row.querySelector("span").textContent = e.Name;
+                row.addEventListener("click", () => select(e, row));
+                row.addEventListener("dblclick", () => { if (!e.IsDirectory) try { fs().Open(e.Path); } catch (x) { showError(String(x)); } });
+                listEl.appendChild(row);
+            }
+        }
+
+        // folders navigate the left pane on click; files select + preview (double-click opens them natively)
+        function select(entry, row) {
+            if (entry.IsDirectory) {
+                load(entry.Path);
+                return;
+            }
+            const sel = listEl.querySelector(".row.sel");
+            if (sel) sel.classList.remove("sel");
+            row.classList.add("sel");
+            showPreview(entry);
+        }
+
+        function load(path) {
+            try {
+                render(JSON.parse(fs().List(path)));
+                listEl.scrollTop = 0;
+            } catch (e) {
+                showError(String(e));
+            }
+        }
+
+        function showError(msg) { errEl.style.display = "block"; errEl.textContent = msg; }
+
+        upBtn.addEventListener("click", () => { if (current && current.Parent !== null) load(current.Parent); });
+        document.getElementById("home").addEventListener("click", () => load(fs().GetHome()));
+        document.getElementById("drives").addEventListener("click", () => load(""));
+        document.getElementById("close").addEventListener("click", () => window.__aotrino && window.__aotrino.closeWindow());
+        pathEl.addEventListener("keydown", (e) => { if (e.key === "Enter") load(pathEl.value.trim()); });
+
+        // draggable divider between the two panes
+        (function () {
+            const split = document.getElementById("split");
+            const divider = document.getElementById("divider");
+            let dragging = false;
+            divider.addEventListener("mousedown", (e) => { dragging = true; e.preventDefault(); document.body.style.userSelect = "none"; });
+            window.addEventListener("mousemove", (e) => {
+                if (!dragging) return;
+                const rect = split.getBoundingClientRect();
+                const w = Math.max(160, Math.min(rect.width - 200, e.clientX - rect.left));
+                listEl.style.flex = "0 0 " + w + "px";
+            });
+            window.addEventListener("mouseup", () => { dragging = false; document.body.style.userSelect = ""; });
+        })();
+
+        if (window.chrome && chrome.webview && chrome.webview.hostObjects) {
+            load(""); // start at This PC (drives)
+        } else {
+            showError("chrome.webview.hostObjects not available");
+        }
+    </script>
+</body>
+</html>

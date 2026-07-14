@@ -268,33 +268,8 @@
             btn.addEventListener("click", () => { try { actions[btn.dataset.act](); } catch (e) { log("err", String(e)); } });
         }
 
-        // headless self-test (verified by the batch harness when launched with --selftest)
-        async function selfTest() {
-            const d = sync(), a = async();
-            // JS console → .NET trace capture (the async awaits below give the fire-and-forget calls time to land)
-            console.log("AOTRINO_SELFTEST console.log");
-            console.warn("AOTRINO_SELFTEST console.warn");
-            console.error("AOTRINO_SELFTEST console.error");
-            const r = {
-                ping: d.Ping(),
-                add: d.Add(2, 3),
-                upper: d.Upper("aotrino"),
-                machineName: d.MachineName,
-                primes: Array.from(d.GetPrimes(5)),
-                systemInfo: JSON.parse(d.GetSystemInfo()),
-                echo: await a.EchoAsync("AOTrino"),
-                factorial: await a.FactorialAsync(5),
-            };
-            try { d.Fail("x"); r.failCaught = false; } catch { r.failCaught = true; }
-            // in --selftest mode this returns true; then prove Quit() closes the app from JS
-            if (d.WriteSelfTest(JSON.stringify(r))) {
-                d.Quit();
-            }
-        }
-
         if (window.chrome && chrome.webview && chrome.webview.hostObjects) {
             log("ret", "host objects ready — click any action");
-            selfTest().catch((e) => log("err", "selftest: " + e));
         } else {
             log("err", "chrome.webview.hostObjects not available");
         }

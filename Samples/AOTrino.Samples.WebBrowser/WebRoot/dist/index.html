@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="AOTrino.png" />
+    <title>AOTrino — Web Browser</title>
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            background: radial-gradient(120% 120% at 50% 0%, #16202c 0%, #0d1117 55%);
+            color: #e6edf3;
+            font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+            padding: 2rem;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 2rem;
+            color: #58a6ff;
+            letter-spacing: -0.02em;
+        }
+
+        .sub {
+            margin: -0.8rem 0 0;
+            color: #8b949e;
+            font-size: 0.95rem;
+            text-align: center;
+            max-width: 44rem;
+        }
+
+            .sub code {
+                color: #79c0ff;
+                font-family: "Cascadia Code", "Consolas", monospace;
+            }
+
+        .links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+            justify-content: center;
+        }
+
+            .links a {
+                padding: 0.45rem 0.9rem;
+                border-radius: 999px;
+                border: 1px solid #30363d;
+                background: #161b22;
+                color: #c9d1d9;
+                text-decoration: none;
+                font-size: 0.9rem;
+            }
+
+                .links a:hover {
+                    border-color: #58a6ff;
+                    color: #fff;
+                }
+
+        .keys {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.1rem;
+            justify-content: center;
+            color: #8b949e;
+            font-size: 0.82rem;
+        }
+
+        kbd {
+            font-family: "Cascadia Code", "Consolas", monospace;
+            font-size: 0.78rem;
+            padding: 0.12rem 0.4rem;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+            background: #161b22;
+            color: #adbac7;
+        }
+    </style>
+</head>
+<body>
+    <h1>AOTrino · Web Browser</h1>
+    <p class="sub">This window is in <code>NavigationMode.Web</code> mode, it browses the real web. Use the address bar above (injected on every page via <code>AddStartupScript</code>), or pick a link below.</p>
+
+    <div class="links">
+        <a href="https://www.bing.com/">Bing</a>
+        <a href="https://en.wikipedia.org/">Wikipedia</a>
+        <a href="https://learn.microsoft.com/microsoft-edge/webview2/">WebView2 docs</a>
+        <a href="https://developer.mozilla.org/">MDN</a>
+        <a href="https://github.com/">GitHub</a>
+    </div>
+
+    <div class="keys">
+        <span><kbd>Alt</kbd>+<kbd>←</kbd> Back</span>
+        <span><kbd>Alt</kbd>+<kbd>→</kbd> Forward</span>
+        <span><kbd>F5</kbd> Reload</span>
+    </div>
+</body>
+</html>

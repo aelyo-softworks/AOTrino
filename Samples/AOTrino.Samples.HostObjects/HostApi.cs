@@ -89,9 +89,9 @@ public partial class HostApi(WebViewWindow window) : DispatchObject
         return true;
     }
 
-    // --- bidirectional: .NET pushes to JS. the bridge invokes this on the UI thread and the awaits
+    // bidirectional: .NET pushes to JS. the bridge invokes this on the UI thread and the awaits
     // resume there (window sync context), so ExecuteScript is safe. calls window.aotrinoTick(i) each
-    // second, then window.aotrinoTick(0) when done. ---
+    // second, then window.aotrinoTick(0) when done.
     public async Task<int> CountdownAsync(int seconds)
     {
         var n = Math.Clamp(seconds, 1, 10);
@@ -123,18 +123,9 @@ public partial class HostApi(WebViewWindow window) : DispatchObject
         }
     }
 
-    // quit the whole app from JS: posts WM_CLOSE to the window (graceful — the app exits once the last window closes)
+    // quit gracefully the whole app from JS (posts WM_CLOSE to the window)
     public void Quit() => window.Close();
 
-    // lets the batch harness verify the bridge end-to-end; only writes (and returns true) when launched with --selftest
-    public bool WriteSelfTest(string json)
-    {
-        if (!Environment.GetCommandLineArgs().Contains("--selftest"))
-            return false;
-
-        File.WriteAllText(Path.Combine(Path.GetTempPath(), "aotrino-hostobjects-selftest.json"), json);
-        return true;
-    }
 #pragma warning restore CA1822
 
     // AOT-safe Task<T> unwrap: enumerate the concrete Task<T> types this object returns (no reflection)

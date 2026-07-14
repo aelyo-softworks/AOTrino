@@ -38,4 +38,25 @@
 		</ItemGroup>
 	</Target>
 
+	<!--
+	  AOTrino embedded scripts.
+
+	  Any file under a project's Scripts\ folder is embedded with its bare file name as the logical name
+	  (e.g. Scripts\BrowserChrome.js -> "BrowserChrome.js"). Load it at runtime with
+	  AOTrino's EmbeddedResource.Load(assembly, "BrowserChrome.js") or WebViewWindow.AddStartupScriptResource,
+	  so JS/CSS live in real files instead of C# string literals.
+	-->
+	<ItemGroup>
+		<ScriptResource Include="Scripts\**\*" />
+		<UpToDateCheckInput Include="@(ScriptResource)" />
+	</ItemGroup>
+
+	<Target Name="AOTrinoEmbedScripts" BeforeTargets="BeforeBuild">
+		<ItemGroup>
+			<EmbeddedResource Include="@(ScriptResource)">
+				<LogicalName>%(Filename)%(Extension)</LogicalName>
+			</EmbeddedResource>
+		</ItemGroup>
+	</Target>
+
 </Project>
