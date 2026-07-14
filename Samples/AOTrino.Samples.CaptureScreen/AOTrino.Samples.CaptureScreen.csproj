@@ -4,18 +4,19 @@
 		<OutputType>WinExe</OutputType>
 		<PublishAot>true</PublishAot>
 		<ApplicationManifest>app.manifest</ApplicationManifest>
-		<RootNamespace>AOTrino.Samples.Capture</RootNamespace>
+		<RootNamespace>AOTrino.Samples.CaptureScreen</RootNamespace>
 
 		<!-- opt in to AOTrino's WebRoot embedding (see Directory.Build.targets) -->
 		<AOTrinoEmbedWebRoot>true</AOTrinoEmbedWebRoot>
 
-		<Title>AOTrino Samples - Capture</Title>
-		<AssemblyTitle>AOTrino Samples - Capture</AssemblyTitle>
+		<Title>AOTrino Samples - Capture Screen</Title>
+		<AssemblyTitle>AOTrino Samples - Capture Screen</AssemblyTitle>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<Using Include="AOTrino" />
 		<Using Include="AOTrino.Input" />
+		<Using Include="AOTrino.Utilities" />
 		<Using Include="System" />
 		<Using Include="System.Linq" />
 		<Using Include="System.Numerics" />

@@ -6,9 +6,18 @@
     <link rel="icon" type="image/png" href="AOTrino.png" />
     <title>AOTrino — Capture</title>
     <style>
-        :root { color-scheme: dark; }
-        * { box-sizing: border-box; }
-        html, body { height: 100%; margin: 0; }
+        :root {
+            color-scheme: dark;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
 
         body {
             height: 100vh;
@@ -40,12 +49,9 @@
             line-height: 1.55;
         }
 
-        .arrow {
-            position: fixed;
-            top: 6px;
-            right: 24px;
+        .hint {
+            font-size: 0.82rem;
             color: #8b949e;
-            font-size: 0.8rem;
         }
 
         button {
@@ -59,13 +65,17 @@
             cursor: pointer;
         }
 
-        button:hover { border-color: #ff7b72; background: #2d1f1f; color: #fff; }
+            button:hover {
+                border-color: #ff7b72;
+                background: #2d1f1f;
+                color: #fff;
+            }
     </style>
 </head>
-<body>
-    <div class="arrow">↑ live screen capture, drawn by .NET</div>
-    <h1>AOTrino · Capture</h1>
-    <p>The thumbnail in the top-right corner is a <strong>live capture of your screen</strong> (Windows.Graphics.Capture), rendered with Direct2D and composited by .NET <em>on top of this web page</em>. A web page can't capture and show other OS windows — this is native-only, possible because the WebView is just one composition layer.</p>
-    <button onclick="window.__aotrino && window.__aotrino.closeWindow()">Close ✕</button>
+<body data-aotrino-drag>
+    <h1>AOTrino · Capture Screen</h1>
+    <p>This left pane is the web page. The right pane is a <strong>live capture of your screen</strong> (Windows.Graphics.Capture), rendered with Direct2D and composited by .NET beside this page. A web page can't capture and show other OS windows — this is native-only, possible because the WebView is just one composition layer.</p>
+    <p class="hint">Drag the divider to resize · drag this pane to move the window.</p>
+    <button data-aotrino-nodrag onclick="window.__aotrino && window.__aotrino.closeWindow()">Close ✕</button>
 </body>
 </html>

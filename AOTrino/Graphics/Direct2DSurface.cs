@@ -1,6 +1,6 @@
 namespace AOTrino.Graphics;
 
-// renders an animated Direct2D scene in .NET on the GPU and displays it at high performance on a <canvas data-aotrino-surface="NAME"> — via a WebView2 shared buffer + WebGL.
+// renders an animated Direct2D scene in .NET on the GPU and displays it at high performance on a <canvas data-aotrino-surface="NAME">, via a WebView2 shared buffer + WebGL.
 // built ENTIRELY on the generic AOTrino.SharedBuffer (the transport is renderer-agnostic).
 // the scene is drawn on the GPU (the window's Direct2D device), copied GPU->CPU into the shared memory,
 // and the injected WebGL runtime uploads it (zero-copy) to the canvas every animation frame.

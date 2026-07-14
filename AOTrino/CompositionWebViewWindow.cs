@@ -49,9 +49,11 @@ public partial class CompositionWebViewWindow : WebViewWindow, IDropTarget
     protected virtual bool UseDirect2D => true;
     protected virtual SpriteVisual CreateWindowVisual() => Compositor.CreateSpriteVisual();
 
-    // the composition visual the WebView renders into. defaults to RootVisual (the WebView fills the window).
-    // override to host it in a child visual you can offset / transform / animate — i.e. treat the WebView as
-    // one composable layer among others. must be a visual in this window's composition tree.
+    // the composition visual the WebView renders into.
+    // defaults to RootVisual (the WebView fills the window).
+    // override to host it in a child visual you can offset / transform / animate,
+    // i.e. treat the WebView as one composable layer among others.
+    // must be a visual in this window's composition tree.
     protected virtual Visual WebViewVisualTarget => RootVisual;
 
     protected override void CreateController(ICoreWebView2Environment12 environment, Action onControllerReady)

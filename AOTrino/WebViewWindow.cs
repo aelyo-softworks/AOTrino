@@ -1,10 +1,12 @@
 namespace AOTrino;
 
-// hosting-agnostic WebView2 window base. it owns the environment, the WebView, navigation, host objects,
-// scripts, the shared-buffer transport and all window/input plumbing — everything except HOW the WebView is
-// hosted. the two hosting models are concrete subclasses: CompositionWebViewWindow (the WebView is one visual
-// in a Windows.UI.Composition tree) and HwndWebViewWindow (the WebView is a classic child window). the only
-// differences are CreateController (below), input forwarding and the window's redirection style.
+// hosting-agnostic WebView2 window base.
+// it owns the environment, the WebView, navigation, host objects, scripts, the shared-buffer transport and all window/input plumbing,
+// everything except HOW the WebView is hosted.
+// the two hosting models are concrete subclasses:
+// * CompositionWebViewWindow (the WebView is one visual in a Windows.UI.Composition tree)
+// * HwndWebViewWindow (the WebView is a classic child window).
+// the only differences are CreateController (below), input forwarding and the window's redirection style.
 public abstract partial class WebViewWindow : D3D11SwapChainWindow
 {
     private readonly bool[] _capturedButtons = new bool[Enum.GetNames<MouseButton>().Length];
@@ -109,8 +111,8 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     // ready, call SetWebViewController(controller, coreWebView2) and then invoke onControllerReady.
     protected abstract void CreateController(ICoreWebView2Environment12 environment, Action onControllerReady);
 
-    // forward a mouse event to a composition-hosted WebView (which gets no OS input). the HWND host leaves this
-    // a no-op — its child window receives input directly.
+    // forward a mouse event to a composition-hosted WebView (which gets no OS input).
+    // the HWND host leaves this a no-op, its child window receives input directly.
     protected virtual void ForwardMouseInput(COREWEBVIEW2_MOUSE_EVENT_KIND kind, COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS keys, uint data, POINT point) { }
 
     // forward a pointer event to a composition-hosted WebView. return true if handled (consumed). HWND: no-op.

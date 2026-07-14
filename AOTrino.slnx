@@ -40,7 +40,7 @@
       <Platform Solution="*|x64" Project="x64" />
       <Platform Solution="*|x86" Project="x86" />
     </Project>
-    <Project Path="Samples/AOTrino.Samples.Capture/AOTrino.Samples.Capture.csproj">
+    <Project Path="Samples/AOTrino.Samples.CaptureScreen/AOTrino.Samples.CaptureScreen.csproj">
       <Platform Solution="*|ARM64" Project="ARM64" />
       <Platform Solution="*|x64" Project="x64" />
       <Platform Solution="*|x86" Project="x86" />

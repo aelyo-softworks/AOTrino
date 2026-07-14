@@ -6,8 +6,13 @@
     <link rel="icon" type="image/png" href="AOTrino.png" />
     <title>AOTrino — Translucid</title>
     <style>
-        :root { color-scheme: dark; }
-        * { box-sizing: border-box; }
+        :root {
+            color-scheme: dark;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
 
         /* the page is transparent, so the Windows 11 system backdrop (Mica / Acrylic) shows in the border */
         html, body {
@@ -27,7 +32,7 @@
             cursor: default;
         }
 
-        /* the center pane is OPAQUE — only the transparent border around it shows the backdrop */
+        /* the center pane is OPAQUE, only the transparent border around it shows the backdrop */
         .card {
             display: flex;
             flex-direction: column;
@@ -41,9 +46,26 @@
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
         }
 
-        h1 { margin: 0; font-size: 1.9rem; letter-spacing: -0.02em; }
-        p { margin: 0; text-align: center; color: #b6c2cf; font-size: 0.95rem; line-height: 1.5; }
-        .row { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+        h1 {
+            margin: 0;
+            font-size: 1.9rem;
+            letter-spacing: -0.02em;
+        }
+
+        p {
+            margin: 0;
+            text-align: center;
+            color: #b6c2cf;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+        }
 
         button {
             font: inherit;
@@ -56,9 +78,27 @@
             cursor: pointer;
         }
 
-        button:hover { border-color: #58a6ff; background: #262c34; }
-        button.close { color: #ffb4ac; border-color: #5a2a2a; }
-        button.close:hover { border-color: #ff7b72; background: #2d1f1f; color: #fff; }
+            button:hover {
+                border-color: #58a6ff;
+                background: #262c34;
+            }
+
+            button.active {
+                border-color: #58a6ff;
+                background: rgba(88, 166, 255, 0.28);
+                color: #fff;
+            }
+
+            button.close {
+                color: #ffb4ac;
+                border-color: #5a2a2a;
+            }
+
+                button.close:hover {
+                    border-color: #ff7b72;
+                    background: #2d1f1f;
+                    color: #fff;
+                }
     </style>
 </head>
 <!-- data-aotrino-drag: dragging the transparent border moves the window; the card is data-aotrino-nodrag -->
@@ -67,10 +107,10 @@
         <h1>AOTrino · Translucid</h1>
         <p>Only the <strong>border</strong> around this pane is translucent — a Windows 11 <strong>system backdrop</strong> shows your wallpaper / windows through it, while the center pane stays opaque. Switch the material:</p>
         <div class="row">
-            <button onclick="setBackdrop('mica')">Mica</button>
-            <button onclick="setBackdrop('acrylic')">Acrylic</button>
-            <button onclick="setBackdrop('tabbed')">Tabbed</button>
-            <button onclick="setBackdrop('none')">None</button>
+            <button class="active" data-type="mica" onclick="setBackdrop('mica')">Mica</button>
+            <button data-type="acrylic" onclick="setBackdrop('acrylic')">Acrylic</button>
+            <button data-type="tabbed" onclick="setBackdrop('tabbed')">Tabbed</button>
+            <button data-type="none" onclick="setBackdrop('none')">None</button>
         </div>
         <p>Drag the border to move the window. An HWND-hosted (opaque) WebView can't do any of this. Requires Windows 11.</p>
         <div class="row">
@@ -81,6 +121,9 @@
     <script>
         function setBackdrop(type) {
             if (window.__aotrino) window.__aotrino.post({ __aotrino: "backdrop", type: type });
+            for (const b of document.querySelectorAll("button[data-type]")) {
+                b.classList.toggle("active", b.dataset.type === type);
+            }
         }
     </script>
 </body>

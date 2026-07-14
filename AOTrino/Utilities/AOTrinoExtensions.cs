@@ -36,6 +36,20 @@ public static class AOTrinoExtensions
         return obj ?? throw new InvalidCastException($"Object of type '{winRTObject.GetType().FullName}' is not of type '{typeof(T).FullName}'.");
     }
 
+    // a WinRT IDirect3DSurface (capture frame) -> its underlying DXGI interface (e.g. IDXGISurface)
+    public static IComObject<T>? AsDxgiComObject<T>(this object? winRTObject, CreateObjectFlags flags = CreateObjectFlags.UniqueInstance)
+    {
+        if (winRTObject == null)
+            return null;
+
+        using var access = winRTObject.AsComObject<IDirect3DDxgiInterfaceAccess>(flags) ??
+            throw new InvalidCastException($"Object of type '{winRTObject.GetType().FullName}' is not of type '{nameof(IDirect3DDxgiInterfaceAccess)}'.");
+
+        access.Object.GetInterface(typeof(T).GUID, out var ptr).ThrowOnError();
+        var obj = DirectN.Extensions.Com.ComObject.FromPointer<T>(ptr, flags);
+        return obj ?? throw new InvalidCastException($"Object of type '{winRTObject.GetType().FullName}' is not of type '{typeof(T).FullName}'.");
+    }
+
     public static MODIFIERKEYS_FLAGS ToFlags(this MouseButton button) => button switch
     {
         MouseButton.Left => MODIFIERKEYS_FLAGS.MK_LBUTTON,

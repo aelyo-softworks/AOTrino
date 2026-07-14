@@ -2,24 +2,30 @@ namespace AOTrino.Samples.Composition;
 
 // hosts the WebView as ONE visual in a composition tree, then composites live .NET layers ON TOP of it:
 //  - a soft glow that follows the OS mouse over the page,
-//  - a Direct2D-drawn "glass" HUD (a real native 2D surface: rounded panel + an equalizer), and
+//  - a Direct2D-drawn "glass" HUD showing a live system-CPU graph (a real native 2D surface), and
 //  - a translucent status bar with a pulsing dot.
-// the page underneath stays fully interactive. an HWND-hosted WebView is an opaque top-most child window, so
-// native code can't draw anything over it — which is why the HWND window shows none of this.
+// the page underneath stays fully interactive.
+// an HWND-hosted WebView is an opaque top-most child window, so native code can't draw anything over it, which is why the HWND window shows none of this.
 [System.Runtime.InteropServices.Marshalling.GeneratedComClass]
 public partial class CompositionShowcaseWindow : CompositionWebViewWindow
 {
     private const float _barHeight = 52;
     private const float _glowSize = 280;
-    private const float _hudWidth = 190;
-    private const float _hudHeight = 96;
+    private const float _hudWidth = 214;
+    private const float _hudHeight = 84;
 
     private readonly SpriteVisual _pageVisual; // the WebView renders here (full size, fully interactive)
     private readonly SpriteVisual _glow;       // a soft glow that follows the cursor, over the page
     private readonly SpriteVisual _overlay;    // a translucent status bar over the page
     private readonly SpriteVisual _dot;        // a pulsing indicator inside the bar
-    private SpriteVisual? _hud;                // a Direct2D-drawn glass HUD
+    private SpriteVisual? _hud;                // a Direct2D-drawn glass HUD (a live CPU graph)
     private CompositionDrawingSurface? _hudSurface;
+    private readonly float[] _cpu = new float[30]; // rolling CPU-usage history
+    private float _cpuValue;
+    private long _prevIdle, _prevKernel, _prevUser;
+    private IComObject<IDWriteTextFormat>? _labelFormat;
+    private IComObject<IDWriteTextFormat>? _valueFormat;
+    private volatile bool _disposed;
 
     public CompositionShowcaseWindow()
         : base("AOTrino — Composition host")
@@ -85,7 +91,7 @@ public partial class CompositionShowcaseWindow : CompositionWebViewWindow
         _dot.StartAnimation("Opacity", pulse);
     }
 
-    // a HUD rendered with Direct2D onto a composition surface — arbitrary native 2D graphics over the web page
+    // a HUD rendered with Direct2D onto a composition surface: two live monitors (CPU + GPU) with DWrite labels
     private void BuildHud()
     {
         if (GraphicsDevice == null)
@@ -97,9 +103,19 @@ public partial class CompositionShowcaseWindow : CompositionWebViewWindow
         _hud.Brush = Compositor.CreateSurfaceBrush(_hudSurface);
         RootVisual.Children.InsertAtTop(_hud);
 
+        using (var dwrite = DWriteFunctions.DWriteCreateFactory())
+        {
+            _labelFormat = dwrite.CreateTextFormat("Segoe UI", 13f, weight: DWRITE_FONT_WEIGHT.DWRITE_FONT_WEIGHT_SEMI_BOLD);
+            _labelFormat.Object.SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT.DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+            _valueFormat = dwrite.CreateTextFormat("Consolas", 13f);
+            _valueFormat.Object.SetTextAlignment(DWRITE_TEXT_ALIGNMENT.DWRITE_TEXT_ALIGNMENT_TRAILING);
+            _valueFormat.Object.SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT.DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+        }
+
         DrawHud();
         Layout();
         CompositorController.Commit();
+        _ = MonitorAsync();
     }
 
     private void DrawHud()
@@ -109,25 +125,105 @@ public partial class CompositionShowcaseWindow : CompositionWebViewWindow
 
         using var interop = _hudSurface.AsComObject<ICompositionDrawingSurfaceInterop>();
         using var dc = interop.BeginDraw(null);
-        dc.Clear(new D3DCOLORVALUE { r = 0, g = 0, b = 0, a = 0 });
 
-        using var glass = dc.CreateSolidColorBrush(new D3DCOLORVALUE { r = 0.05f, g = 0.07f, b = 0.11f, a = 0.62f });
+        using var glass = dc.CreateSolidColorBrush(new D3DCOLORVALUE { r = 0.05f, g = 0.07f, b = 0.11f, a = 0.68f });
         dc.FillRectangle(new D2D_RECT_F { left = 0, top = 0, right = _hudWidth, bottom = _hudHeight }, glass);
 
+        using var textBrush = dc.CreateSolidColorBrush(new D3DCOLORVALUE { r = 0.86f, g = 0.9f, b = 0.95f, a = 1f });
         using var accent = dc.CreateSolidColorBrush(new D3DCOLORVALUE { r = 0.345f, g = 0.651f, b = 1f, a = 1f });
-        var heights = new[] { 0.45f, 0.8f, 0.6f, 0.95f, 0.55f, 0.75f, 0.5f };
-        var barWidth = 14f;
-        var gap = 8f;
-        var baseline = _hudHeight - 20;
-        var x = 20f;
-        foreach (var h in heights)
-        {
-            var barHeight = h * 52;
-            dc.FillRectangle(new D2D_RECT_F { left = x, top = baseline - barHeight, right = x + barWidth, bottom = baseline }, accent);
-            x += barWidth + gap;
-        }
+        using var hot = dc.CreateSolidColorBrush(new D3DCOLORVALUE { r = 1f, g = 0.48f, b = 0.42f, a = 1f });
+        using var track = dc.CreateSolidColorBrush(new D3DCOLORVALUE { r = 1f, g = 1f, b = 1f, a = 0.06f });
+
+        DrawMonitor(dc, "CPU", _cpuValue, _cpu, 14, 36, 68, textBrush, accent, hot, track);
 
         interop.EndDraw();
+    }
+
+    private void DrawMonitor(IComObject<ID2D1DeviceContext> dc, string label, float value, float[] history,
+        float textTop, float graphTop, float graphBottom,
+        IComObject<ID2D1Brush> textBrush, IComObject<ID2D1Brush> accent, IComObject<ID2D1Brush> hot, IComObject<ID2D1Brush> track)
+    {
+        const float padX = 14;
+        if (_labelFormat != null)
+        {
+            dc.DrawText(label, _labelFormat, new D2D_RECT_F { left = padX, top = textTop, right = padX + 90, bottom = textTop + 18 }, textBrush);
+        }
+
+        if (_valueFormat != null)
+        {
+            dc.DrawText((int)Math.Round(value * 100) + "%", _valueFormat, new D2D_RECT_F { left = 110, top = textTop, right = _hudWidth - padX, bottom = textTop + 18 }, textBrush);
+        }
+
+        var left = padX;
+        var right = _hudWidth - padX;
+        dc.FillRectangle(new D2D_RECT_F { left = left, top = graphTop, right = right, bottom = graphBottom }, track);
+
+        var graphWidth = right - left;
+        var graphHeight = graphBottom - graphTop;
+        var slot = graphWidth / history.Length;
+        var barWidth = Math.Max(2f, slot - 1.5f);
+        for (var i = 0; i < history.Length; i++)
+        {
+            var v = history[i];
+            var x = left + i * slot;
+            var brush = v >= 0.85f ? hot : accent;
+            dc.FillRectangle(new D2D_RECT_F { left = x, top = graphBottom - v * graphHeight, right = x + barWidth, bottom = graphBottom }, brush);
+        }
+    }
+
+    // sample CPU every second and redraw (on the UI thread via the window sync context)
+    private async Task MonitorAsync()
+    {
+        SampleCpu(); // prime the CPU deltas
+        try { await Task.Delay(1000); } catch { return; }
+
+        while (!_disposed && _hudSurface != null)
+        {
+            _cpuValue = SampleCpu();
+            Push(_cpu, _cpuValue);
+            DrawHud();
+            CompositorController.Commit();
+
+            try { await Task.Delay(1000); }
+            catch { break; }
+        }
+    }
+
+    private static void Push(float[] history, float value)
+    {
+        Array.Copy(history, 1, history, 0, history.Length - 1);
+        history[^1] = value;
+    }
+
+    private float SampleCpu()
+    {
+        if (!GetSystemTimes(out var idle, out var kernel, out var user))
+            return 0;
+
+        var idleDelta = idle - _prevIdle;
+        var totalDelta = (kernel - _prevKernel) + (user - _prevUser); // kernel time includes idle time
+        _prevIdle = idle;
+        _prevKernel = kernel;
+        _prevUser = user;
+        if (totalDelta <= 0)
+            return 0;
+
+        return Math.Clamp((float)(totalDelta - idleDelta) / totalDelta, 0f, 1f);
+    }
+
+    [LibraryImport("kernel32")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool GetSystemTimes(out long lpIdleTime, out long lpKernelTime, out long lpUserTime);
+
+    protected override void Dispose(bool disposing)
+    {
+        _disposed = true;
+        if (disposing)
+        {
+            _labelFormat?.Dispose();
+            _valueFormat?.Dispose();
+        }
+        base.Dispose(disposing);
     }
 
     protected override bool OnResized(WindowResizedType type, SIZE size)
@@ -154,9 +250,6 @@ public partial class CompositionShowcaseWindow : CompositionWebViewWindow
         _overlay.Size = new Vector2(rc.Width, _barHeight);
         _overlay.Offset = new Vector3(0, rc.Height - _barHeight, 0);
         _dot.Offset = new Vector3(22, rc.Height - _barHeight + (_barHeight - 14) / 2, 0);
-        if (_hud != null)
-        {
-            _hud.Offset = new Vector3(rc.Width - _hudWidth - 20, 20, 0);
-        }
+        _hud?.Offset = new Vector3(rc.Width - _hudWidth - 20, 20, 0);
     }
 }

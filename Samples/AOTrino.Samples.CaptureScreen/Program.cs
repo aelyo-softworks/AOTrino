@@ -1,4 +1,4 @@
-namespace AOTrino.Samples.Capture;
+namespace AOTrino.Samples.CaptureScreen;
 
 internal static class Program
 {
