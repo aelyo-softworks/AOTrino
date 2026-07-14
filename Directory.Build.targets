@@ -4,11 +4,13 @@
 	  AOTrino WebRoot embedding.
 
 	  A host project opts in with <AOTrinoEmbedWebRoot>true</AOTrinoEmbedWebRoot>. Every file under
-	  $(AOTrinoWebRootDir) (default: WebRoot\dist) is collected into @(WebRootResource) and embedded as a
-	  manifest resource whose logical name is its project-relative path (e.g. "WebRoot\dist\index.html").
-	  AOTrino's runtime WebRoot extractor finds every resource starting with "WebRoot\", strips that prefix,
-	  and writes the rest to disk so the WebView can navigate to the local index.html. This generalizes the
-	  per-file <WebRootResource> list that the reference app maintained by hand into a single glob.
+	  $(AOTrinoWebRootDir) (default: WebRoot\dist) is embedded as a manifest resource whose logical name is
+	  its project-relative path (e.g. "WebRoot\dist\index.html"). AOTrino's runtime WebRoot extractor finds
+	  every resource starting with "WebRoot\", strips that prefix, and writes the rest to disk so the WebView
+	  can navigate to the local index.html.
+
+	  A project whose WebRoot is generated (npm/Vite rather than hand-written) also sets
+	  <AOTrinoNpmBuild>true</AOTrinoNpmBuild>; see the AOTrinoNpmBuild target below.
 
 	  When AOTrino ships as a NuGet package this file moves to the package's build\ folder and is imported
 	  automatically; today it lives at the repo root so every sample picks it up.
@@ -17,22 +19,66 @@
 		<AOTrinoWebRootDir Condition="'$(AOTrinoWebRootDir)' == ''">WebRoot\dist</AOTrinoWebRootDir>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(AOTrinoNpmBuild)' == 'true'">
+		<!-- the npm project root: holds package.json, and Vite builds from here into $(AOTrinoWebRootDir) -->
+		<AOTrinoNpmDir Condition="'$(AOTrinoNpmDir)' == ''">WebRoot</AOTrinoNpmDir>
+	</PropertyGroup>
+
 	<!-- default application icon (the brand icon at the repo root) for every executable project; a project can override with its own <ApplicationIcon> -->
 	<PropertyGroup Condition="'$(ApplicationIcon)' == '' and ('$(OutputType)' == 'WinExe' or '$(OutputType)' == 'Exe')">
 		<ApplicationIcon>$(MSBuildThisFileDirectory)AOTrino.ico</ApplicationIcon>
 	</PropertyGroup>
 
-	<ItemGroup Condition="'$(AOTrinoEmbedWebRoot)' == 'true'">
-		<WebRootResource Include="$(AOTrinoWebRootDir)\**\*" />
-		<!-- so Visual Studio's fast up-to-date check rebuilds (re-embeds) when a WebRoot file changes, instead of skipping to a stale build -->
-		<UpToDateCheckInput Include="@(WebRootResource)" />
+	<!--
+	  So Visual Studio's fast up-to-date check rebuilds (re-embeds) when the page changes instead of skipping
+	  to a stale build. For a hand-written WebRoot the embedded files themselves are the inputs; for a
+	  generated one they're an *output* of the npm build, so watch its sources instead.
+	-->
+	<ItemGroup Condition="'$(AOTrinoEmbedWebRoot)' == 'true' and '$(AOTrinoNpmBuild)' != 'true'">
+		<UpToDateCheckInput Include="$(AOTrinoWebRootDir)\**\*" />
 	</ItemGroup>
+
+	<ItemGroup Condition="'$(AOTrinoNpmBuild)' == 'true'">
+		<UpToDateCheckInput Include="$(AOTrinoNpmDir)\src\**\*" />
+		<UpToDateCheckInput Include="$(AOTrinoNpmDir)\index.html" />
+		<UpToDateCheckInput Include="$(AOTrinoNpmDir)\package.json" />
+		<UpToDateCheckInput Include="$(AOTrinoNpmDir)\vite.config.ts" />
+	</ItemGroup>
+
+	<!--
+	  Builds a generated WebRoot before it gets embedded.
+
+	  The repo-root package.json declares npm workspaces, which link @aotrino/* into node_modules as
+	  symlinks: no registry, no publishing, and the front end resolves "@aotrino/client" normally.
+	  When AOTrino ships, a consumer project gets the packed tarballs from the NuGet instead and this
+	  target reduces to the plain "npm run build" line.
+	-->
+	<Target Name="AOTrinoNpmBuild"
+			BeforeTargets="AOTrinoEmbedWebRoot"
+			Condition="'$(AOTrinoNpmBuild)' == 'true'">
+		<Exec Command="npm install"
+			  WorkingDirectory="$(MSBuildThisFileDirectory)"
+			  Condition="!Exists('$(MSBuildThisFileDirectory)node_modules')" />
+		<!-- installing runs the client's prepare script, but only the first time: rebuild it explicitly so
+		     an edit to the client is picked up by the app that consumes it -->
+		<Exec Command="npm run build -w @aotrino/client"
+			  WorkingDirectory="$(MSBuildThisFileDirectory)" />
+		<Exec Command="npm run build"
+			  WorkingDirectory="$(MSBuildProjectDirectory)\$(AOTrinoNpmDir)" />
+	</Target>
 
 	<Target Name="AOTrinoEmbedWebRoot"
 			BeforeTargets="BeforeBuild"
 			Condition="'$(AOTrinoEmbedWebRoot)' == 'true'">
 		<ItemGroup>
-			<EmbeddedResource Include="@(WebRootResource)">
+			<!--
+			  Glob inside the target rather than in a static ItemGroup: a generated WebRoot doesn't exist yet
+			  when the project is evaluated (AOTrinoNpmBuild produces it above), so a static glob would embed
+			  nothing on a clean clone. Glob into a private item first and transform it in a second step: an
+			  Include with both a wildcard and %(Identity) metadata in one step doesn't batch as it looks.
+			-->
+			<_AOTrinoWebRootFile Include="$(AOTrinoWebRootDir)\**\*" />
+			<EmbeddedResource Include="@(_AOTrinoWebRootFile)">
 				<LogicalName>%(Identity)</LogicalName>
 			</EmbeddedResource>
 		</ItemGroup>

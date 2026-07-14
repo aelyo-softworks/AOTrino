@@ -61,7 +61,9 @@ public partial class AOTrinoApplication : CompositionApplication
         if (!string.IsNullOrWhiteSpace(version))
             return;
 
-        TraceInfo(Res.WebView2NotFound);
+        // invariant English on purpose: Res is for what the user reads (the dialog below), not for the log.
+        // a trace line that changes with the machine's locale is one support can't grep for.
+        TraceInfo("WebView2 runtime not found.");
         ShowWebView2DownloadDialog();
         Environment.Exit(_webView2MissingExitCode);
     }

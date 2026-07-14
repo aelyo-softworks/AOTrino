@@ -107,8 +107,8 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     public virtual bool CanChangeCursor { get; set; } = true;
     public virtual bool SendDoubleClicks { get; set; } // WebView2 doesn't seem to care (chrome uses UP & DOWN events by itself)
 
-    // create the WebView2 controller (composition or HWND). the implementation must, once its controller is
-    // ready, call SetWebViewController(controller, coreWebView2) and then invoke onControllerReady.
+    // create the WebView2 controller (composition or HWND). the implementation must, once its controller is ready,
+    // call SetWebViewController(controller, coreWebView2) and then invoke onControllerReady.
     protected abstract void CreateController(ICoreWebView2Environment12 environment, Action onControllerReady);
 
     // forward a mouse event to a composition-hosted WebView (which gets no OS input).

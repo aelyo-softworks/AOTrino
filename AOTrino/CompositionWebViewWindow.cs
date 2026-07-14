@@ -1,9 +1,8 @@
 namespace AOTrino;
 
-// hosts the WebView as ONE visual in a Windows.UI.Composition tree (ICoreWebView2CompositionController +
-// RootVisualTarget). the window is a NoRedirectionBitmap composition window, so the WebView composes with any
-// other visuals you add to RootVisual, and can be transformed/animated/effected like any layer. because a
-// composition-hosted WebView receives no OS input, this class forwards mouse/pointer input to it.
+// hosts the WebView as ONE visual in a Windows.UI.Composition tree (ICoreWebView2CompositionController + RootVisualTarget).
+// the window is a NoRedirectionBitmap composition window, so the WebView composes with any other visuals you add to RootVisual, and can be transformed/animated/effected like any layer.
+// because a composition-hosted WebView receives no OS input, this class forwards mouse/pointer input to it.
 [System.Runtime.InteropServices.Marshalling.GeneratedComClass]
 public partial class CompositionWebViewWindow : WebViewWindow, IDropTarget
 {
@@ -51,8 +50,7 @@ public partial class CompositionWebViewWindow : WebViewWindow, IDropTarget
 
     // the composition visual the WebView renders into.
     // defaults to RootVisual (the WebView fills the window).
-    // override to host it in a child visual you can offset / transform / animate,
-    // i.e. treat the WebView as one composable layer among others.
+    // override to host it in a child visual you can offset / transform / animate, i.e. treat the WebView as one composable layer among others.
     // must be a visual in this window's composition tree.
     protected virtual Visual WebViewVisualTarget => RootVisual;
 

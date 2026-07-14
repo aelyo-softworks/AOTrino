@@ -1,0 +1,29 @@
+{
+  "name": "@aotrino/client",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Typed client for AOTrino apps: window controls, host objects and shared buffers.",
+  "license": "MIT",
+  "author": "Aelyo Softworks",
+  "types": "./dist/index.d.ts",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepare": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3"
+  }
+}

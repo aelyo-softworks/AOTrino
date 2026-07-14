@@ -1,6 +1,6 @@
 namespace AOTrino.Samples.FileExplorer;
 
-// a JS-callable host object exposed as chrome.webview.hostObjects.fs: a tiny, read-only local file browser backend (a heavily reduced ShellBat).
+// a JS-callable host object exposed as chrome.webview.hostObjects.fs: a tiny, read-only local file browser backend.
 // the window stays NavigationMode.Local, so browsing happens through these host calls, not by navigating the WebView.
 // complex results cross the bridge as JSON strings.
 [System.Runtime.InteropServices.Marshalling.GeneratedComClass]

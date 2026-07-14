@@ -5,8 +5,10 @@ namespace AOTrino;
 // instance (not static) so two apps in one process don't share extraction state (owned by AOTrinoApplication).
 public class WebRoot
 {
+    // public: a window that serves the WebRoot from a virtual host builds its own start URL from it
+    public const string IndexFileName = "index.html";
+
     private const string _prefix = @"WebRoot\";
-    private const string _indexFileName = "index.html";
     private const string _signatureFileName = ".webroot";
 
     private readonly Assembly _assembly;
@@ -24,7 +26,7 @@ public class WebRoot
     }
 
     public string DistPath => _paths.WebRootDistPath;
-    public string IndexFilePath => Path.Combine(_paths.WebRootDistPath, _indexFileName);
+    public string IndexFilePath => Path.Combine(_paths.WebRootDistPath, IndexFileName);
 
     public Task EnsureFilesAsync(bool forceRefresh = false)
     {

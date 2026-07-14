@@ -1,0 +1,15 @@
+{
+  "name": "aotrino",
+  "version": "1.0.0",
+  "private": true,
+  "description": "npm workspaces for AOTrino: the @aotrino/* front-end packages and the JS-based samples that consume them. Nothing here is published to a registry - samples resolve @aotrino/* through workspace symlinks.",
+  "license": "MIT",
+  "workspaces": [
+    "npm/client",
+    "Samples/AOTrino.Samples.React.*/WebRoot"
+  ],
+  "scripts": {
+    "build": "npm run build --if-present --workspaces",
+    "typecheck": "npm run typecheck --if-present --workspaces"
+  }
+}
