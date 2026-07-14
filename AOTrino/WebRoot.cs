@@ -2,7 +2,7 @@ namespace AOTrino;
 
 // extracts the embedded front-end (resources whose logical name starts with "WebRoot\") from an
 // assembly to a versioned folder on disk, so the WebView can navigate to it as a local file.
-// instance (not static) so two apps in one process don't share extraction state — owned by AOTrinoApplication.
+// instance (not static) so two apps in one process don't share extraction state (owned by AOTrinoApplication).
 public class WebRoot
 {
     private const string _prefix = @"WebRoot\";

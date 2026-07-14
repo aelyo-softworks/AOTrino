@@ -2,7 +2,7 @@ namespace AOTrino;
 
 // per-application paths derived from the app assembly (title + informational version).
 // generalizes what a host app would otherwise hardcode in its own Settings class.
-// instance (not static) so it carries no process-global state — owned by AOTrinoApplication.
+// instance (not static) so it carries no process-global state, owned by AOTrinoApplication.
 public class AOTrinoPaths
 {
     public AOTrinoPaths(Assembly appAssembly)

@@ -249,8 +249,8 @@
         const ph = document.getElementById("ph");
         let current = null;
 
-        // file types the WebView can render directly in the preview iframe (images / pdf / text & code)
-        const PREVIEWABLE = /\.(png|jpe?g|gif|webp|bmp|svg|ico|avif|pdf|txt|log|md|json|xml|csv|html?|css|js|ts|ini|yml|yaml|c|cpp|h|hpp|cs|py)$/i;
+        // file types the WebView can render directly in the preview iframe (images / videos / pdf / text & code)
+        const PREVIEWABLE = /\.(png|apng|jpe?g|gif|webp|bmp|svg|ico|cur|avif|mp4|webm|ogg|wav|mp3|pdf|txt|log|md|json|xml|csv|html?|css|js|ts|ini|yml|yaml|c|cpp|h|hpp|cs|py)$/i;
 
         function fmtSize(n) {
             if (!n) return "";
@@ -271,7 +271,7 @@
                 preview.removeAttribute("src");
                 preview.style.display = "none";
                 ph.textContent = entry && !entry.IsDirectory
-                    ? "No preview for this file type — double-click to open it"
+                    ? "No preview for this file type, double-click to open it"
                     : "Select a file to preview";
                 ph.style.display = "flex";
             }

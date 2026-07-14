@@ -12,9 +12,8 @@ public partial class MainWindow : AOTrinoWindow
 
     protected override void ControllerCreated()
     {
-        // create the surface BEFORE base navigates: its document-created scripts (the __aotrino runtime +
-        // WebGL display) must be registered before the page loads. the entire app is these two lines — a
-        // Direct2D scene rendered in .NET, shown on the page's <canvas data-aotrino-surface="scene">.
+        // create the surface BEFORE base navigates: its document-created scripts (the __aotrino runtime + WebGL display) must be registered before the page loads.
+        // the entire app is these two lines, Direct2D scene rendered in .NET, shown on the page's <canvas data-aotrino-surface="scene">.
         _surface = new Direct2DSurface(this, "scene");
         _surface.StartAnimation(DrawScene);
 

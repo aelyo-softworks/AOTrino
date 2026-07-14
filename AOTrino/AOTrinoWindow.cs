@@ -30,9 +30,9 @@ public partial class AOTrinoWindow(
     {
     }
 
-    // decides whether a navigation may proceed in this window. the default enforces NavigationMode; override
-    // for a custom allow-list (e.g. Local, but permit a specific service origin). return false to keep the
-    // navigation out of the window — OnNavigationStarting then opens it in the default browser instead.
+    // decides whether a navigation may proceed in this window. the default enforces NavigationMode;
+    // override for a custom allow-list (e.g. Local, but permit a specific service origin).
+    // return false to keep the navigation out of the window, OnNavigationStarting then opens it in the default browser instead.
     protected virtual bool IsNavigationAllowed(Uri uri)
     {
         ArgumentNullException.ThrowIfNull(uri);

@@ -1,11 +1,10 @@
 namespace AOTrino.Bridge;
 
 // a named block of shared memory between .NET and JS (WebView2 CreateSharedBuffer).
-// this is a GENERIC byte channel — it knows nothing about rendering. .NET gets a raw pointer; JS gets
-// the same memory (zero-copy) as an ArrayBuffer via window.__aotrino.getBuffer(name) / onBuffer(name, cb).
-// grow-only; call Post() to (re)hand the buffer to the page (e.g. after a resize) with optional metadata.
-// created ReadWrite it is bidirectional (both sides read/write). specializations such as
-// AOTrino.Graphics.Direct2DSurface build a renderer on top of this.
+// this is a GENERIC byte channel, it knows nothing about rendering. .NET gets a raw pointer.
+// JS gets the same memory (zero-copy) as an ArrayBuffer via window.__aotrino.getBuffer(name) / onBuffer(name, cb).
+// grow-only, call Post() to (re)hand the buffer to the page (e.g. after a resize) with optional metadata.
+// created ReadWrite it is bidirectional (both sides read/write). specializations such as AOTrino.Graphics.Direct2DSurface build a renderer on top of this.
 public class SharedBuffer : IDisposable
 {
     // the generic __aotrino runtime (embedded resource, loaded/cached from the assembly). injected once per

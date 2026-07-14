@@ -169,7 +169,8 @@ public partial class DispatchObject : IDispatch
         }
         catch (Exception ex)
         {
-            // a host method exception is handed back to JS below (via EXCEPINFO) — it's control flow, not an app error to report
+            // a host method exception is handed back to JS below (via EXCEPINFO).
+            // it's control flow, not an app error to report
             Application.TraceWarning($"Host object method exception: {ex.Message}");
             if (pExcepInfo != 0)
             {
@@ -542,7 +543,8 @@ public partial class DispatchObject : IDispatch
             }
             catch (Exception ex)
             {
-                // a host method exception is handed back to JS below (via EXCEPINFO) — it's control flow, not an app error to report
+                // a host method exception is handed back to JS below (via EXCEPINFO).
+                // it's control flow, not an app error to report
                 Application.TraceWarning($"Host object method exception: {ex.Message}");
                 if (pExcepInfo != 0)
                 {

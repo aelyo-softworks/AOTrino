@@ -1,8 +1,8 @@
 namespace AOTrino.Samples.FileExplorer;
 
-// a JS-callable host object exposed as chrome.webview.hostObjects.fs — a tiny, read-only local file browser
-// backend (a heavily reduced ShellBat). the window stays NavigationMode.Local, so browsing happens through
-// these host calls, not by navigating the WebView. complex results cross the bridge as JSON strings.
+// a JS-callable host object exposed as chrome.webview.hostObjects.fs: a tiny, read-only local file browser backend (a heavily reduced ShellBat).
+// the window stays NavigationMode.Local, so browsing happens through these host calls, not by navigating the WebView.
+// complex results cross the bridge as JSON strings.
 [System.Runtime.InteropServices.Marshalling.GeneratedComClass]
 public partial class FileSystemApi : DispatchObject
 {
@@ -47,6 +47,13 @@ public partial class FileSystemApi : DispatchObject
     public bool Open(string path)
     {
         Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
+        return true;
+    }
+
+    // open the given folder in Windows File Explorer
+    public bool RevealInExplorer(string path)
+    {
+        Process.Start(new ProcessStartInfo { FileName = "explorer.exe", Arguments = $"\"{path}\"", UseShellExecute = true });
         return true;
     }
 #pragma warning restore CA1822
