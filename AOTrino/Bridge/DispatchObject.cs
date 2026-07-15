@@ -43,8 +43,60 @@ public partial class DispatchObject : IDispatch
         }
     }
 
-    // if you throw here implement type in your GetTaskResult code.
-    protected virtual object? GetTaskResult(Task task) => throw new NotSupportedException($"Type '{GetType().FullName}' returns a task of type '{task.GetType().FullName}'.");
+    // unwraps the value of an async host method so it can cross to JS.
+    // a switch rather than reflection over Task<T>.Result or a dynamic cast, because those need types the AOT
+    // compiler cannot see coming and the bridge has to survive trimming.
+    // the well-known list below covers what JS can actually receive, so most host objects need nothing at all.
+    // for a Task<T> of your own, override and chain to base (see docs/BRIDGE.md):
+    //
+    //   protected override object? GetTaskResult(Task task) => task switch
+    //   {
+    //       Task<MyThing> t => t.Result,
+    //       _ => base.GetTaskResult(task),
+    //   };
+    protected virtual object? GetTaskResult(Task task) => task switch
+    {
+        Task<string> t => t.Result,
+        Task<bool> t => t.Result,
+        Task<int> t => t.Result,
+        Task<long> t => t.Result,
+        Task<short> t => t.Result,
+        Task<byte> t => t.Result,
+        Task<sbyte> t => t.Result,
+        Task<uint> t => t.Result,
+        Task<ulong> t => t.Result,
+        Task<ushort> t => t.Result,
+        Task<float> t => t.Result,
+        Task<double> t => t.Result,
+        Task<decimal> t => t.Result,
+        Task<char> t => t.Result,
+        Task<DateTime> t => t.Result,
+        Task<DateTimeOffset> t => t.Result,
+        Task<TimeSpan> t => t.Result,
+        Task<Guid> t => t.Result,
+        Task<Uri> t => t.Result,
+        Task<object> t => t.Result,
+
+        // arrays of the above cross as JS arrays
+        Task<string[]> t => t.Result,
+        Task<bool[]> t => t.Result,
+        Task<int[]> t => t.Result,
+        Task<long[]> t => t.Result,
+        Task<double[]> t => t.Result,
+        Task<float[]> t => t.Result,
+        Task<object[]> t => t.Result,
+
+        // nullables, for a host method that returns Task<int?> and friends
+        Task<bool?> t => t.Result,
+        Task<int?> t => t.Result,
+        Task<long?> t => t.Result,
+        Task<double?> t => t.Result,
+        Task<Guid?> t => t.Result,
+        Task<DateTime?> t => t.Result,
+
+        _ => throw new NotSupportedException($"Type '{GetType().FullName}' returns a task of type '{task.GetType().FullName}'. Override {nameof(GetTaskResult)} to unwrap it; see docs/BRIDGE.md."),
+    };
+
     protected virtual TaskFunction CreateTaskFunction(MethodInfo method, object?[]? arguments) => new(this, method, arguments);
     protected virtual bool TryConvertArgument(MethodInfo method, int index, ParameterInfo parameter, object? value, out object? converted) =>
         Conversions.TryChangeObjectType(value, parameter.ParameterType, out converted);
@@ -55,7 +107,7 @@ public partial class DispatchObject : IDispatch
     // when working with WebView2 and the HostObjectHelper is installed, set this to true
     public static bool OneStepInvoke { get; set; }
 
-    public bool IsMethod(string? name)
+    public virtual bool IsMethod(string? name)
     {
         if (string.IsNullOrEmpty(name))
             return true;
@@ -70,7 +122,7 @@ public partial class DispatchObject : IDispatch
         return dispatchType.IsMethod(name) == true;
     }
 
-    public bool IsAsync(string? name)
+    public virtual bool IsAsync(string? name)
     {
         if (string.IsNullOrEmpty(name))
             return true;

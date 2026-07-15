@@ -6,11 +6,12 @@
   "license": "MIT",
   "workspaces": [
     "npm/*",
-    "Samples/AOTrino.Samples.React.*/WebRoot"
+    "Samples/AOTrino.Samples.React.*/WebRoot",
+    "Samples/AOTrino.Samples.FluentUI.*/WebRoot"
   ],
   "scripts": {
-    "//build:libs": "the @aotrino/* libraries, in dependency order. react's types come from client's dist, so client must be built first — npm does not guarantee an order for workspace prepare scripts, which is why this list is explicit and lives here rather than in a prepare script.",
-    "build:libs": "npm run build -w @aotrino/client && npm run build -w @aotrino/react",
+    "//build:libs": "the @aotrino/* libraries, in dependency order: each one's types come from the previous one's dist, so they must build client -> react -> fluent. npm does not guarantee an order for workspace prepare scripts, which is why this list is explicit and lives here rather than in a prepare script.",
+    "build:libs": "npm run build -w @aotrino/client && npm run build -w @aotrino/react && npm run build -w @aotrino/fluent",
     "postinstall": "npm run build:libs",
     "build": "npm run build --if-present --workspaces",
     "typecheck": "npm run typecheck --if-present --workspaces"

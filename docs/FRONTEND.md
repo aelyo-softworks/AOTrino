@@ -22,7 +22,7 @@ Both are plain globals. You can use them directly, and a zero-build page should.
 | --- | --- | --- |
 | `@aotrino/client` | built (`npm/client`) | TypeScript types over `window.__aotrino` and the host-object bridge |
 | `@aotrino/react` | built (`npm/react`) | headless hooks and components over the client — behaviour and class names, no CSS |
-| `@aotrino/fluent` | planned | a FluentUI starter — a template choice, never a platform mandate |
+| `@aotrino/fluent` | built (`npm/fluent`) | a Fluent UI starter: system-themed provider + a Fluent caption. A template choice, never a platform mandate |
 
 `@aotrino/client` deliberately **ships no runtime**. The C# side owns the runtime and it travels inside the
 executable; the package is a typed facade over what is already on the page. Only the type shape can drift, not
@@ -102,6 +102,15 @@ typed call for each shape the bridge supports (property, sync method, async meth
 `Samples/AOTrino.Samples.React.Dashboard` is the fuller tour: live .NET process state (uptime, working set,
 managed heap, collections, threads) with manual `refresh()` and auto-refresh, alongside a slow call
 (`pending`) and a throwing one (`error`). Same split as `HelloWorld` vs `HostObjects` on the C# side.
+
+Fluent UI samples are named **`AOTrino.Samples.FluentUI.*`** rather than `React.*`: Fluent implies React, so
+saying both is noise. The repo-root `workspaces` globs cover both families, so a new sample in either needs no
+edit.
+
+`Samples/AOTrino.Samples.FluentUI.HelloWorld` is the whole pyramid in one window: the client types the bridge,
+the react hooks supply the data and the caption gesture, and `@aotrino/fluent` dresses it — light and dark
+following Windows, pickable from the caption and remembered, with six lines of app CSS. See
+[THEMING.md](THEMING.md).
 
 ### Serve it from a virtual host
 

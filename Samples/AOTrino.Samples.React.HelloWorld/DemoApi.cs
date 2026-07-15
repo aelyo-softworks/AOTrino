@@ -34,11 +34,4 @@ public partial class DemoApi(WebViewWindow window) : DispatchObject
 
     // closes the window (and the app) from the page's custom title bar
     public void Quit() => window.Close();
-
-    // AOT-safe Task<T> unwrap: enumerate the concrete Task<T> types this object returns (no reflection)
-    protected override object? GetTaskResult(Task task) => task switch
-    {
-        Task<string> t => t.Result,
-        _ => base.GetTaskResult(task),
-    };
 }

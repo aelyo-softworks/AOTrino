@@ -1,0 +1,11 @@
+/* Fluent's tokens own the colours and typography, and <AOTrinoProvider> sizes itself like a window.
+   this file only has to stop the document from fighting them. */
+html,
+body,
+#root {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+}

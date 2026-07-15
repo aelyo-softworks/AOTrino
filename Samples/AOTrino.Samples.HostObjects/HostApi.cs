@@ -127,12 +127,4 @@ public partial class HostApi(WebViewWindow window) : DispatchObject
     public void Quit() => window.Close();
 
 #pragma warning restore CA1822
-
-    // AOT-safe Task<T> unwrap: enumerate the concrete Task<T> types this object returns (no reflection)
-    protected override object? GetTaskResult(Task task) => task switch
-    {
-        Task<string> t => t.Result,
-        Task<int> t => t.Result,
-        _ => base.GetTaskResult(task),
-    };
 }
