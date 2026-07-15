@@ -24,7 +24,6 @@
 		<Using Include="System.Text.Json" />
 		<Using Include="System.Threading.Tasks" />
 		<Using Include="DirectN" />
-		<Using Alias="DirectNFunctions" Include="DirectN.Functions" />
 		<Using Include="DirectN.Extensions" />
 		<Using Include="DirectN.Extensions.Com" />
 		<Using Include="DirectN.Extensions.Utilities" />
@@ -32,6 +31,8 @@
 		<Using Include="Windows.Graphics.DirectX" />
 		<Using Include="Windows.UI" />
 		<Using Include="Windows.UI.Composition" />
+
+		<Using Alias="DirectNFunctions" Include="DirectN.Functions" />
 	</ItemGroup>
 
 	<ItemGroup>

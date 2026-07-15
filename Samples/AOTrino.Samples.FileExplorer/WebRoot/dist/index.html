@@ -212,6 +212,58 @@
                 color: #79c0ff;
                 font-family: "Cascadia Code", "Consolas", monospace;
             }
+
+        /* Windows' own icon font, so the glyph matches the OS instead of whatever font Chromium falls back to.
+           the other buttons get away with plain unicode because Segoe UI actually has those glyphs; it has no
+           circled "i" (U+24D8), so that one fell back and looked foreign. Fluent Icons is Windows 11, MDL2 is
+           Windows 10 - both ship with the OS. */
+        .glyph {
+            font-family: "Segoe Fluent Icons", "Segoe MDL2 Assets";
+            font-size: 0.9em;
+            /* the font's glyphs sit high; nudge it onto the text baseline */
+            vertical-align: -1px;
+        }
+
+        /* the System information dialog */
+        #sysdlg {
+            width: min(680px, 90vw);
+            max-height: 80vh;
+            padding: 0;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            background: #161b22;
+            color: #e6edf3;
+        }
+
+            #sysdlg::backdrop {
+                background: rgba(0,0,0,.5);
+            }
+
+            #sysdlg header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 10px 12px;
+                border-bottom: 1px solid #30363d;
+            }
+
+            #sysdlg .syshint {
+                margin: 0;
+                padding: 10px 12px;
+                font-size: 12px;
+                color: #8b949e;
+                border-bottom: 1px solid #30363d;
+            }
+
+        #sysjson {
+            margin: 0;
+            padding: 12px;
+            max-height: 52vh;
+            overflow: auto;
+            font-family: Consolas, monospace;
+            font-size: 12px;
+            line-height: 1.5;
+        }
     </style>
 </head>
 <body>
@@ -220,9 +272,24 @@
         <button id="home" title="Home folder">⌂ Home</button>
         <button id="drives" title="This PC (drives)">🖥 This&nbsp;PC</button>
         <input class="path" id="path" spellcheck="false" placeholder="This PC — type a path and press Enter" />
+        <button id="sysinfo" title="What only Windows knows"><span class="glyph">&#xE946;</span> System</button>
         <button id="close" class="close" title="Close">✕</button>
     </div>
     <p class="error" id="error" style="display:none"></p>
+
+    <!-- AOTrino builds SystemInfo but never registers it: this window chose to (see MainWindow.RegisterHostObjects) -->
+    <dialog id="sysdlg">
+        <header>
+            <b>System information</b>
+            <button id="sysclose" title="Close">✕</button>
+        </header>
+        <p class="syshint">
+            Read-only, and every value is something the web platform cannot tell a page. Until you register it,
+            it's just a JSON DOM: this window added <code>explorer</code> to it — and could have dropped
+            <code>adapters</code> just as easily (that line is in <code>MainWindow.cs</code>, commented out).
+        </p>
+        <pre id="sysjson"></pre>
+    </dialog>
 
     <div class="split" id="split">
         <div class="list" id="list"></div>
@@ -350,6 +417,16 @@
         } else {
             showError("chrome.webview.hostObjects not available");
         }
+
+        // SystemInfo hands the whole thing over in one call rather than a bridge round-trip per value
+        const sysdlg = document.getElementById("sysdlg");
+        document.getElementById("sysinfo").addEventListener("click", async () => {
+            document.getElementById("sysjson").textContent = "reading...";
+            sysdlg.showModal();
+            const info = JSON.parse(await chrome.webview.hostObjects.system.getInfo());
+            document.getElementById("sysjson").textContent = JSON.stringify(info, null, 2);
+        });
+        document.getElementById("sysclose").addEventListener("click", () => sysdlg.close());
     </script>
 </body>
 </html>

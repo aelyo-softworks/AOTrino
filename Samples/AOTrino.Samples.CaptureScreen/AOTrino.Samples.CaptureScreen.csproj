@@ -25,7 +25,6 @@
 		<Using Include="System.Threading" />
 		<Using Include="System.Threading.Tasks" />
 		<Using Include="DirectN" />
-		<Using Alias="DirectNFunctions" Include="DirectN.Functions" />
 		<Using Include="DirectN.Extensions" />
 		<Using Include="DirectN.Extensions.Com" />
 		<Using Include="DirectN.Extensions.Utilities" />
@@ -37,6 +36,8 @@
 		<Using Include="Windows.UI" />
 		<Using Include="Windows.UI.Composition" />
 		<Using Include="WinRT" />
+
+		<Using Alias="DirectNFunctions" Include="DirectN.Functions" />
 	</ItemGroup>
 
 	<ItemGroup>

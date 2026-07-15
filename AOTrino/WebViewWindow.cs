@@ -351,6 +351,16 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         }
     }
 
+    // the Windows settings a page can't get from the web platform and can't afford to ask for.
+    // deliberately tiny, and deliberately NOT an API surface: everything the browser already knows (theme,
+    // reduced motion, DPI, locale, screen size, clipboard) stays the browser's job, and everything an app
+    // wants (files, shell, dialogs) stays the app's, through a host object of its own. this is only for
+    // values AOTrino's own front end needs, that Windows alone can answer.
+    // it's injected with the runtime rather than exposed on a host object because a host call is async, and
+    // the callers need it synchronously: a drag region has to decide inside a mousedown whether the press
+    // is the second of a double-click - it cannot await.
+    protected virtual string GetSystemJson() => $"{{\"doubleClickTimeMs\":{DirectNFunctions.GetDoubleClickTime()}}}";
+
     protected virtual void EnsureSharedRuntime()
     {
         if (_sharedRuntimeReady)
@@ -361,6 +371,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
 
         // the generic __aotrino runtime, on every future document and the current one
         AddStartupScript(SharedBuffer.Runtime);
+        AddStartupScript($"window.__aotrino.system = {GetSystemJson()};");
 
         webView.Object.add_WebMessageReceived(new CoreWebView2WebMessageReceivedEventHandler((sender, args) =>
         {

@@ -107,6 +107,17 @@ public partial class DispatchObject : IDispatch
     // when working with WebView2 and the HostObjectHelper is installed, set this to true
     public static bool OneStepInvoke { get; set; }
 
+    // hides a member from JS without deleting it. [Browsable(false)] does the same at compile time when you
+    // own the class; this is for when you don't - dropping a property from a host object you inherited, say
+    // AOTrino's SystemInfo:
+    //
+    //   protected override bool IsMemberVisible(string name) =>
+    //       name != nameof(SystemInfo.Adapters) && base.IsMemberVisible(name);
+    //
+    // adding members needs nothing: the dispatch cache is per runtime type, so a subclass's own public
+    // members show up on their own.
+    protected virtual bool IsMemberVisible(string name) => true;
+
     public virtual bool IsMethod(string? name)
     {
         if (string.IsNullOrEmpty(name))
@@ -163,7 +174,12 @@ public partial class DispatchObject : IDispatch
             }
 
             var dispId = dispatchType.GetDispId(name);
-            if (dispId < 0)
+            if (dispId >= 0 && !IsMemberVisible(name))
+            {
+                // hidden on purpose, so it isn't an error worth tracing: JS just doesn't see the member
+                dispId = -1;
+            }
+            else if (dispId < 0)
             {
                 Application.TraceError($"DISP_E_UNKNOWNNAME {GetType().FullName} {name}");
             }

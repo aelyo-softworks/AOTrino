@@ -9,7 +9,17 @@ export interface BufferMetadata {
 
 export type BufferCallback = (buffer: ArrayBuffer, meta: BufferMetadata) => void;
 
+// Windows settings the web platform can't answer, injected with the runtime so they can be read
+// synchronously. deliberately tiny: anything the browser already knows (theme, reduced motion, DPI, locale,
+// screen, clipboard) is the browser's job, and anything an app wants is the app's, through a host object.
+export interface AOTrinoSystem {
+    // GetDoubleClickTime(). the user's setting, not a guess: Mouse Properties can put it anywhere
+    // from 200 ms to 900 ms.
+    readonly doubleClickTimeMs: number;
+}
+
 export interface AOTrinoRuntime {
+    readonly system: AOTrinoSystem;
     getBuffer(name: string): ArrayBuffer | null;
     getMeta(name: string): BufferMetadata | null;
     onBuffer(name: string, callback: BufferCallback): void;
@@ -52,6 +62,14 @@ export function runtime(): AOTrinoRuntime {
 
     return injected;
 }
+
+// what Windows says, with the documented defaults when there's no host (a plain browser under `npm run dev`)
+export function system(): AOTrinoSystem {
+    return (typeof window !== "undefined" ? window.__aotrino?.system : undefined) ?? defaultSystem;
+}
+
+// Windows' own default double-click time, for when nothing can be asked
+const defaultSystem: AOTrinoSystem = { doubleClickTimeMs: 500 };
 
 export function webView(): WebView {
     const view = typeof window !== "undefined" ? window.chrome?.webview : undefined;

@@ -1,12 +1,14 @@
 import type { HTMLAttributes, MouseEvent } from "react";
 import { useRef } from "react";
-import { appWindow, dragAttribute, dragExcludeAttribute } from "@aotrino/client";
+import { appWindow, dragAttribute, dragExcludeAttribute, system } from "@aotrino/client";
 
-// Windows' default double-click time.
 // the gesture is timed here rather than handled with an onDoubleClick, because no dblclick ever arrives on a drag region:
 // the first mousedown starts a native window, move loop (ReleaseCapture + WM_NCLBUTTONDOWN) which swallows the mouseup, so the browser never completes a click pair.
 // the second mousedown does reach us, and that is what this measures.
-const doubleClickMs = 500;
+//
+// the window it's measured against is Windows' own GetDoubleClickTime(), not a guess: the user can set it
+// anywhere from 200 ms to 900 ms in Mouse Properties, and a caption that ignores that is a caption that
+// feels broken to whoever changed it.
 
 // TypeScript allows data-* attributes in JSX but not in HTMLAttributes, so name the two keys explicitly.
 // dragAttribute/dragExcludeAttribute are const string literals, so `typeof` gives the exact key names and these stay in step with the client automatically.
@@ -37,7 +39,7 @@ export function useDragRegion(options?: DragRegionOptions): DragRegionProps {
         if ((e.target as Element).closest(`[${dragExcludeAttribute}]`))
             return;
 
-        const secondClick = e.timeStamp - lastDownAt.current <= doubleClickMs;
+        const secondClick = e.timeStamp - lastDownAt.current <= system().doubleClickTimeMs;
         lastDownAt.current = secondClick ? 0 : e.timeStamp;
         if (!secondClick)
             return;

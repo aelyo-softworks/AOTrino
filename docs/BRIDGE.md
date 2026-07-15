@@ -172,6 +172,37 @@ For bulk data — pixels, buffers, anything per-frame — don't use the bridge a
 `WebViewWindow.CreateSharedBuffer`, which hands the page real shared memory (`AOTrino.Graphics.Direct2DSurface`
 is built on it).
 
+## What AOTrino puts on the page by default
+
+Next to nothing, and that's the design.
+
+```js
+window.__aotrino.system.doubleClickTimeMs   // GetDoubleClickTime()
+```
+
+That is the entire built-in Windows surface. It's injected with the runtime rather than exposed as a host
+object because it has to be readable **synchronously**: a drag region decides *inside* a mousedown whether the
+press is the second of a double-click, and it cannot await. `@aotrino/client` types it as `system()`, with
+Windows' own 500 ms as the fallback when there's no host.
+
+The line it's drawn on:
+
+- **The browser already knows it → the browser's job.** Theme (`prefers-color-scheme`), reduced motion,
+  DPI (`devicePixelRatio`), locale, screen size, clipboard, online state. Re-exposing those through a native
+  API would be a second, worse source of truth. `@aotrino/fluent` follows the Windows theme this way and never
+  touches .NET to do it.
+- **Only Windows knows it, and AOTrino's own front end needs it → here.** Today that is exactly one value.
+  It's here because `useDragRegion` would otherwise guess, and a caption that ignores a user who set their
+  double-click speed to 900 ms is a caption that feels broken to them.
+- **Your app wants it → your app's host object.** Files, shell, dialogs, printing, settings, power. AOTrino
+  neither grants nor blocks these (see [SECURITY.md](SECURITY.md)); it just doesn't pretend they're
+  platform features. This is where AOTrino deliberately diverges from Electron, which ships `dialog`,
+  `shell`, `clipboard`, `powerMonitor` and the rest as framework surface — every one of those is API you
+  inherit, version, and answer for. Here they're twenty lines in a class you own.
+
+To add a value, override `WebViewWindow.GetSystemJson`. If you find yourself wanting many, that's the signal
+you want a host object instead.
+
 ## Rules the bridge imposes
 
 - **Host object classes need `[GeneratedComClass]` and `partial`.** They're COM objects underneath.

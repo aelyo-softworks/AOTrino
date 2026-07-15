@@ -125,7 +125,59 @@ AOTrino intentionally does **not** decide these for you — they stay explicit, 
   neither grants nor blocks it. Expose it through a host object if and when your app needs it.
 - **Host objects (the JS ↔ .NET bridge).** Nothing is reachable from JS that you did not explicitly register
   (`AddHostObject`). The bridge is deny-all by default simply because it's empty until you fill it. If you host
-  untrusted content, register nothing sensitive on it — or don't host it in a privileged window at all.
+  untrusted content, register nothing sensitive on it — or don't host it in a privileged window at all. See
+  the next section: that last sentence is not a style note.
+
+## Host objects belong to the window, not to your page
+
+A host object registered on a window is reachable from **every document that window loads**, whatever its
+origin. WebView2's `AddHostObjectToScript` takes no origin filter (`AddHostObjectToScriptWithOrigins` exists
+only for iframes), so this is not something AOTrino can tighten for you.
+
+Measured, with `https://example.com` loaded in a `NavigationMode.Web` window that had registered a host object:
+
+```js
+chrome.webview.hostObjects.sync.secret.getSecret()   // -> "simon@SMO03"
+```
+
+The injected runtime reaches remote pages too — `window.__aotrino` and its window controls are there on any
+site. That is deliberate and harmless (they drive *this* window; a page can already `window.close()`), but a
+**host object is not harmless**, because it's your code.
+
+So the rule is simple, and it is about the window, not the object:
+
+> Register host objects on windows that show **your** content. A window that browses the web gets none.
+
+If an app needs both, that's the two-window shape from *the footgun* above: a `Local` window with the host
+objects, a `Web` window with none. `NavigationMode` is a property you can set at any time — flipping a window
+to `Web` after registering does **not** unregister anything, so don't.
+
+## `SystemInfo`: shipped, not registered
+
+`AOTrino.SystemInfo` is a ready-made host object of read-only facts a page can't otherwise learn: versions
+(down to the kernel), cultures and keyboard layouts, DPI and the monitors, graphics adapters, VM and remote
+session detection. It exists so nobody hand-rolls DXGI enumeration for an about box.
+
+**AOTrino never registers it.** That would violate the rule above — and everything in it is exactly what
+fingerprinting wants. You register it, on a window you trust:
+
+```csharp
+protected override void RegisterHostObjects() => AddHostObject("system", new SystemInfo(this));
+```
+
+Its values are a JSON DOM, and they're yours before you hand them over — drop what your app has no business
+reporting, add what it does:
+
+```csharp
+var info = new SystemInfo(this);
+info.Values.Remove("adapters");
+info.Values["tenant"] = currentTenant;
+AddHostObject("system", info);
+```
+
+`AOTrino.Samples.FileExplorer` does this behind its **System** button. Deliberately absent (but demonstrated 
+in samples) is elevation state (the first thing an exploit wants to know), and the machine and user names — those are the app's to
+expose, from its own host object, if it wants them at all.
 
 ## The footgun, spelled out
 

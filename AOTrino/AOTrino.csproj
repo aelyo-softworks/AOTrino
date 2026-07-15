@@ -30,6 +30,7 @@
 		<Using Include="System.Security.Cryptography" />
 		<Using Include="System.Text" />
 		<Using Include="System.Text.Json" />
+		<Using Include="System.Text.Json.Nodes" />
 		<Using Include="System.Text.Json.Serialization.Metadata" />
 		<Using Include="System.Threading" />
 		<Using Include="System.Threading.Tasks" />
