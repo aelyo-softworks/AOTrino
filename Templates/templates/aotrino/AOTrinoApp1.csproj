@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RootNamespace>AOTrinoApp1</RootNamespace>
+    <AssemblyTitle>AOTrinoApp1</AssemblyTitle>
+
+    <!-- one exe, no runtime to install. `dotnet publish -r win-x64` produces it -->
+    <PublishAot>true</PublishAot>
+    <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
+
+    <!-- everything under WebRoot\dist is embedded in the exe and extracted at startup -->
+    <AOTrinoEmbedWebRoot>true</AOTrinoEmbedWebRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AOTrino" Version="1.0.0" />
+  </ItemGroup>
+
+</Project>

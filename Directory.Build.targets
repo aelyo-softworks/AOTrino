@@ -1,111 +1,68 @@
-<Project>
+﻿<Project>
 
 	<!--
-	  AOTrino WebRoot embedding.
-
-	  A host project opts in with <AOTrinoEmbedWebRoot>true</AOTrinoEmbedWebRoot>. Every file under
-	  $(AOTrinoWebRootDir) (default: WebRoot\dist) is embedded as a manifest resource whose logical name is
-	  its project-relative path (e.g. "WebRoot\dist\index.html"). AOTrino's runtime WebRoot extractor finds
-	  every resource starting with "WebRoot\", strips that prefix, and writes the rest to disk so the WebView
-	  can navigate to the local index.html.
-
-	  A project whose WebRoot is generated (npm/Vite rather than hand-written) also sets
-	  <AOTrinoNpmBuild>true</AOTrinoNpmBuild>; see the AOTrinoNpmBuild target below.
-
-	  When AOTrino ships as a NuGet package this file moves to the package's build\ folder and is imported
-	  automatically; today it lives at the repo root so every sample picks it up.
+	  The build logic AOTrino ships lives in AOTrino\build\AOTrino.targets, and it is imported here rather than
+	  copied: a consumer gets that file from the package (NuGet imports build\<PackageId>.targets on its own),
+	  while the samples reference the project instead - so without this import they would be exercising build
+	  logic no consumer ever runs, and the shipped copy would rot unnoticed.
+	  What stays in this file is what only makes sense inside this repo.
 	-->
-	<PropertyGroup Condition="'$(AOTrinoEmbedWebRoot)' == 'true'">
-		<AOTrinoWebRootDir Condition="'$(AOTrinoWebRootDir)' == ''">WebRoot\dist</AOTrinoWebRootDir>
-	</PropertyGroup>
+	<Import Project="$(MSBuildThisFileDirectory)AOTrino\build\AOTrino.targets" />
 
-	<PropertyGroup Condition="'$(AOTrinoNpmBuild)' == 'true'">
-		<!-- the npm project root: holds package.json, and Vite builds from here into $(AOTrinoWebRootDir) -->
-		<AOTrinoNpmDir Condition="'$(AOTrinoNpmDir)' == ''">WebRoot</AOTrinoNpmDir>
-	</PropertyGroup>
-
-	<!-- default application icon (the brand icon at the repo root) for every executable project; a project can override with its own <ApplicationIcon> -->
+	<!--
+	  Default application icon (the brand icon at the repo root) for every executable project; a project can
+	  override with its own <ApplicationIcon>. Not in the shipped targets: a consumer's app has its own identity.
+	-->
 	<PropertyGroup Condition="'$(ApplicationIcon)' == '' and ('$(OutputType)' == 'WinExe' or '$(OutputType)' == 'Exe')">
 		<ApplicationIcon>$(MSBuildThisFileDirectory)AOTrino.ico</ApplicationIcon>
 	</PropertyGroup>
 
 	<!--
-	  So Visual Studio's fast up-to-date check rebuilds (re-embeds) when the page changes instead of skipping
-	  to a stale build. For a hand-written WebRoot the embedded files themselves are the inputs; for a
-	  generated one they're an *output* of the npm build, so watch its sources instead.
+	  Every sample can be published for any of the three architectures (publish.bat does all of them), and this
+	  is what makes one restore cover all three: project.assets.json only carries the RIDs the project declares,
+	  so without this, publishing win-arm64 fails with NETSDK1047 ("assets file doesn't have a target for
+	  .../win-arm64") unless something restored for that exact RID immediately before - which NuGet is free to
+	  skip when it decides the restore is up to date.
+	  Set here rather than in Directory.Build.props because OutputType isn't known that early, and set rather than
+	  defaulted because something upstream already leaves RuntimeIdentifiers as ";win-x64" - so a
+	  Condition="'$(RuntimeIdentifiers)' == ''" silently never fires and only x64 can be published.
 	-->
-	<ItemGroup Condition="'$(AOTrinoEmbedWebRoot)' == 'true' and '$(AOTrinoNpmBuild)' != 'true'">
-		<UpToDateCheckInput Include="$(AOTrinoWebRootDir)\**\*" />
-	</ItemGroup>
-
-	<ItemGroup Condition="'$(AOTrinoNpmBuild)' == 'true'">
-		<UpToDateCheckInput Include="$(AOTrinoNpmDir)\src\**\*" />
-		<UpToDateCheckInput Include="$(AOTrinoNpmDir)\index.html" />
-		<UpToDateCheckInput Include="$(AOTrinoNpmDir)\package.json" />
-		<UpToDateCheckInput Include="$(AOTrinoNpmDir)\vite.config.ts" />
-	</ItemGroup>
+	<PropertyGroup Condition="'$(OutputType)' == 'WinExe' or '$(OutputType)' == 'Exe'">
+		<RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
+	</PropertyGroup>
 
 	<!--
-	  Builds a generated WebRoot before it gets embedded.
+	  The shipped targets install a project's front end themselves (AOTrinoNpmInstall). This repo doesn't want
+	  that: node_modules is one workspace shared by every npm sample, and installing it per project in parallel
+	  collided on the workspace symlinks (EEXIST). AOTrino.Npm.proj does it once instead - see below.
+	-->
+	<PropertyGroup>
+		<AOTrinoNpmInstall>false</AOTrinoNpmInstall>
+	</PropertyGroup>
 
-	  The repo-root package.json declares npm workspaces, which link @aotrino/* into node_modules as
-	  symlinks: no registry, no publishing, and the front end resolves "@aotrino/client" normally.
-	  When AOTrino ships, a consumer project gets the packed tarballs from the NuGet instead and this
-	  target reduces to the plain "npm run build" line.
+	<!--
+	  Replaces the shipped AOTrinoNpmBuild (a plain "npm run build") for this repo only: same target name,
+	  defined after the import, so this one wins.
+
+	  The difference is the workspace. The repo-root package.json declares npm workspaces, which link @aotrino/*
+	  into node_modules as symlinks: no registry, no publishing, and the front end resolves "@aotrino/client"
+	  normally. A consumer has no workspace - it installs the @aotrino/* tarballs like any other dependency, so
+	  the shipped target only has to run their own build.
+
+	  node_modules and the @aotrino/* libraries belong to the whole solution, not to one project, so they live in
+	  AOTrino.Npm.proj. Calling it through the MSBuild task (rather than a ProjectReference) runs it at exactly
+	  this point in the build, and MSBuild still caches the result per project+targets, so with several npm
+	  samples building in parallel it executes once. Doing the npm work per-project raced: two installs collided
+	  on the workspace symlinks (EEXIST) and two compilers wrote one dist.
 	-->
 	<Target Name="AOTrinoNpmBuild"
 			BeforeTargets="AOTrinoEmbedWebRoot"
 			Condition="'$(AOTrinoNpmBuild)' == 'true'">
-		<!--
-		  node_modules and the @aotrino/* libraries belong to the whole solution, not to this project, so they
-		  live in AOTrino.Npm.proj. Calling it through the MSBuild task (rather than a ProjectReference) runs it
-		  at exactly this point in the build, and MSBuild still caches the result per project+targets, so with
-		  several npm samples building in parallel it executes once. Doing the npm work per-project raced: two
-		  installs collided on the workspace symlinks (EEXIST) and two compilers wrote one dist.
-		-->
 		<MSBuild Projects="$(MSBuildThisFileDirectory)npm\AOTrino.Npm.proj" Targets="Build" />
 
 		<!-- ...and then only this project's own front end -->
 		<Exec Command="npm run build"
 			  WorkingDirectory="$(MSBuildProjectDirectory)\$(AOTrinoNpmDir)" />
-	</Target>
-
-	<Target Name="AOTrinoEmbedWebRoot"
-			BeforeTargets="BeforeBuild"
-			Condition="'$(AOTrinoEmbedWebRoot)' == 'true'">
-		<ItemGroup>
-			<!--
-			  Glob inside the target rather than in a static ItemGroup: a generated WebRoot doesn't exist yet
-			  when the project is evaluated (AOTrinoNpmBuild produces it above), so a static glob would embed
-			  nothing on a clean clone. Glob into a private item first and transform it in a second step: an
-			  Include with both a wildcard and %(Identity) metadata in one step doesn't batch as it looks.
-			-->
-			<_AOTrinoWebRootFile Include="$(AOTrinoWebRootDir)\**\*" />
-			<EmbeddedResource Include="@(_AOTrinoWebRootFile)">
-				<LogicalName>%(Identity)</LogicalName>
-			</EmbeddedResource>
-		</ItemGroup>
-	</Target>
-
-	<!--
-	  AOTrino embedded scripts.
-
-	  Any file under a project's Scripts\ folder is embedded with its bare file name as the logical name
-	  (e.g. Scripts\BrowserChrome.js -> "BrowserChrome.js"). Load it at runtime with
-	  AOTrino's EmbeddedResource.Load(assembly, "BrowserChrome.js") or WebViewWindow.AddStartupScriptResource,
-	  so JS/CSS live in real files instead of C# string literals.
-	-->
-	<ItemGroup>
-		<ScriptResource Include="Scripts\**\*" />
-		<UpToDateCheckInput Include="@(ScriptResource)" />
-	</ItemGroup>
-
-	<Target Name="AOTrinoEmbedScripts" BeforeTargets="BeforeBuild">
-		<ItemGroup>
-			<EmbeddedResource Include="@(ScriptResource)">
-				<LogicalName>%(Filename)%(Extension)</LogicalName>
-			</EmbeddedResource>
-		</ItemGroup>
 	</Target>
 
 </Project>

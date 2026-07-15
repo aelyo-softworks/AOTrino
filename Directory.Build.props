@@ -3,11 +3,13 @@
 	<!-- values shared by every project in the solution -->
 	<PropertyGroup>
 		<TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
-		<WindowsSdkPackageVersion>10.0.26100.57</WindowsSdkPackageVersion>
 		<Nullable>enable</Nullable>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<Platforms>x86;x64;ARM64</Platforms>
 		<Configurations>Release;Debug</Configurations>
+
+		<!-- the library and the templates ship as packages; every sample opts out by inheriting this -->
+		<IsPackable>false</IsPackable>
 
 		<Product>AOTrino</Product>
 		<Company>Aelyo Softworks</Company>

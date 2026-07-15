@@ -13,6 +13,8 @@
     "//build:libs": "the @aotrino/* libraries, in dependency order: each one's types come from the previous one's dist, so they must build client -> react -> fluent. npm does not guarantee an order for workspace prepare scripts, which is why this list is explicit and lives here rather than in a prepare script.",
     "build:libs": "npm run build -w @aotrino/client && npm run build -w @aotrino/react && npm run build -w @aotrino/fluent",
     "postinstall": "npm run build:libs",
+    "//pack:libs": "the tarballs an app outside this repo installs. nothing here is published to a registry, so a consumer can't ask for \"@aotrino/client\": \"^1.0.0\" and get anything - it installs these files, and AOTrino.Templates carries them into a generated app. --pack-destination doesn't create the folder, hence the node line. same dependency order as build:libs; each prepack rebuilds its own dist.",
+    "pack:libs": "node -e \"require('fs').mkdirSync('npm/pack',{recursive:true})\" && npm pack -w @aotrino/client -w @aotrino/react -w @aotrino/fluent --pack-destination npm/pack",
     "build": "npm run build --if-present --workspaces",
     "typecheck": "npm run typecheck --if-present --workspaces"
   }

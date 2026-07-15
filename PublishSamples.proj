@@ -1,0 +1,187 @@
+﻿<Project DefaultTargets="Help">
+
+	<!--
+	  Publishes every sample, for every architecture, into one folder.
+
+	  This is not part of a normal build: it's the "cut a drop" operation - AOT-compile all of them, three times
+	  each, and put the exes somewhere you can look at them side by side (or hand them to someone).
+
+	      publish.bat                 all samples, all architectures -> publish\win-x64\*.exe, etc.
+	      publish.bat -upx            ...and squeeze the exes with UPX
+	      publish.bat -rid win-arm64  just one architecture
+	      publish.bat -zip            ...and one zip per architecture
+	      publish.bat -release v1.0.0 ...and hand those zips to a GitHub release
+
+	  or, from anywhere MSBuild runs (including VS's terminal):
+
+	      dotnet build PublishSamples.proj -t:PublishAll
+	      dotnet build PublishSamples.proj -t:PublishAll -p:Upx=true -p:Rids=win-x64
+
+	  The default target is Help, deliberately: this file publishes a dozen native binaries and nobody wants that
+	  from a stray "build everything".
+	-->
+
+	<PropertyGroup>
+		<PublishRoot Condition="'$(PublishRoot)' == ''">$(MSBuildThisFileDirectory)publish</PublishRoot>
+		<Rids Condition="'$(Rids)' == ''">win-x86;win-x64;win-arm64</Rids>
+		<Upx Condition="'$(Upx)' == ''">false</Upx>
+		<Zip Condition="'$(Zip)' == ''">false</Zip>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- every sample, found rather than listed: a new sample joins the drop by existing -->
+		<SampleProject Include="$(MSBuildThisFileDirectory)Samples\*\*.csproj" />
+
+		<!-- a RID and the Platform that goes with it: the samples declare x86;x64;ARM64 and no AnyCPU, so
+		     publishing win-arm64 as x64 would compile the wrong thing (or fail to find the platform at all).
+		     the condition selects at Include time - a <Rid Remove> with a %(Identity) condition doesn't batch
+		     the way it reads and silently removed all three, which shows up much later as an empty
+		     RuntimeIdentifier. -->
+		<Rid Include="win-x86" Platform="x86" Condition="$(Rids.Contains('win-x86'))" />
+		<Rid Include="win-x64" Platform="x64" Condition="$(Rids.Contains('win-x64'))" />
+		<Rid Include="win-arm64" Platform="ARM64" Condition="$(Rids.Contains('win-arm64'))" />
+	</ItemGroup>
+
+	<Target Name="Help">
+		<Message Importance="High" Text="AOTrino - publishes every sample, AOT, for every architecture, into one folder." />
+		<Message Importance="High" Text=" " />
+		<Message Importance="High" Text="  publish.bat                    all samples, all architectures" />
+		<Message Importance="High" Text="  publish.bat -upx               ...and compress the exes with UPX" />
+		<Message Importance="High" Text="  publish.bat -rid win-x64       one architecture only" />
+		<Message Importance="High" Text="  publish.bat -clean             delete $(PublishRoot) first" />
+		<Message Importance="High" Text="  publish.bat -zip               ...and one zip per architecture" />
+		<Message Importance="High" Text="  publish.bat -release v1.0.0    ...and publish those zips as a GitHub release (needs gh)" />
+		<Message Importance="High" Text=" " />
+		<Message Importance="High" Text="  output: $(PublishRoot)\&lt;rid&gt;\&lt;sample&gt;.exe, $(PublishRoot)\AOTrino-samples-&lt;rid&gt;.zip" />
+	</Target>
+
+	<Target Name="Clean">
+		<RemoveDir Directories="$(PublishRoot)" />
+		<Message Importance="High" Text="AOTrino: removed $(PublishRoot)" />
+	</Target>
+
+	<!--
+	  One pass per architecture: restore for that RID, then publish every sample into the same folder.
+
+	  Target batching (Outputs="%(Rid.Identity)") runs PublishRid once per architecture.
+	  PublishDir per RID rather than per project is what puts the exes together.
+	  BuildInParallel: AOT compiling a dozen binaries is the slow part, and they're independent.
+	-->
+	<Target Name="RestoreAll">
+		<!--
+		  One restore for all architectures: the samples declare RuntimeIdentifiers (see Directory.Build.targets),
+		  so a single restore writes every RID's target into project.assets.json and each Publish below finds its
+		  own. Restoring per RID instead looks equivalent and isn't - NuGet skips a restore it considers up to
+		  date, and the publish that follows then fails with NETSDK1047 for the RID that was never restored.
+		-->
+		<Message Importance="High" Text="AOTrino: restoring @(SampleProject->Count()) samples" />
+		<MSBuild Projects="@(SampleProject)" Targets="Restore" Properties="Configuration=Release;Platform=x64" />
+	</Target>
+
+	<Target Name="PublishRid" Outputs="%(Rid.Identity)">
+		<Message Importance="High" Text="AOTrino: publishing @(SampleProject->Count()) samples for %(Rid.Identity) into $(PublishRoot)\%(Rid.Identity)" />
+		<!--
+		  _IsPublishing is not decoration: `dotnet publish` sets it, and without it the SDK drops the
+		  RuntimeIdentifier we pass, so ILCompiler stops with "RuntimeIdentifier is required for native
+		  compilation" - a confusing way to be told the Publish target was invoked, but not by publish.
+		-->
+		<MSBuild Projects="@(SampleProject)"
+				 Targets="Publish"
+				 BuildInParallel="true"
+				 Properties="Configuration=Release;RuntimeIdentifier=%(Rid.Identity);Platform=%(Rid.Platform);PublishDir=$(PublishRoot)\%(Rid.Identity)\;PublishAot=true;_IsPublishing=true" />
+	</Target>
+
+	<Target Name="PublishAll" DependsOnTargets="RestoreAll;PublishRid">
+		<CallTarget Targets="Upx" Condition="'$(Upx)' == 'true'" />
+		<CallTarget Targets="Zip" Condition="'$(Zip)' == 'true' or '$(ReleaseTag)' != ''" />
+		<CallTarget Targets="Report" />
+		<CallTarget Targets="Release" Condition="'$(ReleaseTag)' != ''" />
+	</Target>
+
+	<!--
+	  UPX, on request only.
+
+	  Measured, UPX 5.2.0: x86 and x64 come down to about 36% (a 11 MB sample ends at 4 MB), and arm64 doesn't
+	  compress at all - "CantPackException: win64/arm64 is not yet supported". That's why failure here is a
+	  warning, not an error: an uncompressed exe is a fine outcome, a failed drop isn't. Skipping arm64 outright
+	  would be tidier and wrong - the day UPX learns arm64, this starts working with no change here.
+
+	  It also rewrites the exe in place, so a second run over the same folder meets an already-packed file; the
+	  force flag keeps that from ending the drop.
+
+	  Careful with the name: upx.exe reads default options from an environment variable called UPX, so a caller
+	  that does `set UPX=true` breaks every invocation with "invalid string 'true' in environment variable 'UPX'"
+	  - and MSBuild reads environment variables as properties, so that same variable would quietly set $(Upx)
+	  as well. publish.bat uses AOTRINO_UPX for both reasons.
+	-->
+	<Target Name="Upx">
+		<ItemGroup>
+			<PublishedExe Include="$(PublishRoot)\**\*.exe" />
+		</ItemGroup>
+		<Message Importance="High" Text="AOTrino: UPX on @(PublishedExe->Count()) exe(s) - arm64 is expected to refuse, UPX can't pack it yet" />
+		<Exec Command="upx --best --force &quot;%(PublishedExe.Identity)&quot;"
+			  ContinueOnError="WarnAndContinue"
+			  StandardOutputImportance="high" />
+	</Target>
+
+	<!--
+	  One zip per architecture, because that's what a release page can actually offer: twelve samples times three
+	  architectures is 36 loose assets, and nobody downloads 36 things.
+
+	  Staged through a temp folder rather than zipping publish\<rid> directly: that folder also holds the .pdb
+	  next to every exe, and symbols have no business in a "here are the samples" download - they'd more than
+	  double it. ZipDirectory takes a directory, not a file list, so the exes are copied out first.
+	-->
+	<Target Name="Zip" Outputs="%(Rid.Identity)">
+		<PropertyGroup>
+			<_ZipStage>$(PublishRoot)\staging\%(Rid.Identity)</_ZipStage>
+			<_ZipFile>$(PublishRoot)\AOTrino-samples-%(Rid.Identity).zip</_ZipFile>
+		</PropertyGroup>
+		<ItemGroup>
+			<_ZipExe Include="$(PublishRoot)\%(Rid.Identity)\*.exe" />
+		</ItemGroup>
+
+		<Copy SourceFiles="@(_ZipExe)" DestinationFolder="$(_ZipStage)" />
+		<ZipDirectory SourceDirectory="$(_ZipStage)" DestinationFile="$(_ZipFile)" Overwrite="true" />
+
+		<!-- the parent too, or an empty publish\staging survives the drop. the next architecture's Copy recreates
+		     it, so removing it every round still ends clean -->
+		<RemoveDir Directories="$(_ZipStage);$(PublishRoot)\staging" />
+		<Message Importance="High" Text="AOTrino: zipped @(_ZipExe->Count()) exe(s) -> $(_ZipFile)" />
+	</Target>
+
+	<!--
+	  Hands the zips to a GitHub release, the way rel.bat does it elsewhere: gh, a tag, generated notes.
+
+	  This one is different in kind from every other target here - it publishes, to the internet, under a tag that
+	  is awkward to take back. Hence: nothing happens without an explicit -release <tag>, and the assets have to
+	  exist already (a release of nothing, or of a stale publish, is worse than no release).
+	  gh.exe must be on the PATH and already authenticated.
+	-->
+	<Target Name="Release">
+		<Error Condition="'$(ReleaseTag)' == ''" Text="AOTrino: -release needs a tag, e.g. publish.bat -release v1.0.0" />
+
+		<ItemGroup>
+			<ReleaseAsset Include="$(PublishRoot)\*.zip" />
+		</ItemGroup>
+		<Error Condition="'@(ReleaseAsset)' == ''" Text="AOTrino: no zips in $(PublishRoot) to release. Run publish.bat -release &lt;tag&gt; (it zips first)." />
+
+		<Message Importance="High" Text=" " />
+		<Message Importance="High" Text="AOTrino: creating GitHub release $(ReleaseTag) with @(ReleaseAsset->Count()) asset(s)" />
+		<Exec Command="gh release create $(ReleaseTag) @(ReleaseAsset->'&quot;%(FullPath)&quot;', ' ') --generate-notes" />
+	</Target>
+
+	<!--
+	  What came out, and how big. Size is the whole reason UPX is an option here, so it's worth printing rather
+	  than leaving to explorer.
+	  Shelled out because MSBuild can't read a file's length: property functions are a fixed list, and
+	  System.IO.FileInfo isn't on it.
+	-->
+	<Target Name="Report">
+		<Message Importance="High" Text=" " />
+		<Exec Command="powershell -NoProfile -Command &quot;Get-ChildItem -Path '$(PublishRoot)' -Recurse -Filter *.exe | Sort-Object FullName | ForEach-Object { '{0,10:N2} MB  {1}\{2}' -f ($_.Length/1MB), $_.Directory.Name, $_.Name }&quot;"
+			  Condition="Exists('$(PublishRoot)')"
+			  StandardOutputImportance="high" />
+	</Target>
+
+</Project>

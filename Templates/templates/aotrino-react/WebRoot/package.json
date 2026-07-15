@@ -1,0 +1,25 @@
+{
+  "name": "aotrinoapp1",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc -b --noEmit"
+  },
+  "//dependencies": "@aotrino/* install from the tarballs in packages\\: they are not on any registry. when they are, these become version ranges.",
+  "dependencies": {
+    "@aotrino/client": "file:../packages/aotrino-client-1.0.0.tgz",
+    "@aotrino/react": "file:../packages/aotrino-react-1.0.0.tgz",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.10"
+  }
+}

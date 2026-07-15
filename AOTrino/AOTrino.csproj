@@ -5,7 +5,28 @@
 		<RootNamespace>AOTrino</RootNamespace>
 		<Title>AOTrino</Title>
 		<AssemblyTitle>AOTrino</AssemblyTitle>
+
+		<IsPackable>true</IsPackable>
+		<PackageId>AOTrino</PackageId>
+		<PackageTags>.NET AOT WebView2 Desktop Electron SingleExe DirectN DirectNAot WebView2Aot React FluentUI</PackageTags>
+		<PackageProjectUrl>https://github.com/aelyo-softworks/AOTrino</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/aelyo-softworks/AOTrino</RepositoryUrl>
+		<PackageIcon>AOTrino256.png</PackageIcon>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageLicenseFile>LICENSE</PackageLicenseFile>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="..\LICENSE" Pack="true" PackagePath="\" />
+		<None Include="..\README.md" Pack="true" PackagePath="\" />
+		<None Include="..\AOTrino256.png" Pack="true" PackagePath="\" />
+
+		<!-- NuGet imports build\<PackageId>.targets into the consumer's project, which is how a plain csproj gets
+		     WebRoot embedding without copying MSBuild into every app. this repo imports the same file from
+		     Directory.Build.targets, so what the samples build with is what ships. -->
+		<None Include="build\AOTrino.targets" Pack="true" PackagePath="build\" />
+		<None Include="build\AOTrino.app.manifest" Pack="true" PackagePath="build\" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<Using Include="AOTrino" />
@@ -54,7 +75,26 @@
 		<Using Alias="DirectNFunctions" Include="DirectN.Functions" />
 	</ItemGroup>
 
-	<ItemGroup>
+	<!--
+		the same three assemblies, reached two ways.
+
+		by default (and in the IDE) they come from External\, which cr.bat fills from local builds of DirectNAot,
+		DirectNAot.Extensions and WebView2Aot: that's what lets a change in one of those be tried here immediately,
+		without a round trip through nuget.org.
+
+		`dotnet pack` sets UseLocalExternal=false and builds against the published packages instead. that isn't a
+		detail: a package must DECLARE what it needs, and a <Reference> to a file on this machine declares nothing,
+		so a package built the first way would restore for nobody. building the second way is also the only honest
+		test that what's published is enough to compile AOTrino - if it isn't, pack fails here rather than for
+		whoever installs it.
+	-->
+	<PropertyGroup>
+		<UseLocalExternal Condition="'$(UseLocalExternal)' == ''">true</UseLocalExternal>
+		<DirectNAotVersion>1.6.4</DirectNAotVersion>
+		<WebView2AotVersion>1.5.0</WebView2AotVersion>
+	</PropertyGroup>
+
+	<ItemGroup Condition="'$(UseLocalExternal)' == 'true'">
 		<Reference Include="DirectN">
 			<HintPath>..\External\DirectN.dll</HintPath>
 		</Reference>
@@ -64,6 +104,12 @@
 		<Reference Include="WebView2">
 			<HintPath>..\External\WebView2.dll</HintPath>
 		</Reference>
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(UseLocalExternal)' != 'true'">
+		<PackageReference Include="DirectNAot" Version="$(DirectNAotVersion)" />
+		<PackageReference Include="DirectNAot.Extensions" Version="$(DirectNAotVersion)" />
+		<PackageReference Include="WebView2Aot" Version="$(WebView2AotVersion)" />
 	</ItemGroup>
 
 	<!-- end-user-facing strings (Res.resx → strongly-typed Res); VS nests the designer and regenerates it when the resx changes -->

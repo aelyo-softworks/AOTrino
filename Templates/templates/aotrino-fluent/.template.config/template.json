@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Aelyo Softworks",
+  "classifications": [
+    "Desktop",
+    "Windows",
+    "WebView2",
+    "AOT",
+    "React",
+    "Fluent UI"
+  ],
+  "identity": "AOTrino.App.Fluent",
+  "name": "AOTrino app (Fluent UI)",
+  "shortName": "aotrino-fluent",
+  "description": "A single-exe Windows desktop app: Fluent UI in a WebView2 window, AOT-compiled, themed from Windows with @aotrino/fluent.",
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "sourceName": "AOTrinoApp1",
+  "preferNameDirectory": true,
+  "guids": []
+}

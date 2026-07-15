@@ -16,6 +16,8 @@ public partial class AOTrinoApplication : CompositionApplication
         // continuations after 'await' resume on the window message loop
         WindowSynchronizationContext.Install();
 
+        CheckErrorReporting();
+
         var assembly = appAssembly ?? Assembly.GetEntryAssembly() ?? typeof(AOTrinoApplication).Assembly;
         Paths = CreatePaths() ?? throw new InvalidOperationException($"CreatePaths returned null for assembly {assembly.FullName}");
         WebRoot = CreateWebRoot(assembly, Paths) ?? throw new InvalidOperationException($"CreateWebRoot returned null for assembly {assembly.FullName} and paths {Paths}");
@@ -48,10 +50,49 @@ public partial class AOTrinoApplication : CompositionApplication
 
     // application-level tracing. default forwards to DirectN's static Application.Trace*;
     // override to redirect logs (file, telemetry, on-screen console, ...). captured JS console output routes here.
-    public virtual new void TraceInfo(object? message = null, [CallerMemberName] string? methodName = null) => Application.TraceInfo(message, methodName);
-    public virtual new void TraceWarning(object? message = null, [CallerMemberName] string? methodName = null) => Application.TraceWarning(message, methodName);
-    public virtual new void TraceError(object? message = null, [CallerMemberName] string? methodName = null) => Application.TraceError(message, methodName);
-    public virtual new void TraceVerbose(object? message = null, [CallerMemberName] string? methodName = null) => Application.TraceVerbose(message, methodName);
+    public new void TraceInfo(object? message = null, [CallerMemberName] string? methodName = null) => Trace(TraceLevel.Info, message, methodName);
+    public new void TraceWarning(object? message = null, [CallerMemberName] string? methodName = null) => Trace(TraceLevel.Warning, message, methodName);
+    public new void TraceError(object? message = null, [CallerMemberName] string? methodName = null) => Trace(TraceLevel.Error, message, methodName);
+    public new void TraceVerbose(object? message = null, [CallerMemberName] string? methodName = null) => Trace(TraceLevel.Verbose, message, methodName);
+    public virtual new void Trace(TraceLevel level, object? message = null, [CallerMemberName] string? methodName = null) => Application.Trace(level, message, methodName);
+
+    // errors are reported in a task dialog, and TaskDialogIndirect only exists in comctl32 version 6,
+    // which a process only gets from a manifest (AOTrino ships one - see build\AOTrino.app.manifest.
+    // so this is about apps that bring their own and leave Common-Controls out of it).
+    // without it the first error dies inside the error reporter, and what the user is shown is "Unable to find an  entry point named 'TaskDialogIndirect'",
+    // a complaint about the messenger, while the actual exception is only in the trace.
+    // so: check once, up front, and if the dialog can't work, report through MessageBox instead.
+    // the manifest is still the fix; this just makes the app say what went wrong while you find that out.
+    protected virtual void CheckErrorReporting()
+    {
+        if (IsTaskDialogAvailable())
+            return;
+
+        TraceWarning("comctl32 version 6 is not active: this application's manifest doesn't reference Microsoft.Windows.Common-Controls 6.0.0.0. Errors will be reported in a plain message box, and the UI is not visual-styled.");
+        ShowFatalErrorFunc = ShowFatalErrorWithoutTaskDialog;
+    }
+
+    // comctl32 v6 exports TaskDialogIndirect; 5.82 (what an unmanifested process gets) doesn't.
+    // LoadLibrary rather than GetModuleHandle: at this point in startup nothing has needed comctl32 yet, and the activation context decides which version this resolves to.
+    private static bool IsTaskDialogAvailable()
+    {
+        var module = DirectNFunctions.LoadLibraryW(PWSTR.From("comctl32.dll"));
+        if (module.Value == 0)
+            return false;
+
+        return DirectNFunctions.GetProcAddress(module, PSTR.From("TaskDialogIndirect")) != 0;
+    }
+
+    private static bool ShowFatalErrorWithoutTaskDialog(HWND hwnd)
+    {
+        var errors = GetErrors(true);
+        if (errors.Count == 0)
+            return false;
+
+        var text = string.Join(Environment.NewLine + Environment.NewLine, errors.Select(e => e.GetInterestingExceptionMessage()));
+        MessageBox.Show(hwnd, text, GetTitle(hwnd), MESSAGEBOX_STYLE.MB_ICONSTOP);
+        return true;
+    }
 
     // called at startup with the detected WebView2 runtime version (null/empty when absent).
     // default behavior: show a task dialog with a download link, then force-close the process.

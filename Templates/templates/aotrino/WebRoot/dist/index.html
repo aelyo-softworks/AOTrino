@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>AOTrinoApp1</title>
+    <style>
+        :root { color-scheme: light dark; }
+        body { font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif; margin: 0; display: grid; place-items: center; height: 100vh; }
+        code { font-family: "Cascadia Code", Consolas, monospace; }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>AOTrinoApp1</h1>
+        <p>This page is inside the exe. Edit <code>WebRoot\dist\index.html</code> and rebuild.</p>
+        <p id="hosted"></p>
+    </main>
+    <script>
+        // window.__aotrino is injected by the host: window controls, shared buffers, the caption title
+        document.getElementById("hosted").textContent = window.__aotrino
+            ? "Running in AOTrino: " + window.__aotrino.window.title
+            : "Not hosted by AOTrino.";
+    </script>
+</body>
+</html>

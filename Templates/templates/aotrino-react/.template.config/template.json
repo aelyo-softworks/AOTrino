@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Aelyo Softworks",
+  "classifications": [
+    "Desktop",
+    "Windows",
+    "WebView2",
+    "AOT",
+    "React"
+  ],
+  "identity": "AOTrino.App.React",
+  "name": "AOTrino app (React)",
+  "shortName": "aotrino-react",
+  "description": "A single-exe Windows desktop app: React in a WebView2 window, AOT-compiled, with @aotrino/react's window hooks and caption.",
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "sourceName": "AOTrinoApp1",
+  "preferNameDirectory": true,
+  "guids": []
+}

@@ -431,3 +431,6 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# the @aotrino/* tarballs (npm run pack:libs); build output, rebuilt on demand, carried into AOTrino.Templates at pack time
+npm/pack/

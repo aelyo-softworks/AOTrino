@@ -1,5 +1,3 @@
-using System.Runtime.CompilerServices;
-
 namespace AOTrino.Samples.HostObjects;
 
 // demonstrates that AOTrinoApplication's trace methods are overridable: here we simply tag every line before
@@ -9,8 +7,5 @@ public class HostObjectsApplication : AOTrinoApplication
 {
     private const string _tag = "[HostObjects] ";
 
-    public override void TraceInfo(object? message = null, [CallerMemberName] string? methodName = null) => base.TraceInfo(_tag + message, methodName);
-    public override void TraceWarning(object? message = null, [CallerMemberName] string? methodName = null) => base.TraceWarning(_tag + message, methodName);
-    public override void TraceError(object? message = null, [CallerMemberName] string? methodName = null) => base.TraceError(_tag + message, methodName);
-    public override void TraceVerbose(object? message = null, [CallerMemberName] string? methodName = null) => base.TraceVerbose(_tag + message, methodName);
+    public override void Trace(TraceLevel level, object? message = null, [CallerMemberName] string? methodName = null) => base.Trace(level, _tag + message, methodName);
 }

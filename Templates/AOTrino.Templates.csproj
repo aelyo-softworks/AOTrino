@@ -1,0 +1,79 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<!--
+	  `dotnet new aotrino` and friends.
+
+	  A template package is not a library: it has no code, no target framework, and NuGet ships its content
+	  verbatim. Hence the odd-looking properties below - they're what the template engine requires.
+
+	  The three templates are the three levels of the platform: plain page, React, Fluent UI. Each one is the
+	  smallest thing that runs, not a sample - the samples are the place to show what else is possible.
+	-->
+	<PropertyGroup>
+		<PackageType>Template</PackageType>
+		<PackageId>AOTrino.Templates</PackageId>
+		<Title>AOTrino templates</Title>
+		<Description>Project templates for AOTrino: single-exe Windows desktop apps on .NET AOT + WebView2. Plain page, React, or Fluent UI.</Description>
+		<PackageTags>dotnet-new;templates;AOTrino;AOT;WebView2;Desktop;React;FluentUI</PackageTags>
+		<PackageProjectUrl>https://github.com/aelyo-softworks/AOTrino</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/aelyo-softworks/AOTrino</RepositoryUrl>
+		<PackageIcon>AOTrino256.png</PackageIcon>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageLicenseFile>LICENSE</PackageLicenseFile>
+
+		<IsPackable>true</IsPackable>
+		<TargetFramework>net10.0</TargetFramework>
+		<IncludeContentInPack>true</IncludeContentInPack>
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+		<ContentTargetFolders>content</ContentTargetFolders>
+		<NoWarn>$(NoWarn);NU5128</NoWarn>
+		<EnableDefaultItems>false</EnableDefaultItems>
+		<!-- the templates are content; nothing here compiles, and the RIDs the samples need would only slow this down -->
+		<RuntimeIdentifiers></RuntimeIdentifiers>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="..\LICENSE" Pack="true" PackagePath="\" />
+		<None Include="..\AOTrino256.png" Pack="true" PackagePath="\" />
+		<None Include="README.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
+
+	<!--
+	  Everything under templates\, except what a build leaves behind: a template that carries someone's bin\,
+	  obj\ or node_modules\ generates a project that starts out dirty (and weighs 200 MB).
+
+	  dist\ is excluded for the two bundler templates only, where it really is build output. The plain template's
+	  WebRoot\dist\index.html is hand-written - it IS the app - and excluding it by pattern produced a template
+	  that generates a project with no page in it.
+	-->
+	<ItemGroup>
+		<Content Include="templates\**\*"
+				 Exclude="templates\**\bin\**;templates\**\obj\**;templates\**\node_modules\**;templates\aotrino-react\**\dist\**;templates\aotrino-fluent\**\dist\**" />
+		<Compile Remove="**\*" />
+	</ItemGroup>
+
+	<!--
+	  The @aotrino/* tarballs, packed straight into the React and Fluent templates.
+
+	  They're a build output (npm/pack, gitignored), so they're fetched here at pack time rather than committed.
+	  A generated app installs them by path - see the templates' package.json - because nothing is published to a
+	  registry: "@aotrino/react": "^1.0.0" would resolve to nothing at all.
+	-->
+	<Target Name="AOTrinoPackNpmLibs" BeforeTargets="Build;Pack">
+		<Exec Command="npm run pack:libs" WorkingDirectory="$(MSBuildThisFileDirectory)..\" />
+
+		<!-- PackagePath, not Link: pack ignores Link and would put every tarball at the root of content\, where
+		     the second template's copy collides with the first (NU5118).
+		     each template carries only what it depends on: fluent sits on react, react sits on client. -->
+		<PropertyGroup>
+			<_AOTrinoPackDir>$(MSBuildThisFileDirectory)..\npm\pack</_AOTrinoPackDir>
+		</PropertyGroup>
+		<ItemGroup>
+			<Content Include="$(_AOTrinoPackDir)\aotrino-client-*.tgz;$(_AOTrinoPackDir)\aotrino-react-*.tgz"
+					 Pack="true" PackagePath="content\templates\aotrino-react\packages\" />
+			<Content Include="$(_AOTrinoPackDir)\*.tgz"
+					 Pack="true" PackagePath="content\templates\aotrino-fluent\packages\" />
+		</ItemGroup>
+	</Target>
+
+</Project>

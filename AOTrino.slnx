@@ -71,6 +71,15 @@
     <Platform Solution="*|x64" Project="x64" />
     <Platform Solution="*|x86" Project="x86" />
   </Project>
+  <Folder Name="/Packaging/">
+    <File Path="publish.bat" />
+    <File Path="PublishSamples.proj" />
+    <Project Path="Templates/AOTrino.Templates.csproj">
+    <Platform Solution="*|ARM64" Project="ARM64" />
+    <Platform Solution="*|x64" Project="x64" />
+    <Platform Solution="*|x86" Project="x86" />
+    </Project>
+  </Folder>
   <Folder Name="/npm/">
     <File Path="package.json" />
     <File Path="npm\AOTrino.Npm.proj" />
