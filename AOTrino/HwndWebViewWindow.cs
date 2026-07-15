@@ -13,7 +13,6 @@ public partial class HwndWebViewWindow(
     RECT? rect = null) : WebViewWindow(title, style: style, extendedStyle: extendedStyle, rect: rect)
 {
     private ComObject<ICoreWebView2Controller>? _controller;
-    private ComObject<ICoreWebView2Environment12>? _environment;
 
     protected override void CreateController(ICoreWebView2Environment12 environment, Action onControllerReady)
     {
@@ -21,7 +20,6 @@ public partial class HwndWebViewWindow(
         {
             try
             {
-                _environment = new ComObject<ICoreWebView2Environment12>(environment);
                 _controller = new ComObject<ICoreWebView2Controller>(controller);
                 controller.put_Bounds(ClientRect).ThrowOnError();
                 controller.get_CoreWebView2(out var webView2).ThrowOnError();
@@ -44,19 +42,7 @@ public partial class HwndWebViewWindow(
         {
             DetachController(); // before disposing the controller: teardown focus/size messages must not hit it
             _controller?.Dispose();
-            _environment?.Dispose();
         }
         base.Dispose(disposing);
-    }
-
-    protected override IComObject<IRawElementProviderSimple>? GetAutomationProvider()
-    {
-        if (_environment != null)
-        {
-            _environment.Object.GetAutomationProviderForWindow(Handle, out var provider);
-            if (provider != null)
-                return new ComObject<IRawElementProviderSimple>(provider);
-        }
-        return null;
     }
 }

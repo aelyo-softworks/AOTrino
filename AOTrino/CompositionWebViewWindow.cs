@@ -7,7 +7,6 @@ namespace AOTrino;
 public partial class CompositionWebViewWindow : WebViewWindow, IDropTarget
 {
     private ComObject<ICoreWebView2CompositionController>? _controller;
-    private IComObject<ICoreWebView2CompositionController2>? _controller2;
     private IComObject<ICoreWebView2CompositionController3>? _controller3;
     private WebView2.EventRegistrationToken _cursorChangedToken;
     private bool _isDropTarget;
@@ -45,7 +44,6 @@ public partial class CompositionWebViewWindow : WebViewWindow, IDropTarget
 
     protected ComObject<ICoreWebView2CompositionController>? Controller => _controller;
     protected bool DoUseDirect2D { get; }
-
     protected virtual bool TopMostDesktopWindowTarget => true;
     protected virtual bool UseDirect2D => true;
     protected virtual SpriteVisual CreateWindowVisual() => Compositor.CreateSpriteVisual();
@@ -63,7 +61,6 @@ public partial class CompositionWebViewWindow : WebViewWindow, IDropTarget
             try
             {
                 _controller = new ComObject<ICoreWebView2CompositionController>(controller);
-                _controller2 = ComExtensions.As<ICoreWebView2CompositionController2>(_controller);
                 _controller3 = ComExtensions.As<ICoreWebView2CompositionController3>(_controller);
                 _controller.Object.add_CursorChanged(new CoreWebView2CursorChangedEventHandler((sender, args) =>
                 {
@@ -223,18 +220,6 @@ public partial class CompositionWebViewWindow : WebViewWindow, IDropTarget
         return DirectNConstants.S_OK;
     }
 
-    // gets the WebView's UI Automation provider
-    protected override IComObject<IRawElementProviderSimple>? GetAutomationProvider()
-    {
-        if (_controller2 != null)
-        {
-            _controller2.Object.get_AutomationProvider(out var provider);
-            if (provider != null)
-                return new ComObject<IRawElementProviderSimple>(provider);
-        }
-        return null;
-    }
-
     protected override void Dispose(bool disposing)
     {
         if (disposing)
@@ -248,7 +233,6 @@ public partial class CompositionWebViewWindow : WebViewWindow, IDropTarget
             }
 
             _controller3?.Dispose();
-            _controller2?.Dispose();
             _controller?.Dispose();
             CompositorController?.Dispose();
             RootVisual?.Dispose();
