@@ -2,30 +2,27 @@ import type { HTMLAttributes, MouseEvent } from "react";
 import { useRef } from "react";
 import { appWindow, dragAttribute, dragExcludeAttribute } from "@aotrino/client";
 
-// Windows' default double-click time. the gesture is timed here rather than handled with an onDoubleClick,
-// because no dblclick ever arrives on a drag region: the first mousedown starts a native window-move loop
-// (ReleaseCapture + WM_NCLBUTTONDOWN) which swallows the mouseup, so the browser never completes a click
-// pair. the second mousedown does reach us, and that is what this measures.
+// Windows' default double-click time.
+// the gesture is timed here rather than handled with an onDoubleClick, because no dblclick ever arrives on a drag region:
+// the first mousedown starts a native window, move loop (ReleaseCapture + WM_NCLBUTTONDOWN) which swallows the mouseup, so the browser never completes a click pair.
+// the second mousedown does reach us, and that is what this measures.
 const doubleClickMs = 500;
 
 // TypeScript allows data-* attributes in JSX but not in HTMLAttributes, so name the two keys explicitly.
-// dragAttribute/dragExcludeAttribute are const string literals, so `typeof` gives the exact key names and
-// these stay in step with the client automatically.
+// dragAttribute/dragExcludeAttribute are const string literals, so `typeof` gives the exact key names and these stay in step with the client automatically.
 export type DragRegionProps = HTMLAttributes<HTMLElement> & { [K in typeof dragAttribute]: string };
 export type DragExcludeProps = { [K in typeof dragExcludeAttribute]: string };
 
 export interface DragRegionOptions {
-    // double-clicking the region maximizes or restores the window, as a native caption does. on by default
-    // because a custom caption stands in for the OS one and users expect the gesture; turn it off for a
-    // window that shouldn't be maximized.
+    // double-clicking the region maximizes or restores the window, as a native caption does.
+    // on by default because a custom caption stands in for the OS one and users expect the gesture; turn it off for a window that shouldn't be maximized.
     doubleClickToMaximize?: boolean;
 }
 
-// props to spread on the element that should behave like a window caption: dragging it moves the window and
-// double-clicking it maximizes or restores.
-// this is the behaviour half of <TitleBar>, split out so a design system can render its own caption markup
-// (Fluent buttons, icons, tokens) without reimplementing the gesture. mark interactive children with
-// data-aotrino-nodrag to keep them clickable.
+// props to spread on the element that should behave like a window caption:
+// dragging it moves the window and double-clicking it maximizes or restores.
+// this is the behaviour half of <TitleBar>, split out so a design system can render its own caption markup (Fluent buttons, icons, tokens) without reimplementing the gesture.
+// mark interactive children with data-aotrino-nodrag to keep them clickable.
 export function useDragRegion(options?: DragRegionOptions): DragRegionProps {
     const doubleClickToMaximize = options?.doubleClickToMaximize ?? true;
     const lastDownAt = useRef(0);
@@ -45,9 +42,9 @@ export function useDragRegion(options?: DragRegionOptions): DragRegionProps {
         if (!secondClick)
             return;
 
-        // React listens on its root container, which is inside document, so this handler runs before the
-        // injected runtime's document-level mousedown: stopping propagation here keeps it from starting
-        // another native drag on top of the maximize.
+        // React listens on its root container, which is inside document,
+        // so this handler runs before the injected runtime's document-level mousedown:
+        // stopping propagation here keeps it from starting another native drag on top of the maximize.
         e.stopPropagation();
         appWindow.maximize();
     }

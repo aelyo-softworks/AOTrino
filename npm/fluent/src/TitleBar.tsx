@@ -57,8 +57,7 @@ const useStyles = makeStyles({
         alignSelf: "stretch",
     },
 
-    // Griffel forbids shorthands in makeStyles, it types them as `undefined`,
-    // so `borderRadius: 0` is a compile error rather than a surprise at runtime.
+    // Griffel forbids shorthands in makeStyles, it types them as `undefined`, so `borderRadius: 0` is a compile error rather than a surprise at runtime.
     button: {
         height: "100%",
         minWidth: "46px",

@@ -11,8 +11,8 @@ export interface HostValue<T> {
 }
 
 // calls a host method when the component mounts, and again whenever `deps` change, exposing the result.
-// this is the method-shaped counterpart of useHostProperties: use it when the data comes from a call rather
-// than a property. use useHostCall instead when the *user* decides when it happens, not the render.
+// this is the method-shaped counterpart of useHostProperties: use it when the data comes from a call rather than a property. 
+// use useHostCall instead when the * user * decides when it happens, not the render.
 // outside AOTrino nothing is called and loading settles to false, so a component renders its fallback.
 export function useHostValue<T>(fn: () => Promise<T>, deps: DependencyList): HostValue<T> {
     // hold the newest lambda so an inline arrow doesn't have to be in `deps`

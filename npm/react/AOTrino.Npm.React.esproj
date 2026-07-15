@@ -1,0 +1,16 @@
+<!--
+  Makes this npm package a real project in Visual Studio: the JavaScript project system globs src/ and
+  surfaces the npm scripts, instead of the hand-listed file links a solution folder needs.
+
+  It builds nothing. npm install and the @aotrino/* builds belong to AOTrino.Npm.proj, which runs them once
+  for the whole solution; letting this project run them too would put two npm installs on the same
+  node_modules and two tsc on the same dist - the exact race AOTrino.Npm.proj exists to prevent.
+-->
+<Project Sdk="Microsoft.VisualStudio.JavaScript.SDK/1.0.6098695">
+	<PropertyGroup>
+		<ShouldRunNpmInstall>false</ShouldRunNpmInstall>
+		<ShouldRunBuildScript>false</ShouldRunBuildScript>
+		<ShouldRunNpmCi>false</ShouldRunNpmCi>
+		<BuildOutputFolder>$(MSBuildThisFileDirectory)dist</BuildOutputFolder>
+	</PropertyGroup>
+</Project>

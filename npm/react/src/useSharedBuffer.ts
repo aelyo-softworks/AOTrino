@@ -8,8 +8,8 @@ export interface SharedBufferState {
 }
 
 // subscribes to a named shared buffer (.NET's AOTrino.Bridge.SharedBuffer).
-// .NET re-hands the buffer whenever it grows, and this re-renders with the new one, so never keep a
-// reference to a previous buffer: the old ArrayBuffer is released on the .NET side.
+// .NET re-hands the buffer whenever it grows, and this re-renders with the new one, so never keep a reference to a previous buffer: 
+// the old ArrayBuffer is released on the.NET side.
 export function useSharedBuffer(name: string): SharedBufferState {
     const [state, setState] = useState<SharedBufferState>({ buffer: null, meta: null });
 

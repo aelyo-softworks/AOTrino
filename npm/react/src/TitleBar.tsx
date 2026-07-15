@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import { appWindow } from "@aotrino/client";
 import { dragExcludeProps, useDragRegion } from "./useDragRegion.js";
 
-// accessible names for the window buttons. they're the only user-visible text this package renders, so
-// they're overridable rather than baked in: an app that ships in another language passes its own.
+// accessible names for the window buttons.
+// they're the only user-visible text this package renders, so they're overridable rather than baked in: an app that ships in another language passes its own.
 export interface TitleBarLabels {
     minimize: string;
     maximize: string;
@@ -27,9 +27,9 @@ export interface TitleBarProps {
 }
 
 // a draggable window title bar.
-// headless on purpose: it ships behaviour (via useDragRegion), the window commands and accessible names,
-// plus stable class names - but no styling at all, so it drops into any design system. @aotrino/fluent
-// builds its own caption on useDragRegion rather than restyling this one.
+// headless on purpose: it ships behaviour (via useDragRegion), the window commands and accessible names, plus stable class names,
+// but no styling at all, so it drops into any design system.
+// @aotrino/fluent builds its own caption on useDragRegion rather than restyling this one.
 export function TitleBar({
     title,
     children,

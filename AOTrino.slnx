@@ -66,4 +66,59 @@
     <Platform Solution="*|x64" Project="x64" />
     <Platform Solution="*|x86" Project="x86" />
   </Project>
+  <Folder Name="/npm/">
+    <File Path="package.json" />
+    <File Path="npm\AOTrino.Npm.proj" />
+    <Project Path="npm/client/AOTrino.Npm.Client.esproj">
+      <Platform Project="AnyCPU" />
+      <Build />
+      <Deploy />
+    </Project>
+    <Project Path="npm/react/AOTrino.Npm.React.esproj">
+      <Platform Project="AnyCPU" />
+      <Build />
+      <Deploy />
+    </Project>
+    <Project Path="npm/fluent/AOTrino.Npm.Fluent.esproj">
+      <Platform Project="AnyCPU" />
+      <Build />
+      <Deploy />
+    </Project>
+  </Folder>
+  <Folder Name="/npm/client/">
+    <File Path="npm\client\package.json" />
+    <File Path="npm\client\tsconfig.json" />
+    <File Path="npm\client\README.md" />
+    <File Path="npm\client\src\appWindow.ts" />
+    <File Path="npm\client\src\buffers.ts" />
+    <File Path="npm\client\src\host.ts" />
+    <File Path="npm\client\src\index.ts" />
+    <File Path="npm\client\src\messages.ts" />
+    <File Path="npm\client\src\runtime.ts" />
+  </Folder>
+  <Folder Name="/npm/react/">
+    <File Path="npm\react\package.json" />
+    <File Path="npm\react\tsconfig.json" />
+    <File Path="npm\react\README.md" />
+    <File Path="npm\react\src\TitleBar.tsx" />
+    <File Path="npm\react\src\index.ts" />
+    <File Path="npm\react\src\useDragRegion.ts" />
+    <File Path="npm\react\src\useHostCall.ts" />
+    <File Path="npm\react\src\useHostMessage.ts" />
+    <File Path="npm\react\src\useHostProperties.ts" />
+    <File Path="npm\react\src\useHostValue.ts" />
+    <File Path="npm\react\src\useIsHosted.ts" />
+    <File Path="npm\react\src\useSharedBuffer.ts" />
+  </Folder>
+  <Folder Name="/npm/fluent/">
+    <File Path="npm\fluent\package.json" />
+    <File Path="npm\fluent\tsconfig.json" />
+    <File Path="npm\fluent\README.md" />
+    <File Path="npm\fluent\src\AOTrinoProvider.tsx" />
+    <File Path="npm\fluent\src\ThemeContext.ts" />
+    <File Path="npm\fluent\src\TitleBar.tsx" />
+    <File Path="npm\fluent\src\index.ts" />
+    <File Path="npm\fluent\src\themes.ts" />
+    <File Path="npm\fluent\src\useSystemTheme.ts" />
+  </Folder>
 </Solution>

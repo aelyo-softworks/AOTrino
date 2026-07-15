@@ -7,11 +7,10 @@ export interface HostCall<A extends unknown[], R> {
     error: Error | null;
 }
 
-// wraps a host-object call with the pending/result/error state a UI actually needs, and turns a rejection
-// into `error` rather than an unhandled promise rejection: a .NET method that throws crosses the bridge as
-// a rejected promise, which is easy to drop on the floor by accident.
-// pass a lambda - useHostCall((text: string) => api.echoAsync(text)) - rather than `api.echoAsync`:
-// the bridge's proxy members shouldn't be detached from the object they came from.
+// wraps a host-object call with the pending/result/error state a UI actually needs, 
+// and turns a rejection into `error` rather than an unhandled promise rejection:
+// a.NET method that throws crosses the bridge as a rejected promise, which is easy to drop on the floor by accident.
+// pass a lambda - useHostCall((text: string) => api.echoAsync(text)), rather than `api.echoAsync`: the bridge's proxy members shouldn't be detached from the object they came from.
 export function useHostCall<A extends unknown[], R>(fn: (...args: A) => Promise<R>): HostCall<A, R> {
     // hold the newest lambda without letting `call` change identity on every render
     const latest = useRef(fn);

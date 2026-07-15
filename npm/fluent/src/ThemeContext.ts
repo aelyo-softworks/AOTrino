@@ -15,8 +15,8 @@ export interface AOTrinoThemeContextValue {
 
 export const AOTrinoThemeContext = createContext<AOTrinoThemeContextValue | null>(null);
 
-// the current theme and how to change it. returns null outside an <AOTrinoProvider>, 
-// so a component can degrade (the caption simply hides its theme button) instead of throwing.
+// the current theme and how to change it.
+// returns null outside an<AOTrinoProvider>, so a component can degrade (the caption simply hides its theme button) instead of throwing.
 export function useAOTrinoTheme(): AOTrinoThemeContextValue | null {
     return useContext(AOTrinoThemeContext);
 }

@@ -2,6 +2,7 @@
 Electron-like desktop apps on .NET AOT + WebView2, single-exe, Windows x64, front-end-framework-agnostic (React/Fluent layers optional).
 
 ## Documentation
+- [Architecture and maintenance](docs/MAINTENANCE.md) what the repo is made of, where every version lives, what to do weekly/monthly/every six months, and the traps.
 - [Security model](docs/SECURITY.md) local-first by default, `NavigationMode`, and the one rule AOTrino enforces for you.
 - [The bridge](docs/BRIDGE.md) how JS calls .NET and back: host objects, what crosses, async results, exceptions, and the escape hatch.
 - [Front end](docs/FRONTEND.md) hand-written pages need nothing; the optional `@aotrino/client` types the bridge for React/TypeScript apps, without a registry.

@@ -1,7 +1,6 @@
-// the shape of the runtime AOTrino injects into every page (AOTrino/Resources/SharedBuffer.Runtime.js,
-// installed by WebViewWindow.EnsureSharedRuntime).
-// this package deliberately injects nothing of its own: the C# side owns the runtime, and @aotrino/client
-// only types and wraps what the host already put on the page. that keeps the two from drifting apart.
+// the shape of the runtime AOTrino injects into every page (AOTrino/Resources/SharedBuffer.Runtime.js, installed by WebViewWindow.EnsureSharedRuntime).
+// this package deliberately injects nothing of its own: 
+// the C# side owns the runtime, and @aotrino/client only types and wraps what the host already put on the page. that keeps the two from drifting apart.
 
 export interface BufferMetadata {
     readonly name: string;

@@ -11,8 +11,9 @@ export function getBufferMetadata(name: string): BufferMetadata | null {
     return runtime().getMeta(name);
 }
 
-// subscribe to a named shared buffer. fires immediately if the buffer already arrived, and again on
-// every reallocation (.NET re-hands the buffer when it grows). returns an unsubscribe function.
+// subscribe to a named shared buffer.
+// fires immediately if the buffer already arrived, and again on every reallocation (.NET re-hands the buffer when it grows). 
+// returns an unsubscribe function.
 export function onBuffer(name: string, callback: BufferCallback): () => void {
     let active = true;
     runtime().onBuffer(name, (buffer, meta) => {
