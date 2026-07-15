@@ -49,7 +49,7 @@ export function App() {
     // AOTrinoProvider follows the Windows app theme, so there is no theme state to own here
     return (
         <AOTrinoProvider>
-            <TitleBar title="AOTrino — FluentUI — Hello World" onClose={() => void api.quit()} />
+            <TitleBar onClose={() => void api.quit()} />
             <Content />
         </AOTrinoProvider>
     );

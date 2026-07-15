@@ -12,7 +12,7 @@ export function App() {
             {/* behaviour comes from the package: the drag region, double-click to maximize, the window
                 commands and the accessible names. the styling is entirely this app's, through the
                 aotrino-titlebar-* class names. */}
-            <TitleBar title="AOTrino — React — Dashboard" showMinimize showMaximize onClose={() => void api.quit()} />
+            <TitleBar showMinimize showMaximize onClose={() => void api.quit()} />
 
             <main>
                 {!hosted && (

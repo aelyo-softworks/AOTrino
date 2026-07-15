@@ -112,6 +112,20 @@ the react hooks supply the data and the caption gesture, and `@aotrino/fluent` d
 following Windows, pickable from the caption and remembered, with six lines of app CSS. See
 [THEMING.md](THEMING.md).
 
+**`Samples/AOTrino.Samples.FluentUI.Gallery` is the flagship.** Every other sample is one idea in isolation;
+the gallery is all of them in one window, seven pages deep:
+
+- **Controls** — Fluent UI itself, in five categories (Basics, Inputs, Collections, Feedback, Surfaces).
+  None of it is AOTrino, which is the point: the shell is native and small, and the widgets are the web's.
+- **Window** — caption, drag, double-click to maximize, DWM backdrops.
+- **Bridge** — one card per shape: properties, arrays, JSON, async, exceptions, .NET→JS push.
+- **Theming**, **System**, **Security** — following Windows, what only Windows knows, and the model
+  demonstrated rather than asserted.
+
+Every card is a live demo with the code that produced it behind a *Show code* button, in the spirit of
+WinUI-Gallery's `ControlExample`. It's the one to open first, and the one that keeps these docs honest: if a
+claim here isn't demonstrable there, the claim is what's wrong.
+
 ### Serve it from a virtual host
 
 Vite emits the app as an ES module. Chromium gives a `file://` page an opaque origin and CORS-blocks module

@@ -1,0 +1,32 @@
+{
+  "name": "aotrino-samples-fluentui-gallery",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Fluent UI front end for the AOTrino FluentUI Gallery sample; consumes @aotrino/fluent through npm workspaces.",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc -b --noEmit",
+    "preview": "vite preview",
+    "watch": "vite build --watch"
+  },
+  "dependencies": {
+    "@aotrino/client": "*",
+    "@aotrino/fluent": "*",
+    "@aotrino/react": "*",
+    "@fluentui/react-components": "^9.74.3",
+    "@fluentui/react-icons": "^2.0.333",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.10"
+  }
+}

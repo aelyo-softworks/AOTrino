@@ -1,0 +1,21 @@
+/* Fluent's tokens own the colours and typography, and <AOTrinoProvider> sizes itself like a window.
+   this file only has to stop the document from fighting them. */
+html,
+body,
+#root {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+}
+
+/* set by the Window page while a system backdrop is on.
+   a DWM material sits behind the window, not in the page: it can only be seen through pixels nobody painted.
+   the WebView is already transparent (AOTrinoApplication sets WEBVIEW2_DEFAULT_BACKGROUND_COLOR=00000000),
+   but FluentProvider paints colorNeutralBackground1 over all of it, so lift that one layer and nothing else:
+   the caption, the nav and the cards keep their colours and stay opaque on top of the material,
+   which is what a Mica window is meant to look like. */
+html[data-backdrop] .fui-FluentProvider {
+    background-color: transparent;
+}

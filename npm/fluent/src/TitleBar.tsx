@@ -14,7 +14,7 @@ import {
 import { Dismiss16Regular, Maximize16Regular, Subtract16Regular, WeatherMoon16Regular, WeatherSunny16Regular } from "@fluentui/react-icons";
 import { appWindow } from "@aotrino/client";
 import type { TitleBarLabels } from "@aotrino/react";
-import { dragExcludeProps, useDragRegion } from "@aotrino/react";
+import { dragExcludeProps, useDragRegion, useWindowTitle } from "@aotrino/react";
 import { useAOTrinoTheme } from "./ThemeContext.js";
 import { systemThemeChoice } from "./themes.js";
 
@@ -84,6 +84,9 @@ const useStyles = makeStyles({
 });
 
 export interface TitleBarProps {
+    // defaults to the window's own caption, the one Windows shows in the taskbar and Alt-Tab.
+    // pass a string and the window is renamed to match, so the two can't disagree.
+    // pass a node and only the bar changes (there's nothing sensible to call the window), so name the window in C# in that case.
     title?: ReactNode;
     // rendered between the title and the window buttons (a toolbar, tabs, ...)
     children?: ReactNode;
@@ -117,13 +120,14 @@ export function TitleBar({
     const styles = useStyles();
     const text = { ...defaultLabels, ...labels };
     const dragProps = useDragRegion({ doubleClickToMaximize });
+    const caption = useWindowTitle(title);
     const theme = useAOTrinoTheme();
     const pickable = showThemePicker && theme != null && !theme.pinned && theme.options.length > 0;
 
     return (
         <header className={mergeClasses(styles.root, className)} {...dragProps}>
             <Text size={200} className={styles.title}>
-                {title}
+                {caption}
             </Text>
             {children}
             <div className={styles.buttons} {...dragExcludeProps}>

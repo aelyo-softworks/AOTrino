@@ -1,8 +1,7 @@
 namespace AOTrino;
 
 // hosting-agnostic WebView2 window base.
-// it owns the environment, the WebView, navigation, host objects, scripts, the shared-buffer transport and all window/input plumbing,
-// everything except HOW the WebView is hosted.
+// it owns the environment, the WebView, navigation, host objects, scripts, the shared-buffer transport and all window/input plumbing, everything except HOW the WebView is hosted.
 // the two hosting models are concrete subclasses:
 // * CompositionWebViewWindow (the WebView is one visual in a Windows.UI.Composition tree)
 // * HwndWebViewWindow (the WebView is a classic child window).
@@ -318,7 +317,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         DirectNFunctions.SendMessageW(Handle, MessageDecoder.WM_NCLBUTTONDOWN, new WPARAM { Value = (nuint)HT.HTCAPTION }, new LPARAM());
     }
 
-    // built-in window controls, driven from JS by window.__aotrino.dragWindow()/closeWindow()/minimizeWindow()/maximizeWindow()
+    // built-in window controls, driven from JS by window.__aotrino.dragWindow()/closeWindow()/minimizeWindow()/maximizeWindow()/setWindowTitle()
     private void HandleWindowCommand(string? json)
     {
         if (string.IsNullOrEmpty(json))
@@ -343,6 +342,13 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
                 case "close": Close(); break;
                 case "minimize": Show(SHOW_WINDOW_CMD.SW_MINIMIZE); break;
                 case "maximize": MaximizeOrRestore(); break;
+
+                case "title":
+                    if (root.TryGetProperty("title", out var title))
+                    {
+                        SetWindowTitleFromPage(title.GetString());
+                    }
+                    break;
             }
         }
         catch
@@ -354,12 +360,30 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     // the Windows settings a page can't get from the web platform and can't afford to ask for.
     // deliberately tiny, and deliberately NOT an API surface: everything the browser already knows (theme,
     // reduced motion, DPI, locale, screen size, clipboard) stays the browser's job, and everything an app
-    // wants (files, shell, dialogs) stays the app's, through a host object of its own. this is only for
-    // values AOTrino's own front end needs, that Windows alone can answer.
-    // it's injected with the runtime rather than exposed on a host object because a host call is async, and
-    // the callers need it synchronously: a drag region has to decide inside a mousedown whether the press
-    // is the second of a double-click - it cannot await.
+    // wants (files, shell, dialogs) stays the app's, through a host object of its own.
+    // this is only for values AOTrino's own front end needs, that Windows alone can answer.
+    // it's injected with the runtime rather than exposed on a host object because a host call is async,
+    // and the callers need it synchronously:
+    // a drag region has to decide inside a mousedown whether the press is the second of a double-click, it cannot await.
     protected virtual string GetSystemJson() => $"{{\"doubleClickTimeMs\":{DirectNFunctions.GetDoubleClickTime()}}}";
+
+    // this window's own caption text.
+    // a page that draws its own title bar is drawing *this* window's caption, and it shouldn't have to be told twice what the window is called:
+    // a hard-coded string in the markup drifts from the one Windows shows in the taskbar and Alt-Tab the first time either changes.
+    protected virtual string GetWindowJson() => $"{{\"title\":{JsonSerializer.Serialize(Text ?? string.Empty, AOTrinoJsonContext.Default.String)}}}";
+
+    // the other direction: the page names the window (window.__aotrino.setWindowTitle()).
+    // a caption the page drew is still this window's name, so Windows has to hear about it too,
+    // otherwise the bar says one thing and the taskbar, Alt-Tab and the thumbnails say another.
+    // this level accepts it. deciding WHO may rename the window is policy, and policy lives one level up:
+    // AOTrinoWindow refuses it in NavigationMode.Web. override to decorate the title, or to refuse it outright.
+    protected virtual void SetWindowTitleFromPage(string? title)
+    {
+        if (title != null)
+        {
+            Text = title;
+        }
+    }
 
     protected virtual void EnsureSharedRuntime()
     {
@@ -372,6 +396,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         // the generic __aotrino runtime, on every future document and the current one
         AddStartupScript(SharedBuffer.Runtime);
         AddStartupScript($"window.__aotrino.system = {GetSystemJson()};");
+        AddStartupScript($"window.__aotrino.window = {GetWindowJson()};");
 
         webView.Object.add_WebMessageReceived(new CoreWebView2WebMessageReceivedEventHandler((sender, args) =>
         {

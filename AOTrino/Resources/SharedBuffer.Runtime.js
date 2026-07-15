@@ -14,7 +14,7 @@
     if (cbs) for (var i = 0; i < cbs.length; i++) { try { cbs[i](buffers[name], e.additionalData); } catch (x) {} }
   });
   function post(msg) { try { window.chrome.webview.postMessage(msg); } catch (x) {} }
-  function command(c) { post({ __aotrino: "window-command", command: c }); }
+  function command(c, extra) { var m = { __aotrino: "window-command", command: c }; if (extra) for (var k in extra) m[k] = extra[k]; post(m); }
 
   window.__aotrino = {
     getBuffer: function (name) { return buffers[name] || null; },
@@ -25,7 +25,10 @@
     dragWindow: function () { command("drag"); },
     closeWindow: function () { command("close"); },
     minimizeWindow: function () { command("minimize"); },
-    maximizeWindow: function () { command("maximize"); }
+    maximizeWindow: function () { command("maximize"); },
+    // renames the window itself (taskbar, Alt-Tab, thumbnails), not just document.title.
+    // window.title is injected after this script, hence the guard; keep it truthful so a later read agrees.
+    setWindowTitle: function (t) { t = String(t); command("title", { title: t }); if (this.window) { this.window.title = t; } }
   };
 
   // any element (or ancestor) marked [data-aotrino-drag] drags the window on left-mousedown;

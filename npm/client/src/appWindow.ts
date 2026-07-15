@@ -27,6 +27,19 @@ export const appWindow = {
             runtime().maximizeWindow();
         }
     },
+
+    // renames the window itself: the taskbar, Alt-Tab and the thumbnails, not just document.title.
+    // a page drawing its own caption should call this, or the window ends up answering to two names.
+    // outside AOTrino there's no window to rename, so this falls back to the document's title - the closest
+    // equivalent a browser has, and what `npm run dev` shows in the tab.
+    setTitle(title: string): void {
+        if (isHosted()) {
+            runtime().setWindowTitle(title);
+        }
+        else if (typeof document !== "undefined") {
+            document.title = title;
+        }
+    },
 };
 
 // any element (or ancestor) carrying this attribute drags the window on left-mousedown

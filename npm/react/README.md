@@ -63,18 +63,22 @@ source paths). That's right for a log and wrong for a UI — show `error.message
 ## TitleBar
 
 ```tsx
-<TitleBar title="My app" showMinimize showMaximize onClose={() => void api.quit()} />
+<TitleBar showMinimize showMaximize onClose={() => void api.quit()} />
 ```
 
 Renders the drag region (handled natively — no mousedown handler), the window buttons, and accessible names.
 Class hooks: `aotrino-titlebar`, `-title`, `-buttons`, `-button`, `-close`.
+
+`title` defaults to the window's own caption (`WebViewWindow.Text`), so it matches what Windows shows in the
+taskbar and Alt-Tab without you repeating the string anywhere. Pass a string and the window is renamed to
+match — see `useWindowTitle()`.
 
 Double-clicking the caption maximizes or restores the window, as a native caption does — the bar stands in for
 the OS one, so it owes users that gesture. A double-click that lands on a button is ignored. Turn it off for a
 window that shouldn't be maximized:
 
 ```tsx
-<TitleBar title="My app" doubleClickToMaximize={false} />
+<TitleBar doubleClickToMaximize={false} />
 ```
 
 The button `aria-label`s are the only user-visible text this package renders, so they're overridable:
@@ -82,6 +86,19 @@ The button `aria-label`s are the only user-visible text this package renders, so
 ```tsx
 <TitleBar labels={{ minimize: "Réduire", maximize: "Agrandir", close: "Fermer" }} />
 ```
+
+## useWindowTitle
+
+What `TitleBar` uses, exported for captions you build yourself:
+
+```tsx
+const caption = useWindowTitle(title);   // renames the window if `title` is a string; returns what to draw
+```
+
+A window has one name. If the bar says one thing while the taskbar, Alt-Tab and the thumbnails say another,
+the app answers to two names and nobody wrote that on purpose — so a string `title` is pushed to
+`WebViewWindow.Text`, a node is only drawn (name that window in C#), and passing nothing draws the window's
+own name and costs no code at all.
 
 ## useIsHosted, useSharedBuffer, useHostMessage
 

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { appWindow } from "@aotrino/client";
 import { dragExcludeProps, useDragRegion } from "./useDragRegion.js";
+import { useWindowTitle } from "./useWindowTitle.js";
 
 // accessible names for the window buttons.
 // they're the only user-visible text this package renders, so they're overridable rather than baked in: an app that ships in another language passes its own.
@@ -13,6 +14,8 @@ export interface TitleBarLabels {
 const defaultLabels: TitleBarLabels = { minimize: "Minimize", maximize: "Maximize", close: "Close" };
 
 export interface TitleBarProps {
+    // defaults to the window's own caption - this bar is standing in for it.
+    // a string renames the window to match (see useWindowTitle); a node only changes the bar.
     title?: ReactNode;
     // rendered between the title and the window buttons (a toolbar, tabs, ...)
     children?: ReactNode;
@@ -43,10 +46,11 @@ export function TitleBar({
 }: TitleBarProps) {
     const text = { ...defaultLabels, ...labels };
     const dragProps = useDragRegion({ doubleClickToMaximize });
+    const caption = useWindowTitle(title);
 
     return (
         <header className={className} {...dragProps}>
-            <span className="aotrino-titlebar-title">{title}</span>
+            <span className="aotrino-titlebar-title">{caption}</span>
             {children}
             <span className="aotrino-titlebar-buttons" {...dragExcludeProps}>
                 {showMinimize && (

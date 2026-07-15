@@ -46,15 +46,20 @@ public NavigationMode NavigationMode { get; set; } = NavigationMode.Local;
 
 | Mode | Behavior |
 |---|---|
-| `Local` *(default)* | Only the app's own content (`file://`, or its `VirtualHostName` if set) and in-page schemes (`about`, `data`, `blob`) load in the window. Any off-app navigation (e.g. an `https://` link) is **cancelled** and handed to the user's default browser. |
-| `Web` | The window is a browser: navigation to any origin is allowed. |
+| `Local` *(default)* | Only the app's own content (`file://`, or its `VirtualHostName` if set) and in-page schemes (`about`, `data`, `blob`) load in the window. Any off-app navigation (e.g. an `https://` link) is **cancelled** and handed to the user's default browser. The page may rename the window. |
+| `Web` | The window is a browser: navigation to any origin is allowed, and the page may **not** rename the window. |
 
-`NavigationMode` governs **navigation only**. It does *not* touch web security, file access, or host-object
-exposure, and it makes no claim to. The name says exactly what it does and nothing more.
+`NavigationMode` governs **navigation**, and one thing that follows from it: whether the page may rename the
+window (`setWindowTitle` → `WebViewWindow.Text` → the taskbar, Alt-Tab, thumbnails). That isn't scope creep —
+the mode's whole subject is *whose content is in this window*, and the answer decides whether a caption drawn
+in HTML is the app naming itself or a stranger naming your app. A `Web` page still has `document.title`, like
+any browser tab.
+
+Past that, it does *not* touch web security, file access, or host-object exposure, and it makes no claim to.
 
 ### The escape hatches
 
-Two overridable members, both invoked by name in *your* code:
+Three overridable members, all invoked by name in *your* code:
 
 ```csharp
 // custom allow-list: Local, but permit one specific service origin
@@ -63,11 +68,15 @@ protected override bool IsNavigationAllowed(Uri uri) =>
 
 // change how a blocked navigation is handed off (default: OS default handler / real browser)
 protected override void OpenExternal(Uri uri) => /* ... */;
+
+// who may name this window (default: anyone but a Web-mode page)
+protected override void SetWindowTitleFromPage(string? title) => /* ... */;
 ```
 
 - **Whole-window browser:** set `NavigationMode = NavigationMode.Web`.
 - **Local + a trusted origin:** override `IsNavigationAllowed`.
 - **Custom handoff:** override `OpenExternal`.
+- **A window whose name must not move:** override `SetWindowTitleFromPage` to do nothing.
 
 The default `OnNavigationStarting` respects any cancel your own `NavigationStarting` handler already set, then
 applies `IsNavigationAllowed`; blocked navigations are cancelled and passed to `OpenExternal`.
@@ -127,6 +136,11 @@ AOTrino intentionally does **not** decide these for you — they stay explicit, 
   (`AddHostObject`). The bridge is deny-all by default simply because it's empty until you fill it. If you host
   untrusted content, register nothing sensitive on it — or don't host it in a privileged window at all. See
   the next section: that last sentence is not a style note.
+- **The window's name, past the default.** A `Local` page can rename its own window —
+  `window.__aotrino.setWindowTitle()`, which is `WebViewWindow.Text` and therefore the taskbar, Alt-Tab and the
+  thumbnails. That exists so a page drawing its own caption can't end up disagreeing with Windows about what the
+  window is called. It follows `NavigationMode` on its own (see below), but if your `Local` allow-list admits an
+  origin you'd rather not let name your window, `SetWindowTitleFromPage` is yours to override.
 
 ## Host objects belong to the window, not to your page
 

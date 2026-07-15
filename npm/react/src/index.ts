@@ -17,5 +17,7 @@ export { useHostMessage } from "./useHostMessage.js";
 export type { DragExcludeProps, DragRegionOptions, DragRegionProps } from "./useDragRegion.js";
 export { dragExcludeProps, useDragRegion } from "./useDragRegion.js";
 
+export { useWindowTitle } from "./useWindowTitle.js";
+
 export type { TitleBarLabels, TitleBarProps } from "./TitleBar.js";
 export { TitleBar } from "./TitleBar.js";

@@ -55,6 +55,11 @@
       <Platform Solution="*|x64" Project="x64" />
       <Platform Solution="*|x86" Project="x86" />
     </Project>
+    <Project Path="Samples/AOTrino.Samples.FluentUI.Gallery/AOTrino.Samples.FluentUI.Gallery.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
     <Project Path="Samples/AOTrino.Samples.FluentUI.HelloWorld/AOTrino.Samples.FluentUI.HelloWorld.csproj">
       <Platform Solution="*|ARM64" Project="ARM64" />
       <Platform Solution="*|x64" Project="x64" />

@@ -22,8 +22,9 @@ public partial class AOTrinoWindow(
         ? $"https://{VirtualHostName}/{WebRoot.IndexFileName}"
         : AOTrinoApplication.Current?.WebRoot.IndexFilePath;
 
-    // where this window may navigate. Local (default) keeps the window on the app's own content and hands
-    // off-app links to the default browser; Web turns the window into a browser.
+    // where this window may navigate.
+    // Local (default) keeps the window on the app's own content and hands off-app links to the default browser;
+    // Web turns the window into a browser.
     // this governs navigation only and makes no security claim (web security / file access stay a developer choice via env options).
     public NavigationMode NavigationMode { get; set; } = NavigationMode.Local;
 
@@ -59,6 +60,20 @@ public partial class AOTrinoWindow(
             return true;
 
         return uri.Scheme is "about" or "data" or "blob";
+    }
+
+    // whether the page may rename the window (window.__aotrino.setWindowTitle).
+    // the default follows NavigationMode, like IsNavigationAllowed does:
+    // a Local window shows the app's own content, and a caption it drew in HTML should agree with the taskbar;
+    // a Web window is showing a stranger, and the window's name says which app you are looking at, not a site's to write.
+    // a page still has document.title, as in any browser tab.
+    // override to decide otherwise, e.g. a Local window with an allow-list that admits an origin you'd rather not let rename it.
+    protected override void SetWindowTitleFromPage(string? title)
+    {
+        if (NavigationMode == NavigationMode.Web)
+            return;
+
+        base.SetWindowTitleFromPage(title);
     }
 
     protected override void OnNavigationStarting(object? sender, NavigationEventArgs e)
@@ -106,8 +121,7 @@ public partial class AOTrinoWindow(
 
     protected virtual async Task NavigateToStartAsync()
     {
-        // extraction runs on a worker thread; the continuation resumes on the window's
-        // synchronization context, so Navigate is called back on the UI thread
+        // extraction runs on a worker thread; the continuation resumes on the window's synchronization context, so Navigate is called back on the UI thread
         var app = AOTrinoApplication.Current;
         if (app != null)
         {

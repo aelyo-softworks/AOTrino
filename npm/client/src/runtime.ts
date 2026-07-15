@@ -18,8 +18,16 @@ export interface AOTrinoSystem {
     readonly doubleClickTimeMs: number;
 }
 
+// the native window this page is drawn in
+export interface AOTrinoWindowInfo {
+    // the caption Windows shows in the taskbar and Alt-Tab. a page drawing its own title bar should use this
+    // rather than repeat the string: two copies drift the first time either changes.
+    readonly title: string;
+}
+
 export interface AOTrinoRuntime {
     readonly system: AOTrinoSystem;
+    readonly window: AOTrinoWindowInfo;
     getBuffer(name: string): ArrayBuffer | null;
     getMeta(name: string): BufferMetadata | null;
     onBuffer(name: string, callback: BufferCallback): void;
@@ -28,6 +36,7 @@ export interface AOTrinoRuntime {
     closeWindow(): void;
     minimizeWindow(): void;
     maximizeWindow(): void;
+    setWindowTitle(title: string): void;
 }
 
 export interface WebViewMessageEvent extends Event {
@@ -70,6 +79,13 @@ export function system(): AOTrinoSystem {
 
 // Windows' own default double-click time, for when nothing can be asked
 const defaultSystem: AOTrinoSystem = { doubleClickTimeMs: 500 };
+
+// the hosting window's caption, or the document's own title outside AOTrino - which is the closest thing a
+// plain browser has to the same idea, and keeps `npm run dev` looking right
+export function windowInfo(): AOTrinoWindowInfo {
+    const injected = typeof window !== "undefined" ? window.__aotrino?.window : undefined;
+    return injected ?? { title: typeof document !== "undefined" ? document.title : "" };
+}
 
 export function webView(): WebView {
     const view = typeof window !== "undefined" ? window.chrome?.webview : undefined;

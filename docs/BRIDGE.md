@@ -178,12 +178,36 @@ Next to nothing, and that's the design.
 
 ```js
 window.__aotrino.system.doubleClickTimeMs   // GetDoubleClickTime()
+window.__aotrino.window.title               // this window's caption, i.e. WebViewWindow.Text
 ```
 
-That is the entire built-in Windows surface. It's injected with the runtime rather than exposed as a host
-object because it has to be readable **synchronously**: a drag region decides *inside* a mousedown whether the
-press is the second of a double-click, and it cannot await. `@aotrino/client` types it as `system()`, with
-Windows' own 500 ms as the fallback when there's no host.
+That is the entire built-in Windows surface. Both are injected with the runtime rather than exposed as host
+objects because they have to be readable **synchronously**: a drag region decides *inside* a mousedown whether
+the press is the second of a double-click and cannot await, and a caption that awaited its own text would
+render empty and then pop. `@aotrino/client` types them as `system()` and `windowInfo()`, falling back to
+Windows' own 500 ms and to `document.title` when there's no host, so a page still looks right under
+`npm run dev`.
+
+The title is there because a page drawing its own caption is drawing *that window*: a hard-coded string in the
+markup drifts from the one Windows shows in the taskbar and Alt-Tab the first time either changes. Override
+`GetWindowJson()` to inject something else.
+
+A window has one name, so the title also goes the other way:
+
+```js
+window.__aotrino.setWindowTitle("Report.pdf — Viewer")   // renames the window itself
+```
+
+That is `WebViewWindow.Text`: the taskbar, Alt-Tab and the thumbnails all follow, which `document.title`
+alone will never do. `@aotrino/client` types it as `appWindow.setTitle()` (which falls back to `document.title`
+with no host), and both `<TitleBar>`s call it for you through `useWindowTitle()`: pass a string `title` and the
+window is renamed to match, pass nothing and the window's own name is drawn. Either way the bar and the taskbar
+can't disagree.
+
+The native side is `SetWindowTitleFromPage()`. It follows `NavigationMode`: a `Local` window's page names its
+own window, and a `NavigationMode.Web` window's page is **refused** — the runtime reaches every document, so
+otherwise whatever site the window landed on would be naming your app. It's `virtual` either way: override it to
+decorate the title, or to refuse a rename your mode would have allowed.
 
 The line it's drawn on:
 

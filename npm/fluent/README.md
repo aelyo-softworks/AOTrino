@@ -25,7 +25,7 @@ import { AOTrinoProvider, TitleBar } from "@aotrino/fluent";
 export function App() {
     return (
         <AOTrinoProvider>
-            <TitleBar title="My app" onClose={() => void api.quit()} />
+            <TitleBar onClose={() => void api.quit()} />
             <MyContent />
         </AOTrinoProvider>
     );
@@ -56,12 +56,20 @@ you just want to branch on it.
 ## TitleBar
 
 ```tsx
-<TitleBar title="My app" showMinimize showMaximize onClose={() => void api.quit()} />
+<TitleBar onClose={() => void api.quit()} />
 ```
 
 A Windows-looking caption built from Fluent parts — Fluent buttons, Fluent icons, Fluent tokens — so it
 follows the theme, red close button included. Unlike `@aotrino/react`'s headless `TitleBar`, this one shows all
 three window buttons by default: it stands in for the real caption.
+
+`title` defaults to the window's own caption (`WebViewWindow.Text`), which is what you want almost always: this
+bar *is* that window's caption, and a second copy of the string in the markup drifts from the one in the taskbar
+and Alt-Tab the first time either changes.
+
+Pass a string and it goes the other way — the window is **renamed** to match, so the taskbar, Alt-Tab and the
+thumbnails say what the bar says. Pass a node (an icon, a path, markup) and only the bar changes, since there's
+nothing sensible to call the window; name that window in C#. See `useWindowTitle()` in `@aotrino/react`.
 
 It does **not** reimplement the gesture. The drag region and double-click-to-maximize come from
 `@aotrino/react`'s `useDragRegion()`, which is precisely why that hook exists — the behaviour is subtle

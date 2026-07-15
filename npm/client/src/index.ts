@@ -1,5 +1,5 @@
-export type { AOTrinoRuntime, AOTrinoSystem, BufferCallback, BufferMetadata, WebView, WebViewMessageEvent } from "./runtime.js";
-export { isHosted, system } from "./runtime.js";
+export type { AOTrinoRuntime, AOTrinoSystem, AOTrinoWindowInfo, BufferCallback, BufferMetadata, WebView, WebViewMessageEvent } from "./runtime.js";
+export { isHosted, system, windowInfo } from "./runtime.js";
 
 export type { AsyncHost, SyncHost } from "./host.js";
 export { host, hostSync } from "./host.js";

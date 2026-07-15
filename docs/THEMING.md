@@ -13,7 +13,7 @@ app on `@aotrino/react` themes itself however it likes.
 import { AOTrinoProvider, TitleBar } from "@aotrino/fluent";
 
 <AOTrinoProvider>
-    <TitleBar title="My app" onClose={() => void api.quit()} />
+    <TitleBar onClose={() => void api.quit()} />
     <MyContent />
 </AOTrinoProvider>
 ```
