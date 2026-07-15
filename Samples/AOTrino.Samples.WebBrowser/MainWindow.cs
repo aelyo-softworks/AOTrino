@@ -7,11 +7,19 @@ namespace AOTrino.Samples.WebBrowser;
 [System.Runtime.InteropServices.Marshalling.GeneratedComClass]
 public partial class MainWindow : AOTrinoWindow
 {
-    public MainWindow()
+    private readonly string? _startUrl;
+
+    // startUrl comes from the command line (see Program.GetStartUrl); null opens the bundled start page
+    public MainWindow(string? startUrl = null)
         : base(Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()!.Title)
     {
+        _startUrl = startUrl;
         NavigationMode = NavigationMode.Web;
     }
+
+    // StartUrl is the whole hook: AOTrinoWindow navigates here once the controller is up, so a browser that
+    // opens on a page someone asked for is one override, not a navigation of its own.
+    protected override string? StartUrl => _startUrl ?? base.StartUrl;
 
     protected override void ControllerCreated()
     {

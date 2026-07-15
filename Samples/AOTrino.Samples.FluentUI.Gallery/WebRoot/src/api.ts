@@ -9,12 +9,17 @@ export interface GalleryApi {
     uptime: string;
     workingSet: string;
 
+    rowCount: number;
+
     ping(): string;
     add(a: number, b: number): number;
     getEnvironmentVariable(name: string): string | null;
     getUserName(): string;
     getPrimes(count: number): number[];
     getProcessInfo(): string;
+
+    // one page of the virtual table, as JSON (see GalleryRowPage)
+    getRowsAsync(offset: number, count: number): Promise<string>;
 
     echoAsync(text: string): Promise<string>;
     countdownAsync(seconds: number): Promise<number>;
@@ -40,6 +45,21 @@ export interface ProcessInfo {
     WorkingSet: number;
     ManagedHeap: number;
     Collections: number;
+}
+
+// GalleryRow.cs / GalleryRowPage.cs
+export interface Row {
+    Index: number;
+    Name: string;
+    Kind: string;
+    Size: number;
+    Modified: string;
+}
+
+export interface RowPage {
+    Offset: number;
+    Total: number;
+    Rows: Row[];
 }
 
 export const api = host<GalleryApi>("gallery");

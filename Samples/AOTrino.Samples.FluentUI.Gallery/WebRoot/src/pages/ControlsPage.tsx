@@ -94,6 +94,7 @@ import {
     TextUnderline24Regular,
 } from "@fluentui/react-icons";
 import { Example } from "../Example";
+import { VirtualTable } from "../VirtualTable";
 import { Page } from "./Page";
 
 const useStyles = makeStyles({
@@ -372,6 +373,31 @@ function Collections() {
     const styles = useStyles();
     return (
         <>
+            <Example
+                title="Half a million rows, over the bridge"
+                description={
+                    <>
+                        The table lives in .NET — 500,000 rows that are never sent, and that the browser is never
+                        asked to hold. Scroll it: the page works out which rows are on screen, asks for those
+                        200 at a time, and forgets them again. Watch the counter — you can scroll for a while and
+                        still have fetched a fraction of a percent of the table. This is what a host object is
+                        for; the <code>ping()</code> on the Bridge page is the same mechanism doing nothing
+                        interesting.
+                    </>
+                }
+                code={`// C#: rows are computed per request, no table is ever built
+public int RowCount => 500_000;
+
+public Task<string> GetRowsAsync(int offset, int count) { /* ... */ }
+
+// TS: ask for the window you're showing, keyed by the offset .NET answered with
+const { Offset, Rows } = JSON.parse(await api.getRowsAsync(page * 200, 200));
+setPages(prev => new Map(prev).set(Offset / 200, Rows));`}
+                source="Samples/…/VirtualTable.tsx"
+            >
+                <VirtualTable />
+            </Example>
+
             <Example
                 title="Table"
                 description="Presentational, and yours to drive. DataGrid sits on top of this when you want sorting and selection built in."

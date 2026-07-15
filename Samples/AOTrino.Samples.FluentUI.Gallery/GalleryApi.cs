@@ -6,6 +6,15 @@ namespace AOTrino.Samples.FluentUI.Gallery;
 public partial class GalleryApi(WebViewWindow window) : DispatchObject
 {
     private const string _userNameVariable = "USERNAME";
+
+    // the virtual table the Collections page scrolls. no such table is ever built: rows are computed per
+    // request, which is exactly the point - .NET owns the data, the page is handed only the slice on screen.
+    private const int _virtualRowCount = 500_000;
+    private const int _maxPageSize = 1_000;
+    private static readonly string[] _rowKinds = ["C#", "TypeScript", "Markdown", "Project", "Folder"];
+    private static readonly string[] _rowExtensions = [".cs", ".ts", ".md", ".csproj", string.Empty];
+    private static readonly DateTime _rowEpoch = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
     private readonly long _startTick = Environment.TickCount64;
 
     // host-object members are invoked on the instance by the WebView2 bridge (BindingFlags.Instance),
@@ -74,6 +83,39 @@ public partial class GalleryApi(WebViewWindow window) : DispatchObject
     {
         await Task.Delay(600);
         return $".NET echoes: {text}";
+    }
+
+    // --- the virtual table: how much there is, and one page of it ---
+
+    // read once by the page, to size the scrollbar. it never learns anything else about the other 499,800 rows.
+    public int RowCount => _virtualRowCount;
+
+    // a page of rows, as JSON. Task-returning rather than plain: this one is instant because it computes rows
+    // from an index, but a real source is a database or a disk, and the page has to be written to await either.
+    // count is clamped, deliberately: a page that asks for the whole table isn't paging, and the whole point of
+    // this is that "give me everything" never happens.
+    public Task<string> GetRowsAsync(int offset, int count)
+    {
+        offset = Math.Clamp(offset, 0, _virtualRowCount);
+        count = Math.Clamp(count, 0, Math.Min(_maxPageSize, _virtualRowCount - offset));
+
+        var rows = new GalleryRow[count];
+        for (var i = 0; i < rows.Length; i++)
+        {
+            var index = offset + i;
+            var kind = index % _rowKinds.Length;
+
+            // no randomness: the same row must read the same on every request, or scrolling back would rewrite history
+            rows[i] = new GalleryRow(
+                index,
+                $"item-{index:D6}{_rowExtensions[kind]}",
+                _rowKinds[kind],
+                index * 7919L % 500_000 + 1024,
+                _rowEpoch.AddMinutes(-index * 7d).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture));
+        }
+
+        var page = new GalleryRowPage(offset, _virtualRowCount, rows);
+        return Task.FromResult(JsonSerializer.Serialize(page, GalleryJsonContext.Default.GalleryRowPage));
     }
 
     // --- an exception: crosses as a rejected promise, not a crash ---

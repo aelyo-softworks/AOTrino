@@ -21,6 +21,7 @@
 		<Using Include="AOTrino.Bridge" />
 		<Using Include="System" />
 		<Using Include="System.Diagnostics" />
+		<Using Include="System.Globalization" />
 		<Using Include="System.Reflection" />
 		<Using Include="System.Runtime.InteropServices" />
 		<Using Include="System.Collections.Generic" />

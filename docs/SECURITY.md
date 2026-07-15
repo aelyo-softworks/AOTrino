@@ -166,6 +166,30 @@ If an app needs both, that's the two-window shape from *the footgun* above: a `L
 objects, a `Web` window with none. `NavigationMode` is a property you can set at any time — flipping a window
 to `Web` after registering does **not** unregister anything, so don't.
 
+### The case that tempts everyone: signing in
+
+There's no auth sample, because an OAuth or SSO flow is an identity provider's business and not a platform's.
+But it's worth naming, because it's the moment the rule above gets broken — an app needs the user to sign in at
+`login.microsoftonline.com`, the app already has a window, and pointing that window at the login page is one
+line.
+
+Don't point *that* window at it. The window with your host objects on it is the one window that must never load
+someone else's page — and an auth flow is a redirect chain you don't control, ending wherever the identity
+provider decides. Instead:
+
+- open a **second window** (`NavigationMode.Web`, no host objects) for the sign-in, or hand the URL to the
+  user's real browser with `OpenExternal` — which is what `Local` already does with an off-app link, and what
+  a native app is supposed to do;
+- catch the redirect where a desktop app is meant to: a loopback `http://127.0.0.1:<port>/` listener, or a
+  custom scheme registered to your exe (`myapp://auth`), both of which are the documented desktop patterns and
+  neither of which needs the token to pass through a page;
+- keep the token in .NET. A token in `localStorage` is a token available to every script the window ever runs.
+
+The one AOTrino-specific detail worth knowing: WebView2's user-data folder is per-app, so a sign-in in a `Web`
+window persists its cookies across restarts like a browser profile would — convenient for "stay signed in",
+and a reason to think about where that folder lives (`AOTrinoApplication.Current.Paths.WebView2UserDataPath`)
+before shipping.
+
 ## `SystemInfo`: shipped, not registered
 
 `AOTrino.SystemInfo` is a ready-made host object of read-only facts a page can't otherwise learn: versions

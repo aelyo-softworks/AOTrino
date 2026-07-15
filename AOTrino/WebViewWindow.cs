@@ -14,6 +14,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     private protected readonly HashSet<uint> _pointerIdsStartingInWebView = [];
     private ComObject<ICoreWebView2Environment12>? _environment;
     private ComObject<ICoreWebView2_17>? _webView;
+    private IComObject<IRawElementProviderSimple>? _automationProvider;
     private ICoreWebView2Controller? _baseController; // the controller as its common base type (bounds/focus); owned/disposed by the subclass
     private bool _mouseTracking;
     private bool _hostObjectHelperInstalled;
@@ -106,6 +107,8 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     public virtual bool CanChangeCursor { get; set; } = true;
     public virtual bool SendDoubleClicks { get; set; } // WebView2 doesn't seem to care (chrome uses UP & DOWN events by itself)
 
+    protected virtual bool ProvidesAutomation => true;
+
     // create the WebView2 controller (composition or HWND). the implementation must, once its controller is ready,
     // call SetWebViewController(controller, coreWebView2) and then invoke onControllerReady.
     protected abstract void CreateController(ICoreWebView2Environment12 environment, Action onControllerReady);
@@ -180,6 +183,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         }), ref _navigationCompleted).ThrowOnError();
     }
 
+    protected virtual IComObject<IRawElementProviderSimple>? GetAutomationProvider() => null;
     protected virtual CoreWebView2EnvironmentOptions? GetEnvironmentOptions() => null;
     protected virtual RECT? GetCaptionRect() => null;
     protected virtual void ControllerCreated()
@@ -943,6 +947,17 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
                     return null;
 
                 break;
+
+            case MessageDecoder.WM_GETOBJECT:
+                // UI Automation asks a window what it is through WM_GETOBJECT
+                if (ProvidesAutomation && unchecked((int)lParam.Value) == UiaFunctions.UiaRootObjectId)
+                {
+                    _automationProvider ??= GetAutomationProvider();
+                    if (_automationProvider != null)
+                        return UiaFunctions.UiaReturnRawElementProvider(hwnd, wParam, lParam, _automationProvider.Object);
+                }
+                break;
+
         }
         return base.WindowProc(hwnd, msg, wParam, lParam);
     }
@@ -969,6 +984,10 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     {
         if (disposing)
         {
+            // tells UIA to drop what it cached for this window (pass null on teardown)
+            UiaFunctions.UiaReturnRawElementProvider(Handle, new(), new(), null);
+            _automationProvider?.Dispose();
+
             if (_navigationCompleted.value != 0)
             {
                 WebView?.Object.remove_NavigationCompleted(_navigationCompleted);
