@@ -67,8 +67,20 @@ graph LR
 
 ## Getting started
 
-You need the **.NET 10 SDK**, **Visual Studio's C++ workload** (Native AOT ends in the MSVC linker), and the
-**WebView2 runtime** — already on any up-to-date Windows, and an AOTrino app offers a download link if it isn't.
+**To build and run**, the [.NET 10 SDK](https://dotnet.microsoft.com/download) is all you need. The **WebView2
+runtime** is already on any up-to-date Windows — and an AOTrino app offers a download link if it isn't.
+
+**To publish the single exe**, add the MSVC linker. The SDK compiles to native code but doesn't ship a linker,
+so `dotnet publish` ends in `link.exe` and stops with *"Platform linker not found"* without it. No IDE required
+— the standalone build tools are enough:
+
+```
+winget install Microsoft.VisualStudio.BuildTools --override "--passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+```
+
+Add `--add Microsoft.VisualStudio.Component.VC.Tools.ARM64` for ARM64. If you already have Visual Studio, the
+same thing lives in the installer as **Desktop development with C++**. Full list:
+[aka.ms/nativeaot-prerequisites](https://aka.ms/nativeaot-prerequisites).
 
 ### Plain — a page, no build step
 

@@ -30,6 +30,13 @@
 	  path was the only one that showed it.
 	-->
 	<PropertyGroup Condition="'$(AOTrinoReferencesDirectN)' != 'false' and '$(MSBuildProjectExtension)' == '.csproj'">
+		<!--
+		  Packing never uses External\, whatever is on this machine. A package must DECLARE what it needs, and a
+		  <Reference> to a DLL on my disk declares nothing: pack against it and the result restores for nobody.
+		  Building the other way is also the only honest check that what's published is enough to compile AOTrino.
+		  (_IsPacking is set by `dotnet pack`, the way _IsPublishing is set by `dotnet publish`.)
+		-->
+		<UseLocalExternal Condition="'$(UseLocalExternal)' == '' and '$(_IsPacking)' == 'true'">false</UseLocalExternal>
 		<UseLocalExternal Condition="'$(UseLocalExternal)' == '' and Exists('$(MSBuildThisFileDirectory)External\DirectN.dll')">true</UseLocalExternal>
 		<UseLocalExternal Condition="'$(UseLocalExternal)' == ''">false</UseLocalExternal>
 		<DirectNAotVersion Condition="'$(DirectNAotVersion)' == ''">1.6.4</DirectNAotVersion>
@@ -71,8 +78,13 @@
 	  Set here rather than in Directory.Build.props because OutputType isn't known that early, and set rather than
 	  defaulted because something upstream already leaves RuntimeIdentifiers as ";win-x64" - so a
 	  Condition="'$(RuntimeIdentifiers)' == ''" silently never fires and only x64 can be published.
+
+	  Scoped to .csproj, not to OutputType: the npm .esproj projects in this solution report OutputType=exe and
+	  TargetFramework=net6.0 (their JavaScript SDK's own defaults), so keying off OutputType handed them three
+	  RIDs to restore and Visual Studio stopped with "Your project does not reference '.NETCoreApp,Version=v6.0'".
+	  They are not something anyone publishes.
 	-->
-	<PropertyGroup Condition="'$(OutputType)' == 'WinExe' or '$(OutputType)' == 'Exe'">
+	<PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj' and ('$(OutputType)' == 'WinExe' or '$(OutputType)' == 'Exe')">
 		<RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
 	</PropertyGroup>
 

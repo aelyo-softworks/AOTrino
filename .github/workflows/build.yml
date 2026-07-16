@@ -1,0 +1,69 @@
+# Builds AOTrino the way a stranger would: a clean Windows machine, a clone, and nothing else.
+#
+# That's the whole point of it. Everything on my own machine is already installed and already there - the
+# interop DLLs in External\, node_modules, the C++ tools - so a green build here proves nothing about the two
+# claims the README makes to everyone else: that you can clone this and build it, and that the .NET SDK alone
+# is enough to do so. A runner has no External\ folder, so it takes DirectN and WebView2 from their published
+# packages, which is the path every other person is on.
+name: build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: build + run the samples' front ends
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # the npm samples build their front end during the .NET build (see AOTrino\build\AOTrino.targets);
+      # the runner has Node, this just pins it rather than inheriting whatever the image ships this month
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: dotnet build (no External\, no npm install, no instructions)
+        run: dotnet build AOTrino.slnx -c Release
+
+  publish:
+    name: publish a single exe
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # the other README claim: one file, no runtime to install. This is also the only step that needs the MSVC
+      # linker - the runner image carries it, which is the same thing the docs ask a developer to install.
+      - name: dotnet publish -r win-x64
+        run: dotnet publish Samples/AOTrino.Samples.HelloWorld/AOTrino.Samples.HelloWorld.csproj -c Release -r win-x64 -p:Platform=x64
+
+      # the publish folder specifically: ILC also leaves a copy under native\, and reporting that one would be
+      # measuring the wrong file
+      - name: what came out
+        shell: pwsh
+        run: |
+          $exe = Get-Item Samples/AOTrino.Samples.HelloWorld/bin/x64/Release/*/win-x64/publish/AOTrino.Samples.HelloWorld.exe
+          "{0} - {1:N1} MB" -f $exe.Name, ($exe.Length / 1MB)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HelloWorld-win-x64
+          path: Samples/AOTrino.Samples.HelloWorld/bin/x64/Release/**/publish/AOTrino.Samples.HelloWorld.exe
+          if-no-files-found: error

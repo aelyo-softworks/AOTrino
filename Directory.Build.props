@@ -1,7 +1,14 @@
 <Project>
 
-	<!-- values shared by every project in the solution -->
-	<PropertyGroup>
+	<!--
+	  What every .NET project here shares.
+
+	  Scoped to .csproj, because "every project in the solution" also includes the npm .esproj ones, and they are
+	  not .NET projects at all - their SDK has its own idea of a target framework (net6.0). Forcing this TFM on
+	  them produced a project restored for "net6.0-none", and Visual Studio then refused to build it: "Your
+	  project does not reference '.NETCoreApp,Version=v6.0'". Same for Platforms: the solution builds them AnyCPU.
+	-->
+	<PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
 		<TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -24,7 +31,8 @@
 		<SourceRevisionId>$([System.DateTime]::UtcNow.ToString("yyyyMMddHHmmss"))</SourceRevisionId>
 	</PropertyGroup>
 
-	<ItemGroup>
+	<!-- assembly-level attributes: only a project that produces an assembly has any use for them -->
+	<ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
 		<AssemblyAttribute Include="System.Runtime.CompilerServices.DisableRuntimeMarshallingAttribute" />
 		<AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
 			<_Parameter1>Windows10.0.19041.0</_Parameter1>
