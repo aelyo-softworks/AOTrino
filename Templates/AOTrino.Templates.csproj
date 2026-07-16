@@ -61,8 +61,23 @@
 	  They're a build output (npm/pack, gitignored), so they're fetched here at pack time rather than committed.
 	  A generated app installs them by path - see the templates' package.json - because nothing is published to a
 	  registry: "@aotrino/react": "^1.0.0" would resolve to nothing at all.
+
+	  Hooked to GenerateNuspec, not Build: making tarballs is not part of compiling anything, and doing it on
+	  every build meant a plain `dotnet build` of the solution ran tsc - which needs node_modules, which a machine
+	  that has never run npm install doesn't have. That passed here forever and failed on the first clean CI run,
+	  with the least helpful error available: "npm error command failed ... tsc -p tsconfig.json" out of a
+	  template project.
+
+	  _GetPackageFiles is what turns Content into package files, and it is the last moment these items can be
+	  added: hooking Pack or even GenerateNuspec runs after it, and the tarballs then vanish from the package
+	  without a word - it packs happily, just without them. The items can't be declared statically either,
+	  because npm hasn't produced the files yet when the project is evaluated.
+
+	  AOTrino.Npm.proj first, for the same reason: it's what installs the workspace, once, for the whole
+	  solution. Without it, `dotnet pack` on a fresh clone still has no tsc.
 	-->
-	<Target Name="AOTrinoPackNpmLibs" BeforeTargets="Build;Pack">
+	<Target Name="AOTrinoPackNpmLibs" BeforeTargets="_GetPackageFiles">
+		<MSBuild Projects="$(MSBuildThisFileDirectory)..\npm\AOTrino.Npm.proj" Targets="Build" />
 		<Exec Command="npm run pack:libs" WorkingDirectory="$(MSBuildThisFileDirectory)..\" />
 
 		<!-- PackagePath, not Link: pack ignores Link and would put every tarball at the root of content\, where

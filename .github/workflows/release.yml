@@ -1,0 +1,59 @@
+# Cuts a release: every sample, AOT-compiled for x86 / x64 / arm64, one zip per architecture, attached to a
+# GitHub release with generated notes.
+#
+# It runs publish.bat - the same script as by hand - rather than a second copy of the same steps in YAML. The
+# one that drifts is always the copy nobody runs.
+#
+# Push a tag to trigger it:
+#     git tag v1.0.0 && git push origin v1.0.0
+#
+# or run it from the Actions tab against a tag you've already pushed.
+name: release
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (must already exist, e.g. v1.0.0)'
+        required: true
+
+permissions:
+  # gh release create writes to the repo. The default token is read-only.
+  contents: write
+
+jobs:
+  release:
+    name: publish all samples, all architectures
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # the tag, not the branch: workflow_dispatch would otherwise build main and label it a release
+          ref: ${{ inputs.tag || github.ref }}
+          # --generate-notes writes "what changed since the last tag", which needs the tags
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # UPX is not on the runner. It's optional to the drop - publish.bat treats a failure as a warning, and
+      # arm64 can't be packed at all yet - but without it the exes are 11 MB instead of 4.
+      - name: install upx
+        run: choco install upx --no-progress -y
+
+      - name: publish + zip + release
+        run: .\publish.bat -clean -upx -release ${{ inputs.tag || github.ref_name }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: what shipped
+        shell: pwsh
+        run: Get-ChildItem publish\*.zip | ForEach-Object { '{0,-36} {1,6:N1} MB' -f $_.Name, ($_.Length / 1MB) }

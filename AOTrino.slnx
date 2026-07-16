@@ -5,27 +5,7 @@
     <Platform Name="x86" />
   </Configurations>
   <Folder Name="/Samples/">
-    <Project Path="Samples/AOTrino.Samples.HelloWorld/AOTrino.Samples.HelloWorld.csproj">
-      <Platform Solution="*|ARM64" Project="ARM64" />
-      <Platform Solution="*|x64" Project="x64" />
-      <Platform Solution="*|x86" Project="x86" />
-    </Project>
-    <Project Path="Samples/AOTrino.Samples.HostObjects/AOTrino.Samples.HostObjects.csproj">
-      <Platform Solution="*|ARM64" Project="ARM64" />
-      <Platform Solution="*|x64" Project="x64" />
-      <Platform Solution="*|x86" Project="x86" />
-    </Project>
-    <Project Path="Samples/AOTrino.Samples.Direct2D/AOTrino.Samples.Direct2D.csproj">
-      <Platform Solution="*|ARM64" Project="ARM64" />
-      <Platform Solution="*|x64" Project="x64" />
-      <Platform Solution="*|x86" Project="x86" />
-    </Project>
-    <Project Path="Samples/AOTrino.Samples.WebBrowser/AOTrino.Samples.WebBrowser.csproj">
-      <Platform Solution="*|ARM64" Project="ARM64" />
-      <Platform Solution="*|x64" Project="x64" />
-      <Platform Solution="*|x86" Project="x86" />
-    </Project>
-    <Project Path="Samples/AOTrino.Samples.FileExplorer/AOTrino.Samples.FileExplorer.csproj">
+    <Project Path="Samples/AOTrino.Samples.CaptureScreen/AOTrino.Samples.CaptureScreen.csproj">
       <Platform Solution="*|ARM64" Project="ARM64" />
       <Platform Solution="*|x64" Project="x64" />
       <Platform Solution="*|x86" Project="x86" />
@@ -35,22 +15,12 @@
       <Platform Solution="*|x64" Project="x64" />
       <Platform Solution="*|x86" Project="x86" />
     </Project>
-    <Project Path="Samples/AOTrino.Samples.Translucid/AOTrino.Samples.Translucid.csproj">
+    <Project Path="Samples/AOTrino.Samples.Direct2D/AOTrino.Samples.Direct2D.csproj">
       <Platform Solution="*|ARM64" Project="ARM64" />
       <Platform Solution="*|x64" Project="x64" />
       <Platform Solution="*|x86" Project="x86" />
     </Project>
-    <Project Path="Samples/AOTrino.Samples.CaptureScreen/AOTrino.Samples.CaptureScreen.csproj">
-      <Platform Solution="*|ARM64" Project="ARM64" />
-      <Platform Solution="*|x64" Project="x64" />
-      <Platform Solution="*|x86" Project="x86" />
-    </Project>
-    <Project Path="Samples/AOTrino.Samples.React.HelloWorld/AOTrino.Samples.React.HelloWorld.csproj">
-      <Platform Solution="*|ARM64" Project="ARM64" />
-      <Platform Solution="*|x64" Project="x64" />
-      <Platform Solution="*|x86" Project="x86" />
-    </Project>
-    <Project Path="Samples/AOTrino.Samples.React.Dashboard/AOTrino.Samples.React.Dashboard.csproj">
+    <Project Path="Samples/AOTrino.Samples.FileExplorer/AOTrino.Samples.FileExplorer.csproj">
       <Platform Solution="*|ARM64" Project="ARM64" />
       <Platform Solution="*|x64" Project="x64" />
       <Platform Solution="*|x86" Project="x86" />
@@ -65,20 +35,52 @@
       <Platform Solution="*|x64" Project="x64" />
       <Platform Solution="*|x86" Project="x86" />
     </Project>
+    <Project Path="Samples/AOTrino.Samples.HelloWorld/AOTrino.Samples.HelloWorld.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="Samples/AOTrino.Samples.HostObjects/AOTrino.Samples.HostObjects.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="Samples/AOTrino.Samples.React.Dashboard/AOTrino.Samples.React.Dashboard.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="Samples/AOTrino.Samples.React.HelloWorld/AOTrino.Samples.React.HelloWorld.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="Samples/AOTrino.Samples.Translucid/AOTrino.Samples.Translucid.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="Samples/AOTrino.Samples.WebBrowser/AOTrino.Samples.WebBrowser.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
   </Folder>
-  <Project Path="AOTrino/AOTrino.csproj">
-    <Platform Solution="*|ARM64" Project="ARM64" />
-    <Platform Solution="*|x64" Project="x64" />
-    <Platform Solution="*|x86" Project="x86" />
-  </Project>
   <Folder Name="/Packaging/">
     <File Path="publish.bat" />
     <File Path="PublishSamples.proj" />
     <Project Path="Templates/AOTrino.Templates.csproj">
-    <Platform Solution="*|ARM64" Project="ARM64" />
-    <Platform Solution="*|x64" Project="x64" />
-    <Platform Solution="*|x86" Project="x86" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
     </Project>
+  </Folder>
+  <Folder Name="/global/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Build.targets" />
+    <File Path="package.json" />
+    <File Path="publish.bat" />
+    <File Path="README.md" />
   </Folder>
   <Folder Name="/npm/">
     <File Path="package.json" />
@@ -88,12 +90,12 @@
       <Build />
       <Deploy />
     </Project>
-    <Project Path="npm/react/AOTrino.Npm.React.esproj">
+    <Project Path="npm/fluent/AOTrino.Npm.Fluent.esproj">
       <Platform Project="AnyCPU" />
       <Build />
       <Deploy />
     </Project>
-    <Project Path="npm/fluent/AOTrino.Npm.Fluent.esproj">
+    <Project Path="npm/react/AOTrino.Npm.React.esproj">
       <Platform Project="AnyCPU" />
       <Build />
       <Deploy />
@@ -135,4 +137,9 @@
     <File Path="npm\fluent\src\themes.ts" />
     <File Path="npm\fluent\src\useSystemTheme.ts" />
   </Folder>
+  <Project Path="AOTrino/AOTrino.csproj">
+    <Platform Solution="*|ARM64" Project="ARM64" />
+    <Platform Solution="*|x64" Project="x64" />
+    <Platform Solution="*|x86" Project="x86" />
+  </Project>
 </Solution>
