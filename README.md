@@ -43,8 +43,8 @@ graph BT
 | **+ fluent** | Fluent UI | A window that follows the Windows theme, caption included | `dotnet new aotrino-fluent` |
 
 Nothing above the first level is required by the first level. And `@aotrino/client` adds **no runtime**: the C#
-side already injected it, so the package is types and a thin wrapper over what's on the page — which is exactly
-why the two can't drift apart.
+side already injected it, so the package is types and a thin wrapper over what's on the page — which is what
+keeps the two from drifting apart.
 
 ### What an app is, in one picture
 
@@ -173,15 +173,15 @@ edges transparent. Only possible because the WebView is a composition layer and 
 ### Capture Screen
 
 *Plain HTML.* The left half is the page; the right half is a live `Windows.Graphics.Capture` of the screen,
-drawn with Direct2D and composited *beside* the page by .NET. A web page cannot do this at any price.
+drawn with Direct2D and composited *beside* the page by .NET — which is not something a web page gets to do.
 
 ![Capture Screen](docs/images/capture-screen.png)
 
 ### Web Browser
 
 *Plain HTML + an injected script.* `NavigationMode.Web`: the one sample that browses the real internet, its
-chrome injected into every document. It registers **no host objects**, and
-[docs/SECURITY.md](docs/SECURITY.md) explains why that isn't a detail. Takes `--url`.
+chrome injected into every document. It registers **no host objects** — [docs/SECURITY.md](docs/SECURITY.md)
+explains why that's worth being deliberate about. Takes `--url`.
 
 ![Web Browser](docs/images/web-browser.png)
 
@@ -223,7 +223,7 @@ produced it. Includes a table of **500,000 rows** that lives in .NET and crosses
 ## Documentation
 
 - [Architecture and maintenance](docs/MAINTENANCE.md) — what the repo is made of, where every version lives, what to do weekly/monthly/every six months, and the traps.
-- [Security model](docs/SECURITY.md) — local-first by default, `NavigationMode`, and the one rule AOTrino enforces for you.
+- [Security model](docs/SECURITY.md) — what the defaults are (local-first, `NavigationMode`), what they aren't, and where the decisions stay yours.
 - [The bridge](docs/BRIDGE.md) — how JS calls .NET and back: host objects, what crosses, async results, exceptions, and the escape hatch.
 - [Front end](docs/FRONTEND.md) — hand-written pages need nothing; the optional `@aotrino/client` types the bridge for React/TypeScript apps, without a registry.
 - [Theming](docs/THEMING.md) — light/dark that follows Windows, picked from the caption and remembered — what the `FluentUI` samples get for two lines, and how to change it.
@@ -231,15 +231,20 @@ produced it. Includes a table of **500,000 rows** that lives in .NET and crosses
 ## Building this repo
 
 ```
-cr.bat                        rem copies the local DirectNAot / WebView2Aot builds into External\
+git clone https://github.com/aelyo-softworks/AOTrino
 dotnet build AOTrino.slnx
 publish.bat -upx              rem every sample, AOT, x86 + x64 + ARM64, compressed
 ```
 
-The repo builds against `External\*.dll` so a change in DirectN can be tried here immediately. `dotnet pack`
-builds against the published [DirectNAot](https://www.nuget.org/packages/DirectNAot) and
-[WebView2Aot](https://www.nuget.org/packages/WebView2Aot) packages instead — a package has to declare what it
-needs, and a file reference declares nothing. See [docs/MAINTENANCE.md](docs/MAINTENANCE.md).
+That should be all of it: the interop assemblies come from the published
+[DirectNAot](https://www.nuget.org/packages/DirectNAot),
+[DirectNAot.Extensions](https://www.nuget.org/packages/DirectNAot.Extensions) and
+[WebView2Aot](https://www.nuget.org/packages/WebView2Aot) packages, and the build takes care of npm.
+
+If you happen to be working on those libraries at the same time, drop their local builds into an `External\`
+folder at the root: when it's there, the projects reference those DLLs instead of the packages, so a change in
+DirectN can be tried here without a round trip through nuget.org. It's detected rather than configured —
+`-p:UseLocalExternal=false` overrides it either way. See [docs/MAINTENANCE.md](docs/MAINTENANCE.md).
 
 ## License
 

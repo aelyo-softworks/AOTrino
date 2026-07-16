@@ -30,6 +30,9 @@
 		<EnableDefaultItems>false</EnableDefaultItems>
 		<!-- the templates are content; nothing here compiles, and the RIDs the samples need would only slow this down -->
 		<RuntimeIdentifiers></RuntimeIdentifiers>
+		<!-- and no DirectN either: a PackageReference in a packable project becomes a dependency OF the package,
+		     so the repo-wide switch in Directory.Build.targets has to skip this one -->
+		<AOTrinoReferencesDirectN>false</AOTrinoReferencesDirectN>
 	</PropertyGroup>
 
 	<ItemGroup>

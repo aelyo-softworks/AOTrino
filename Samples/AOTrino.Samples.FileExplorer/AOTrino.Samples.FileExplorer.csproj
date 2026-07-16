@@ -35,16 +35,5 @@
 		<ProjectReference Include="..\..\AOTrino\AOTrino.csproj" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<Reference Include="DirectN">
-			<HintPath>..\..\External\DirectN.dll</HintPath>
-		</Reference>
-		<Reference Include="DirectN.Extensions">
-			<HintPath>..\..\External\DirectN.Extensions.dll</HintPath>
-		</Reference>
-		<Reference Include="WebView2">
-			<HintPath>..\..\External\WebView2.dll</HintPath>
-		</Reference>
-	</ItemGroup>
 
 </Project>

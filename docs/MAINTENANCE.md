@@ -10,11 +10,17 @@ AOTrino.slnx                 the solution: the core lib, every sample, and the n
 Directory.Build.props        shared by every project: TFM, versions, platforms, assembly attributes
 Directory.Build.targets      WebRoot embedding, Scripts embedding, the npm build hook
 package.json                 the npm workspace root: the @aotrino/* list and build:libs
-cr.bat                       refreshes External\ from local builds (out of git; machine-specific paths)
+cr.bat                       MY script, not in this repo: refreshes External\ from local builds of the
+                             sibling repos. It points at paths on my machine, so it's git-ignored - nothing
+                             here needs it, see External/ below
 
 AOTrino/                     the core library. everything else is a consumer of it
   runtimes/win-{x86,x64,arm64}/native/WebView2Loader.dll
-External/                    local (non-NuGet) dependency DLLs. git-ignored, produced by cr.bat
+External/                    OPTIONAL, git-ignored. If present, DirectN/DirectN.Extensions/WebView2 are
+                             referenced from here instead of from their NuGet packages - which is how a change
+                             in one of those libs gets tried here without publishing it first. Absent (a fresh
+                             clone), the published packages are used and everything builds. Detected in
+                             Directory.Build.targets; override with -p:UseLocalExternal=true|false
 npm/
   AOTrino.Npm.proj           runs npm install + build:libs ONCE per build (see BRIDGE/FRONTEND docs)
   client/  react/  fluent/   the @aotrino/* packages: source in src/, built to dist/ (git-ignored)
@@ -42,7 +48,7 @@ scripts, which is why the list is explicit and why the libraries have **no `prep
 | --- | --- | --- |
 | .NET TFM, Windows SDK | `Directory.Build.props` (`TargetFramework`, `WindowsSdkPackageVersion`) | one place, every project |
 | Product/file/informational version | `Directory.Build.props` | `SourceRevisionId` appends the build timestamp on purpose |
-| DirectN, DirectN.Extensions, WebView2, ShellN, WicNet | `External\*.dll` — **copied by `cr.bat`** | not NuGet: local builds of sibling repos |
+| DirectN, DirectN.Extensions, WebView2 | `Directory.Build.targets` (`DirectNAotVersion`, `WebView2AotVersion`) | the published packages by default; `External\*.dll` instead when that folder exists |
 | `WebView2Loader.dll` (x86/x64/arm64) | `AOTrino\runtimes\...` in the core lib | committed binaries |
 | WebView2 **Runtime** | nothing — it's evergreen on the user's machine | `AOTrinoApplication` refuses to start without it and shows a download link |
 | React, Vite, TypeScript, `@types/*` | each `package.json`: `npm/*` and every `Samples/*/WebRoot` | duplicated by design — samples are meant to be copy-pasteable |
@@ -74,15 +80,17 @@ but the checklist is cheap and the failure mode isn't (see *the traps*).
    sample (AOT is where a runtime change actually shows up).
 2. **Majors.** `npm outdated` shows them in the "Latest" column. Take them one package at a time — React,
    Vite, TypeScript and Fluent all have opinions and you want to know which one broke you.
-3. **Local dependencies.** Rebuild the sibling repos (DirectN, WebView2Aot, ...) in Release and run
-   `cr.bat` to refresh `External\`. This is the one that silently rots: nothing tells you `External\` is
-   six months behind.
+3. **The interop libraries.** Bump `DirectNAotVersion` / `WebView2AotVersion` in `Directory.Build.targets`
+   when new ones ship, and rebuild an AOT sample. If you keep an `External\` folder, remember it wins over
+   those versions while it's there - and nothing tells you it's six months behind, which is the one that
+   silently rots. Delete it to build against what everyone else builds against.
 4. **Re-read** `docs/BRIDGE.md` on nested arrays: if WebView2Feedback #3183 ever closes, the flat-array
    advice can change.
 
 ### When you actually need it
 
-- **A new WebView2 API**: regenerate/rebuild the WebView2 bindings in their own repo, then `cr.bat`.
+- **A new WebView2 API**: regenerate/rebuild the WebView2 bindings in their own repo, publish or drop them
+  into `External\`, and bump `WebView2AotVersion` when the package is out.
 - **A new AOTrino sample**: nothing to wire. The `.slnx` needs the project, and the root `workspaces` globs
   (`Samples/AOTrino.Samples.React.*/WebRoot`, `...FluentUI.*/WebRoot`) already cover a new front end.
 

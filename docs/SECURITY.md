@@ -4,20 +4,23 @@ AOTrino is a thin platform: a native window hosting a WebView2 that renders your
 question every embedded-browser framework faces applies here — **what is the web content allowed to touch, and
 where is it allowed to go?**
 
-AOTrino answers this with *one* honest, enforced default and otherwise gets out of your way. There is no
-permission taxonomy, no capability manifest, no "security zones." The whole model fits on this page.
+AOTrino answers it with *one* conservative default and otherwise gets out of your way. There is no permission
+taxonomy, no capability manifest, no "security zones." The whole model fits on this page.
 
-## The one rule
+## The default
 
-> An AOTrino window stays on **your app's own content** and will not navigate to the web unless you say so.
+> An AOTrino window is set up to stay on **your app's own content**, and won't navigate to the web unless you
+> say so.
 
-That is the entire security guarantee AOTrino makes for you. Everything else — disabling web security, granting
-filesystem access, exposing host objects — is a decision *you* make explicitly, in your own code, by name.
+That's the extent of it. Everything else — disabling web security, granting filesystem access, exposing host
+objects — is a decision *you* make explicitly, in your own code, by name.
 
-This is deliberate. A platform that promises broad "safety" writes a check it can't cash; the first time
-something goes wrong, "but the framework said it was safe" is the framework's problem. AOTrino instead makes the
-**safe thing the default** and the **dangerous thing an explicit, clearly-named opt-in**, so that responsibility
-lands where the decision was actually made.
+This is deliberate, and it's a design stance rather than a promise. A platform that claims broad "safety" writes
+a check it can't cash; the first time something goes wrong, "but the framework said it was safe" helps nobody.
+AOTrino tries instead to make the **cautious thing the default** and the **risky thing an explicit,
+clearly-named opt-in**, so the decision is visible where it's actually made. What your app then does with that
+is yours to review — see the [licence](../LICENSE): this is free software, provided as is, with no warranty of
+any kind.
 
 ## Why this rule is the one that matters
 
@@ -33,8 +36,8 @@ Neither half is dangerous alone:
   browser tab.
 
 The catastrophe is mixing them: giving a **remote, untrusted page** the run of the **local machine**. So the one
-thing AOTrino guards by default is exactly the join between those two worlds: **navigation.** Keep untrusted
-content from ever loading into a privileged window and the combination can't occur.
+thing AOTrino defaults to holding shut is exactly the join between those two worlds: **navigation.** Keep
+untrusted content out of a privileged window and that combination shouldn't arise.
 
 ## `NavigationMode`
 
@@ -104,7 +107,8 @@ protected override string? VirtualHostName => "myapp.example";
 ```
 
 The page then has an ordinary `https` origin. Module scripts load with **no browser flag at all**, and the page
-**cannot** read arbitrary local files — the capability is never granted rather than granted-and-hoped-about. Only
+is not handed the run of the disk — the capability isn't granted in the first place, rather than granted and
+hoped about. Only
 the mapped folder is exposed, and `DENY_CORS` keeps other origins out of it. `Local` mode allows the app's own
 virtual host and still hands everything else to the real browser.
 
@@ -117,9 +121,9 @@ so each one carries more overhead than a direct `file://` read.
 | A hand-written page, no modules | `file://` *(default)* | Nothing to fix. `file://` is fine and fastest. |
 | High-throughput local file access (a file browser, a viewer streaming documents or media off disk) | `file://` + `--allow-file-access-from-files` | Direct disk reads are the point; routing them through a virtual host would tax every read. Accept the flag knowingly, and keep the window `Local`. |
 
-The short version: a virtual host is the right default for serving your app's own bundle, and the wrong tool for
-bulk local file access. Reach for the flag when you actually need the speed — and then never pair it with
-untrusted content (see below).
+The short version: a virtual host suits serving your app's own bundle, and is the wrong tool for bulk local file
+access. Reach for the flag when you actually need the speed — and then don't pair it with untrusted content
+(see below).
 
 ## What AOTrino does *not* own
 
@@ -173,7 +177,7 @@ But it's worth naming, because it's the moment the rule above gets broken — an
 `login.microsoftonline.com`, the app already has a window, and pointing that window at the login page is one
 line.
 
-Don't point *that* window at it. The window with your host objects on it is the one window that must never load
+Don't point *that* window at it. The window with your host objects on it is the last one that should load
 someone else's page — and an auth flow is a redirect chain you don't control, ending wherever the identity
 provider decides. Instead:
 
@@ -241,7 +245,8 @@ window (sandboxed, web security on).
 
 ## Summary
 
-AOTrino makes one promise and keeps it in code: **local-first, no wandering onto the web by default.** Every
-capability beyond that is yours to grant, explicitly and by name. That keeps the platform small, keeps the safe
-path the default path, and keeps responsibility where the decisions are actually made — with the app developer,
-with their eyes open.
+AOTrino has one default worth stating: **local-first, no wandering onto the web unless you ask for it.** Every
+capability beyond that is yours to grant, explicitly and by name. That keeps the platform small, keeps the
+cautious path the default path, and keeps the decisions where they're actually made — in your app, with your
+eyes open. It is not a sandbox, it is not an audit, and it comes with no warranty: read the code, and decide
+what your own app should allow.

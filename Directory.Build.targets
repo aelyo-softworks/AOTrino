@@ -10,6 +10,51 @@
 	<Import Project="$(MSBuildThisFileDirectory)AOTrino\build\AOTrino.targets" />
 
 	<!--
+	  Where DirectN, DirectN.Extensions and WebView2 come from - the same three assemblies, reached two ways, for
+	  every project here.
+
+	  If External\ is present, they're taken from it: local builds of the sibling DirectNAot / WebView2Aot repos,
+	  refreshed by a script of mine that isn't in this repo (it points at paths on my machine). That's what lets a
+	  change in one of them be tried here immediately, without a round trip through nuget.org.
+
+	  If External\ is absent - which is what a fresh clone looks like, since it's git-ignored - the published
+	  packages are used instead and the build just works. Nobody has to be told to run anything first.
+
+	  Auto-detected rather than a flag someone must set, because the failure mode of getting this wrong is twelve
+	  projects failing on a missing DLL nobody outside this machine has ever heard of. Force it either way with
+	  -p:UseLocalExternal=true|false.
+
+	  C# projects only. The npm .esproj projects are in this solution too, and handing them a PackageReference
+	  makes their JavaScript SDK try to restore packages and stop with "NU1012: Platform version is not present
+	  ... net6.0-none". A <Reference> to a file, being nothing to restore, never provoked it - so the fresh-clone
+	  path was the only one that showed it.
+	-->
+	<PropertyGroup Condition="'$(AOTrinoReferencesDirectN)' != 'false' and '$(MSBuildProjectExtension)' == '.csproj'">
+		<UseLocalExternal Condition="'$(UseLocalExternal)' == '' and Exists('$(MSBuildThisFileDirectory)External\DirectN.dll')">true</UseLocalExternal>
+		<UseLocalExternal Condition="'$(UseLocalExternal)' == ''">false</UseLocalExternal>
+		<DirectNAotVersion Condition="'$(DirectNAotVersion)' == ''">1.6.4</DirectNAotVersion>
+		<WebView2AotVersion Condition="'$(WebView2AotVersion)' == ''">1.5.0</WebView2AotVersion>
+	</PropertyGroup>
+
+	<ItemGroup Condition="'$(AOTrinoReferencesDirectN)' != 'false' and '$(MSBuildProjectExtension)' == '.csproj' and '$(UseLocalExternal)' == 'true'">
+		<Reference Include="DirectN">
+			<HintPath>$(MSBuildThisFileDirectory)External\DirectN.dll</HintPath>
+		</Reference>
+		<Reference Include="DirectN.Extensions">
+			<HintPath>$(MSBuildThisFileDirectory)External\DirectN.Extensions.dll</HintPath>
+		</Reference>
+		<Reference Include="WebView2">
+			<HintPath>$(MSBuildThisFileDirectory)External\WebView2.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(AOTrinoReferencesDirectN)' != 'false' and '$(MSBuildProjectExtension)' == '.csproj' and '$(UseLocalExternal)' != 'true'">
+		<PackageReference Include="DirectNAot" Version="$(DirectNAotVersion)" />
+		<PackageReference Include="DirectNAot.Extensions" Version="$(DirectNAotVersion)" />
+		<PackageReference Include="WebView2Aot" Version="$(WebView2AotVersion)" />
+	</ItemGroup>
+
+	<!--
 	  Default application icon (the brand icon at the repo root) for every executable project; a project can
 	  override with its own <ApplicationIcon>. Not in the shipped targets: a consumer's app has its own identity.
 	-->
