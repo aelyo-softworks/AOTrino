@@ -10,6 +10,17 @@ name: build
 on:
   push:
     branches: [ main ]
+    # a docs/assets-only commit doesn't change what this proves - skip it. a skip needs EVERY changed file to
+    # match, so a commit that touches real code alongside a README still builds. `[skip ci]` in a commit
+    # message skips any single run by hand. (paths filters don't apply to workflow_dispatch - that always runs.)
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '**/*.png'
+      - '**/*.jpg'
+      - '**/*.svg'
+      - 'LICENSE'
+      - '.gitignore'
   pull_request:
   workflow_dispatch:
 
