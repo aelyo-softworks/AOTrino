@@ -132,7 +132,7 @@ cd MyApp && dotnet run
 </AOTrinoProvider>
 ```
 
-### Shipping it
+### Shipping it and AOT publishing
 
 ```
 dotnet publish -r win-x64 -c Release
@@ -141,6 +141,8 @@ dotnet publish -r win-x64 -c Release
 One exe, about 11 MB, nothing to install alongside it. [UPX](https://upx.github.io/) takes x86/x64 to roughly
 4 MB (it can't pack ARM64 yet). In this repo, `publish.bat -upx` does every sample for all three architectures
 in one go.
+
+Note: for AOT, ensure you have all the required prerequisites, documented at https://aka.ms/nativeaot-prerequisites, in particular the Desktop Development for C++ workload in Visual Studio.
 
 ## Samples
 
