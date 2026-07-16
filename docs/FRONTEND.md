@@ -51,9 +51,11 @@ There is no `@aotrino` scope on any registry, and publishing is not planned. Two
 `"@aotrino/client": "*"` and imports it normally. No registry, and an edit to the client is visible to the sample
 immediately.
 
-**When AOTrino ships — tarballs in the NuGet.** `npm pack` produces `aotrino-client-1.0.0.tgz`; the
-`dotnet new` template carries it and its `package.json` points at it with `"file:./.aotrino/aotrino-client-1.0.0.tgz"`.
-The consumer runs `npm install` and it resolves offline.
+**Outside the repo — tarballs in the NuGet.** `AOTrino.Templates` packs `npm pack`'s tarballs into the React and
+Fluent templates, so a generated project's `package.json` asks for `"file:../packages/aotrino-client.tgz"` and
+`npm install` resolves it offline. `npm pack` names its output after the version inside it
+(`aotrino-client-1.0.0.tgz`); pack renames it, because a version in that path is a version every template's
+`package.json` would have to be edited for on each release.
 
 Not publishing is what keeps the versions honest: the JS and the runtime it wraps ship in the same artifact, so
 they cannot be mismatched. (`npm/client` is marked `"private": true`, which blocks an accidental `npm publish`

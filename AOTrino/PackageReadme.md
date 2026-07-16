@@ -30,7 +30,7 @@ Or add it to a plain WinExe project:
   <AOTrinoEmbedWebRoot>true</AOTrinoEmbedWebRoot>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="AOTrino" Version="1.0.0" />
+  <PackageReference Include="AOTrino" Version="AOTRINO_VERSION" />
 </ItemGroup>
 ```
 

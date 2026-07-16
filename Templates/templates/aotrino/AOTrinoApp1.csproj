@@ -17,7 +17,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AOTrino" Version="1.0.0" />
+    <!-- AOTRINO_VERSION is replaced with the real one when AOTrino.Templates is packed: a generated app has
+         to reference the AOTrino this template shipped with, and a literal here goes stale on the next bump -->
+    <PackageReference Include="AOTrino" Version="AOTRINO_VERSION" />
   </ItemGroup>
 
 </Project>

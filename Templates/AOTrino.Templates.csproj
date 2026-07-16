@@ -51,7 +51,7 @@
 	-->
 	<ItemGroup>
 		<Content Include="templates\**\*"
-				 Exclude="templates\**\bin\**;templates\**\obj\**;templates\**\node_modules\**;templates\aotrino-react\**\dist\**;templates\aotrino-fluent\**\dist\**" />
+				 Exclude="templates\**\bin\**;templates\**\obj\**;templates\**\node_modules\**;templates\aotrino-react\**\dist\**;templates\aotrino-fluent\**\dist\**;templates\**\AOTrinoApp1.csproj" />
 		<Compile Remove="**\*" />
 	</ItemGroup>
 
@@ -75,22 +75,73 @@
 
 	  AOTrino.Npm.proj first, for the same reason: it's what installs the workspace, once, for the whole
 	  solution. Without it, `dotnet pack` on a fresh clone still has no tsc.
+
+	  This is also where the templates get told the version of the thing they're a template for - see below.
 	-->
 	<Target Name="AOTrinoPackNpmLibs" BeforeTargets="_GetPackageFiles">
 		<MSBuild Projects="$(MSBuildThisFileDirectory)..\npm\AOTrino.Npm.proj" Targets="Build" />
 		<Exec Command="npm run pack:libs" WorkingDirectory="$(MSBuildThisFileDirectory)..\" />
 
-		<!-- PackagePath, not Link: pack ignores Link and would put every tarball at the root of content\, where
-		     the second template's copy collides with the first (NU5118).
-		     each template carries only what it depends on: fluent sits on react, react sits on client. -->
 		<PropertyGroup>
 			<_AOTrinoPackDir>$(MSBuildThisFileDirectory)..\npm\pack</_AOTrinoPackDir>
+			<_AOTrinoStageDir>$(MSBuildProjectDirectory)\$(IntermediateOutputPath)templates\</_AOTrinoStageDir>
 		</PropertyGroup>
+
+		<!--
+		  npm pack names a tarball after the version inside it (aotrino-client-1.0.0.tgz), so a package.json that
+		  installs one by path has to name that version too - in five places, across two templates, every bump.
+		  Staging them under a version-less name lets the templates stop caring: npm reads the real version out of
+		  the tarball it's handed.
+
+		  PackagePath, not Link: pack ignores Link and would put every tarball at the root of content\, where the
+		  second template's copy collides with the first (NU5118).
+		  each template carries only what it depends on: fluent sits on react, react sits on client.
+		-->
 		<ItemGroup>
-			<Content Include="$(_AOTrinoPackDir)\aotrino-client-*.tgz;$(_AOTrinoPackDir)\aotrino-react-*.tgz"
+			<_AOTrinoTarball Include="$(_AOTrinoPackDir)\aotrino-client-*.tgz">
+				<StagedName>aotrino-client.tgz</StagedName>
+			</_AOTrinoTarball>
+			<_AOTrinoTarball Include="$(_AOTrinoPackDir)\aotrino-react-*.tgz">
+				<StagedName>aotrino-react.tgz</StagedName>
+			</_AOTrinoTarball>
+			<_AOTrinoTarball Include="$(_AOTrinoPackDir)\aotrino-fluent-*.tgz">
+				<StagedName>aotrino-fluent.tgz</StagedName>
+			</_AOTrinoTarball>
+		</ItemGroup>
+		<Copy SourceFiles="@(_AOTrinoTarball)" DestinationFiles="@(_AOTrinoTarball->'$(_AOTrinoStageDir)packages\%(StagedName)')" />
+
+		<ItemGroup>
+			<Content Include="$(_AOTrinoStageDir)packages\aotrino-client.tgz;$(_AOTrinoStageDir)packages\aotrino-react.tgz"
 					 Pack="true" PackagePath="content\templates\aotrino-react\packages\" />
-			<Content Include="$(_AOTrinoPackDir)\*.tgz"
+			<Content Include="$(_AOTrinoStageDir)packages\*.tgz"
 					 Pack="true" PackagePath="content\templates\aotrino-fluent\packages\" />
+		</ItemGroup>
+
+		<!--
+		  The generated app's <PackageReference Include="AOTrino">, filled in with the version being packed.
+
+		  A template of AOTrino 1.0.1 that generates an app referencing AOTrino 1.0.0 is a broken template, and a
+		  literal version in the checked-in csproj becomes exactly that the moment nobody remembers to edit three
+		  copies of it. So the csproj carries AOTRINO_VERSION and this rewrites it on the way into the package,
+		  which is the one moment the answer is known to be right.
+
+		  Escape the text: WriteLinesToFile takes an item list, and RuntimeIdentifiers' semicolons would otherwise
+		  come out as line breaks.
+		-->
+		<ItemGroup>
+			<_AOTrinoTemplateProject Include="templates\**\AOTrinoApp1.csproj" />
+		</ItemGroup>
+		<WriteLinesToFile File="$(_AOTrinoStageDir)%(_AOTrinoTemplateProject.RecursiveDir)AOTrinoApp1.csproj"
+						  Lines="$([MSBuild]::Escape($([System.IO.File]::ReadAllText('%(_AOTrinoTemplateProject.FullPath)').Replace('AOTRINO_VERSION', '$(Version)'))))"
+						  Overwrite="true" WriteOnlyWhenDifferent="true" />
+
+		<!-- PackagePath stops at templates\: pack appends each item's RecursiveDir itself, and naming the
+		     template folder here too lands them in content\templates\aotrino\aotrino\ -->
+		<ItemGroup>
+			<_AOTrinoStagedProject Include="$(_AOTrinoStageDir)**\AOTrinoApp1.csproj" />
+		</ItemGroup>
+		<ItemGroup>
+			<Content Include="@(_AOTrinoStagedProject)" Pack="true" PackagePath="content\templates\" />
 		</ItemGroup>
 	</Target>
 

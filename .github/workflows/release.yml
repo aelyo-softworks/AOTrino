@@ -29,18 +29,18 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # the tag, not the branch: workflow_dispatch would otherwise build main and label it a release
           ref: ${{ inputs.tag || github.ref }}
           # --generate-notes writes "what changed since the last tag", which needs the tags
           fetch-depth: 0
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 

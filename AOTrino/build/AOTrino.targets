@@ -11,19 +11,19 @@
 	-->
 
 	<!--
-	  The Windows SDK projection AOTrino is compiled against.
+	  No WindowsSdkPackageVersion here, on purpose.
 
-	  AOTrino.dll binds to a specific Microsoft.Windows.SDK.NET, and an app that builds against a different one
-	  compiles fine and then dies on the first window with "Could not load file or assembly
-	  'Microsoft.Windows.SDK.NET, Version=...'". A TFM of net10.0-windows10.0.19041.0 is not enough to agree on
-	  that version: without this property the SDK picks its own default, which is not the one used here.
+	  AOTrino.dll binds to a Microsoft.Windows.SDK.NET, and an app built against a different one can compile and
+	  then fail on the first window with "Could not load file or assembly 'Microsoft.Windows.SDK.NET'". The way
+	  to agree on it is the target framework, which both sides already share - so AOTrino says nothing, the SDK
+	  picks the projection, and there is nothing to disagree about.
 
-	  This is the only copy of the number - the repo gets it from this file too (Directory.Build.targets imports
-	  it), so what AOTrino is built with and what it asks of an app cannot drift apart.
+	  Pinning it is worse than useless: this file arrives with the package, and a build restores before the
+	  package is there, so the restore fetched the SDK's default projection and the build then demanded the
+	  pinned one - NETSDK1112 on every machine that hadn't already downloaded it. An app that genuinely needs a
+	  newer WinRT surface sets WindowsSdkPackageVersion in its own project, where restore can see it: AOTrino's
+	  CaptureScreen sample does exactly that, and it's the only thing in this repo that has to.
 	-->
-	<PropertyGroup Condition="'$(WindowsSdkPackageVersion)' == ''">
-		<WindowsSdkPackageVersion>10.0.26100.57</WindowsSdkPackageVersion>
-	</PropertyGroup>
 
 	<!--
 	  The manifest, when the app hasn't got one of its own.

@@ -19,15 +19,15 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
       # the npm samples build their front end during the .NET build (see AOTrino\build\AOTrino.targets);
       # the runner has Node, this just pins it rather than inheriting whatever the image ships this month
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -39,13 +39,13 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -62,7 +62,7 @@ jobs:
           $exe = Get-Item Samples/AOTrino.Samples.HelloWorld/bin/x64/Release/*/win-x64/publish/AOTrino.Samples.HelloWorld.exe
           "{0} - {1:N1} MB" -f $exe.Name, ($exe.Length / 1MB)
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: HelloWorld-win-x64
           path: Samples/AOTrino.Samples.HelloWorld/bin/x64/Release/**/publish/AOTrino.Samples.HelloWorld.exe

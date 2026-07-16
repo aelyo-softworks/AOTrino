@@ -20,7 +20,7 @@
 		<None Include="..\LICENSE" Pack="true" PackagePath="\" />
 		<!-- the package gets its own front page: nuget.org can't resolve the repo README's relative links, so
 		     its twelve screenshots and every docs/*.md link would render broken there, forever, for 1.0.0 -->
-		<None Include="PackageReadme.md" Pack="true" PackagePath="\README.md" />
+
 		<None Include="..\AOTrino256.png" Pack="true" PackagePath="\" />
 
 		<!-- NuGet imports build\<PackageId>.targets into the consumer's project, which is how a plain csproj gets
@@ -106,5 +106,25 @@
 		<EmbeddedResource Include="runtimes\win-x64\native\WebView2Loader.dll" />
 		<EmbeddedResource Include="runtimes\win-arm64\native\WebView2Loader.dll" />
 	</ItemGroup>
+
+	<!--
+	  The package's front page, with AOTRINO_VERSION filled in.
+
+	  Its "add this to your csproj" snippet names a version, and a version written by hand in a document is a
+	  version that says 1.0.0 for the rest of the package's life. Same trick as AOTrino.Templates: the file holds
+	  a token, and pack - which knows the real answer - resolves it. _GetPackageFiles is the last target that can
+	  still add package files; after it, this would pack with no README at all and not say so.
+	-->
+	<Target Name="AOTrinoPackReadme" BeforeTargets="_GetPackageFiles">
+		<PropertyGroup>
+			<_AOTrinoStagedReadme>$(MSBuildProjectDirectory)\$(IntermediateOutputPath)PackageReadme.md</_AOTrinoStagedReadme>
+		</PropertyGroup>
+		<WriteLinesToFile File="$(_AOTrinoStagedReadme)"
+						  Lines="$([MSBuild]::Escape($([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)\PackageReadme.md').Replace('AOTRINO_VERSION', '$(Version)'))))"
+						  Overwrite="true" WriteOnlyWhenDifferent="true" />
+		<ItemGroup>
+			<None Include="$(_AOTrinoStagedReadme)" Pack="true" PackagePath="\README.md" />
+		</ItemGroup>
+	</Target>
 
 </Project>

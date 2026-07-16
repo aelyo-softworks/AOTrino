@@ -10,8 +10,8 @@
   },
   "//dependencies": "@aotrino/* install from the tarballs in packages\\: they are not on any registry. when they are, these become version ranges.",
   "dependencies": {
-    "@aotrino/client": "file:../packages/aotrino-client-1.0.0.tgz",
-    "@aotrino/react": "file:../packages/aotrino-react-1.0.0.tgz",
+    "@aotrino/client": "file:../packages/aotrino-client.tgz",
+    "@aotrino/react": "file:../packages/aotrino-react.tgz",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   },
