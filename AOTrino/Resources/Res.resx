@@ -66,4 +66,12 @@
     <value>Please install it from &lt;a href="{0}"&gt;{0}&lt;/a&gt;, then start the application again.</value>
     <comment>Task dialog content; {0} is the WebView2 download URL, rendered as a hyperlink.</comment>
   </data>
+  <data name="WindowsVersionNotSupported" xml:space="preserve">
+    <value>Windows 10 or a later version of Windows is required.</value>
+    <comment>Shown (title + main instruction) at startup when Windows is older than version 10.</comment>
+  </data>
+  <data name="WindowsVersionNotSupportedDetail" xml:space="preserve">
+    <value>This application cannot run on {0}.</value>
+    <comment>Task dialog content; {0} is the detected Windows version string.</comment>
+  </data>
 </root>

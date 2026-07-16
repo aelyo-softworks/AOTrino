@@ -77,5 +77,23 @@ namespace AOTrino.Resources {
                 return ResourceManager.GetString("WebView2NotFound", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Windows 10 or a later version of Windows is required..
+        /// </summary>
+        internal static string WindowsVersionNotSupported {
+            get {
+                return ResourceManager.GetString("WindowsVersionNotSupported", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to This application cannot run on {0}..
+        /// </summary>
+        internal static string WindowsVersionNotSupportedDetail {
+            get {
+                return ResourceManager.GetString("WindowsVersionNotSupportedDetail", resourceCulture);
+            }
+        }
     }
 }

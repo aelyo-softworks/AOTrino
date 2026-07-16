@@ -1,11 +1,16 @@
 # Cuts a release: every sample, AOT-compiled for x86 / x64 / arm64, one zip per architecture, attached to a
 # GitHub release with generated notes.
 #
-# It runs publish.bat - the same script as by hand - rather than a second copy of the same steps in YAML. The
-# one that drifts is always the copy nobody runs.
+# The three architectures build on three runners at once (the `build` matrix), because the slow part is Native
+# AOT - a dozen binaries compiled and linked, three times over - and no cache touches that. One runner did them
+# back to back; three do them side by side, so the wall-clock is one architecture's build plus a small release
+# step, instead of the sum of all three. Concurrent jobs are free on a public repo.
+#
+# Each leg still runs publish.bat - the same script as by hand - so the released binaries come out of the same
+# path a local drop does. The leg produces a zip; the final `release` job collects the three and publishes them.
 #
 # Push a tag to trigger it:
-#     git tag v1.0.0 && git push origin v1.0.0
+#     git tag v1.0.1 && git push origin v1.0.1
 #
 # or run it from the Actions tab against a tag you've already pushed.
 name: release
@@ -16,7 +21,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to release (must already exist, e.g. v1.0.0)'
+        description: 'Tag to release (must already exist, e.g. v1.0.1)'
         required: true
 
 permissions:
@@ -24,17 +29,30 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    name: publish all samples, all architectures
+  build:
+    name: publish ${{ matrix.rid }}
     runs-on: windows-latest
+
+    strategy:
+      # see every architecture's failures in one run rather than having the first cancel the rest - a release
+      # wants all three or none, and the release job below won't run unless every leg succeeded anyway
+      fail-fast: false
+      matrix:
+        include:
+          - rid: win-x86
+            upx: true
+          - rid: win-x64
+            upx: true
+          # arm64 gets no UPX: it can't pack win64/arm64 yet ("CantPackException"), so running it is a
+          # guaranteed warning and nothing else. When UPX learns arm64, flip this to true.
+          - rid: win-arm64
+            upx: false
 
     steps:
       - uses: actions/checkout@v7
         with:
           # the tag, not the branch: workflow_dispatch would otherwise build main and label it a release
           ref: ${{ inputs.tag || github.ref }}
-          # --generate-notes writes "what changed since the last tag", which needs the tags
-          fetch-depth: 0
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -43,17 +61,66 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
+          # caches ~/.npm keyed on the root package-lock.json - the React/Fluent samples npm install + build
+          cache: 'npm'
 
-      # UPX is not on the runner. It's optional to the drop - publish.bat treats a failure as a warning, and
-      # arm64 can't be packed at all yet - but without it the exes are 11 MB instead of 4.
+      # The NuGet global-packages folder, shared by all three legs (every leg restores all three RIDs, so they
+      # want the same packages). The point of caching it is the ILCompiler runtime packs - ~100-200 MB each,
+      # re-downloaded on every cold run. The legs race to populate it on a first run; whoever saves first wins
+      # and the others log "already exists", which is not a failure.
+      - name: cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Build.props', 'Directory.Build.targets') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      # x86/x64 only - see the matrix note on arm64. UPX is optional to the drop (publish.bat treats a failure
+      # as a warning), but without it the exes are 11 MB instead of 4.
       - name: install upx
+        if: matrix.upx
         run: choco install upx --no-progress -y
 
-      - name: publish + zip + release
-        run: .\publish.bat -clean -upx -release ${{ inputs.tag || github.ref_name }}
+      - name: publish + zip ${{ matrix.rid }}
+        shell: pwsh
+        run: |
+          # splat the args so the -upx toggle is present or absent, never an empty token - publish.bat's arg
+          # parser reads a "" as end-of-args and would quietly stop
+          $publishArgs = @('-clean', '-rid', '${{ matrix.rid }}', '-zip')
+          if ('${{ matrix.upx }}' -eq 'true') { $publishArgs = @('-upx') + $publishArgs }
+          & .\publish.bat @publishArgs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: zip-${{ matrix.rid }}
+          path: publish/AOTrino-samples-${{ matrix.rid }}.zip
+          if-no-files-found: error
+
+  release:
+    name: publish the release
+    needs: build
+    # just gh + an upload; a Linux runner starts faster and there's nothing Windows-specific left to do
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: collect the zips
+        uses: actions/download-artifact@v7
+        with:
+          path: dist
+          # flatten the three zip-win-* artifacts into dist\ instead of a folder each
+          merge-multiple: true
+
+      - name: create the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          ls -la dist
+          # --generate-notes writes "what changed since the last tag", server-side, so no checkout is needed
+          gh release create "$TAG" dist/*.zip --generate-notes --repo "$REPO"
 
       - name: what shipped
-        shell: pwsh
-        run: Get-ChildItem publish\*.zip | ForEach-Object { '{0,-36} {1,6:N1} MB' -f $_.Name, ($_.Length / 1MB) }
+        run: |
+          for z in dist/*.zip; do printf '%-40s %6.1f MB\n' "$(basename "$z")" "$(echo "scale=1; $(stat -c%s "$z")/1048576" | bc)"; done

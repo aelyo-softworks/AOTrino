@@ -112,8 +112,27 @@ dotnet pack Templates/AOTrino.Templates.csproj -c Release
 4. **Push both packages to nuget.org, together.** `AOTrino` and `AOTrino.Templates` are one product with one
    version: a template that generates an app referencing an `AOTrino` that isn't published yet is a broken
    template, and a published version is immutable — the fix is another version, not a re-upload.
-5. **Tag** `v<version>` and push the tag. `release.yml` runs `publish.bat`, which AOT-publishes every sample for
-   x86/x64/arm64, zips one archive per architecture and attaches them to a GitHub release.
+5. **Tag** `v<version>` and push the tag — that is the whole trigger. `release.yml` fires on any `v*` tag, builds
+   every sample for x86/x64/arm64 on three runners at once, and attaches one zip per architecture to a GitHub
+   release. Nothing else to press.
+
+```bash
+git release            # tags v<Version-from-Directory.Build.props>, pushes it, fires the workflow
+# equivalently, by hand:
+git tag -a v1.0.1 -m "Release v1.0.1" && git push origin v1.0.1
+```
+
+`git release` is a one-line git alias that reads `<Version>` straight from `Directory.Build.props`, so the tag
+can't drift from the packages — set it up once (it's global, and refuses if the file's missing, the version is
+unreadable, or the tag already exists):
+
+```bash
+git config --global alias.release '!f() { root=$(git rev-parse --show-toplevel) || return 1; props="$root/Directory.Build.props"; [ -f "$props" ] || { echo "release: run this from the AOTrino repo" >&2; return 1; }; ver=$(sed -n "s:.*<Version>\(.*\)</Version>.*:\1:p" "$props" | head -1); [ -n "$ver" ] || { echo "release: could not read <Version>" >&2; return 1; }; tag="v$ver"; git rev-parse -q --verify "refs/tags/$tag" >/dev/null 2>&1 && { echo "release: tag $tag already exists (bump <Version> first)" >&2; return 1; }; git tag -a "$tag" -m "Release $tag" && git push origin "$tag"; }; f'
+```
+
+Run it **after** the version bump is committed: the tag points at `HEAD`, so `HEAD` needs to be the commit that
+carries the new `<Version>` (and the packages built from it). The `tag already exists` guard is the safety net —
+a published tag, like a published package, is not a thing you casually move.
 
 Why the two packages ship together, in the general case: the DLL in `AOTrino` and the `PackageReference` in the
 templates are two halves of the same artifact. Anything that changes what a generated app must reference — the
