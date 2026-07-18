@@ -8,6 +8,11 @@ to ship — Windows already has both. x86, x64 and ARM64.
 A window is a real HWND, the UI is a web page, and the two talk over a typed bridge. That's the whole idea. The
 [Fluent UI gallery](#fluentui--gallery) below is an AOTrino app, and it weighs 4 MB.
 
+<p align="center">
+  <img src="docs/images/overview.png" width="100%"
+       alt="Six AOTrino sample apps: a Fluent UI gallery, a React dashboard, a translucent Windows 11 window, the .NET/JS bridge, Direct2D rendering into a canvas, and the two-window composition demo" />
+</p>
+
 ```
 dotnet new install AOTrino.Templates
 dotnet new aotrino -o MyApp && cd MyApp
