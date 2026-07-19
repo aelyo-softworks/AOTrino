@@ -67,7 +67,19 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         }
 
         var options = GetEnvironmentOptions();
-        WebView2.Functions.CreateCoreWebView2EnvironmentWithOptions(PWSTR.Null, PWSTR.From(AOTrinoApplication.Current?.Paths.WebView2UserDataPath), options!,
+
+        // browserExecutableFolder:
+        // * null uses the evergreen runtime installed on the machine
+        // * a path points at a specific bundled WebView2 runtime ("Fixed Version").
+        // see GetBrowserExecutableFolder.
+        var browserFolder = GetBrowserExecutableFolder();
+        if (!string.IsNullOrWhiteSpace(browserFolder) && !Directory.Exists(browserFolder))
+        {
+            AOTrinoApplication.Current?.TraceWarning($"WebView2 fixed-version runtime folder '{browserFolder}' was not found, using the evergreen runtime instead.");
+            browserFolder = null;
+        }
+
+        WebView2.Functions.CreateCoreWebView2EnvironmentWithOptions(string.IsNullOrWhiteSpace(browserFolder) ? PWSTR.Null : PWSTR.From(browserFolder), PWSTR.From(AOTrinoApplication.Current?.Paths.WebView2UserDataPath), options!,
             new CoreWebView2CreateCoreWebView2EnvironmentCompletedHandler((result, envObj) =>
             {
                 try
@@ -180,11 +192,13 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         }), ref _navigationCompleted).ThrowOnError();
     }
 
-    protected virtual CoreWebView2EnvironmentOptions? GetEnvironmentOptions() => null;
+    // the folder of a specific WebView2 runtime to use instead of the machine's evergreen runtime "Fixed Version".
+    // null (the default) uses evergreen. the default reads the application-wide settings.
+    // override for a per-window choice.
+    protected virtual string? GetBrowserExecutableFolder() => AOTrinoApplication.Current?.BrowserExecutableFolder;
     protected virtual RECT? GetCaptionRect() => null;
-    protected virtual void ControllerCreated()
-    {
-    }
+    protected virtual void ControllerCreated() { }
+    protected virtual CoreWebView2EnvironmentOptions? GetEnvironmentOptions() => null;
 
     public virtual async Task NavigateToWebRootAsync()
     {

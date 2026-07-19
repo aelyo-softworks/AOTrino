@@ -21,7 +21,7 @@ AOTrino/                     the core library. everything else is a consumer of 
                              links, so it gets its own
   runtimes/win-{x86,x64,arm64}/native/WebView2Loader.dll
 Templates/                   the AOTrino.Templates package: `dotnet new aotrino[-react|-fluent]`
-  templates/*/               one folder per template - the smallest thing that runs at each level
+  templates/*/               one folder per template, the smallest thing that runs at each level
 npm/
   AOTrino.Npm.proj           runs npm install + build:libs ONCE per build (see BRIDGE/FRONTEND docs)
   client/  react/  fluent/   the @aotrino/* packages: source in src/, built to dist/ (git-ignored)
@@ -31,7 +31,7 @@ Samples/
   AOTrino.Samples.FluentUI.* Fluent UI samples (Fluent implies React, so no React. prefix)
 publish.bat                  every sample x x86/x64/arm64 into publish\, optionally UPX'd, zipped, released
 PublishSamples.proj          what publish.bat actually runs
-.github/workflows/           build.yml on every push; release.yml on a v* tag - it runs publish.bat, so the
+.github/workflows/           build.yml on every push; release.yml on a v* tag, it runs publish.bat, so the
                              released binaries come out of the same script as a local drop
 docs/                        SECURITY, BRIDGE, FRONTEND, THEMING, and this file
 External/                    OPTIONAL, git-ignored, absent from a normal clone. If present, DirectN and
@@ -63,7 +63,7 @@ scripts, which is why the list is explicit and why the libraries have **no `prep
 | Windows SDK projection (`WindowsSdkPackageVersion`) | **nothing, by design** — except `Samples\AOTrino.Samples.CaptureScreen` | the TFM picks it; see *the traps* before you pin it anywhere else |
 | DirectN, DirectN.Extensions, WebView2 | `Directory.Build.targets` (`DirectNAotVersion`, `WebView2AotVersion`) | NuGet packages by default; `External\*.dll` instead when that folder exists |
 | `WebView2Loader.dll` (x86/x64/arm64) | `AOTrino\runtimes\...` in the core lib | committed binaries |
-| WebView2 **Runtime** | nothing — it's evergreen on the user's machine | `AOTrinoApplication` refuses to start without it and shows a download link |
+| WebView2 **Runtime** | nothing by default — evergreen on the user's machine | `AOTrinoApplication` refuses to start without it and shows a download link. An app can pin it (Fixed Version) via `BrowserExecutableFolder` — see [SECURITY.md](SECURITY.md) for the tradeoff |
 | React, Vite, TypeScript, `@types/*` | each `package.json`: `npm/*`, every `Samples/*/WebRoot`, each template | duplicated by design — samples are meant to be copy-pasteable |
 | Fluent UI (`@fluentui/react-components`, `-icons`) | `npm/fluent/package.json` (peer + dev) and each Fluent `WebRoot/package.json` | keep the two in step |
 | `@aotrino/*` npm versions | `npm/*/package.json` | their own; nothing references them *by number*, so they can't mismatch. `npm version <v> --workspaces` bumps all of them |
@@ -188,7 +188,7 @@ actually broken here.
 ```bash
 # 1. a real fresh clone, not an incremental build.
 #    NOTE the glob: only the npm-built samples have a generated dist. the plain samples' WebRoot\dist is
-#    hand-written and committed - `rm -rf Samples/*/WebRoot/dist` deletes your source. (ask how I know.)
+#    hand-written and committed, `rm -rf Samples/*/WebRoot/dist` deletes your source. (ask how I know.)
 rm -rf node_modules npm/*/dist Samples/AOTrino.Samples.React.*/WebRoot/dist Samples/AOTrino.Samples.FluentUI.*/WebRoot/dist
 dotnet build AOTrino.slnx -c Release -p:Platform=x64 -t:Rebuild
 git status --porcelain          # must be empty: nothing generated belongs to git, nothing tracked was deleted

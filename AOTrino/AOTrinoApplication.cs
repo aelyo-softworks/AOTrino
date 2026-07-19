@@ -19,12 +19,16 @@ public partial class AOTrinoApplication : CompositionApplication
     // https://developer.microsoft.com/microsoft-edge/webview2/ evergreen bootstrapper
     public const string WebView2DownloadUrl = "https://go.microsoft.com/fwlink/p/?LinkId=2124703";
 
-    public AOTrinoApplication(Assembly? appAssembly = null)
+    public AOTrinoApplication(Assembly? appAssembly = null, string? browserExecutableFolder = null)
     {
         // continuations after 'await' resume on the window message loop
         WindowSynchronizationContext.Install();
 
         CheckErrorReporting();
+
+        // a pinned WebView2 runtime (Fixed Version) has to be known here, not merely set as a property afterwards:
+        // the runtime check below must validate the runtime the app will actually use. see BrowserExecutableFolder.
+        BrowserExecutableFolder = browserExecutableFolder;
 
         var assembly = appAssembly ?? Assembly.GetEntryAssembly() ?? typeof(AOTrinoApplication).Assembly;
         Paths = CreatePaths() ?? throw new InvalidOperationException($"CreatePaths returned null for assembly {assembly.FullName}");
@@ -33,8 +37,16 @@ public partial class AOTrinoApplication : CompositionApplication
         // the native WebView2 loader is embedded in the AOTrino assembly (this one); the matching architecture is extracted
         WebView2Utilities.Initialize(typeof(AOTrinoApplication).Assembly);
 
-        // no AOTrino app can run without the WebView2 runtime: this closes the process if it's missing (overridable)
-        var version = WebView2Utilities.GetAvailableCoreWebView2BrowserVersionString();
+        // no AOTrino app can run without a WebView2 runtime, this closes the process if it's missing (overridable).
+        // detect the runtime the app will actually use, the pinned folder when one is set and present, else the evergreen runtime.
+        // the missing folder fallback mirrors WebViewWindow (which logs the warning), so a fixed-version app on a machine that also lacks evergreen isn't wrongly rejected at startup.
+        var runtimeFolder = BrowserExecutableFolder;
+        if (!string.IsNullOrWhiteSpace(runtimeFolder) && !Directory.Exists(runtimeFolder))
+        {
+            runtimeFolder = null;
+        }
+
+        var version = WebView2Utilities.GetAvailableCoreWebView2BrowserVersionString(runtimeFolder);
         CheckWebView2Runtime(version);
         WebView2Version = version!;
 
@@ -49,6 +61,15 @@ public partial class AOTrinoApplication : CompositionApplication
 
     // the installed WebView2 runtime version; guaranteed present (the app cannot start otherwise)
     public string WebView2Version { get; }
+
+    // the folder of a specific WebView2 runtime to use instead of the machine's evergreen runtime "Fixed Version" distribution
+    // pins the browser engine so it can't change under the app, at the cost of shipping ~150 MB per architecture and taking on security updates yourself.
+    // null (the default) uses evergreen.
+    // Prefer the constructor's browserExecutableFolder parameter: a value set here after construction is used by windows, but the startup
+    // runtime check has already run against evergreen, so it won't validate the pinned runtime.
+    // WebView2 also honours the WEBVIEW2_BROWSER_EXECUTABLE_FOLDER environment variable when this is null.
+    // See docs/SECURITY.md.
+    public string? BrowserExecutableFolder { get; set; }
 
     // the AOTrino SDK version (this assembly)
     public string AOTrinoVersion { get; } = typeof(AOTrinoApplication).Assembly.GetInformationalVersion()!;

@@ -146,6 +146,49 @@ AOTrino intentionally does **not** decide these for you — they stay explicit, 
   window is called. It follows `NavigationMode` on its own (see below), but if your `Local` allow-list admits an
   origin you'd rather not let name your window, `SetWindowTitleFromPage` is yours to override.
 
+## The WebView2 runtime: evergreen (default) vs pinned
+
+By default an AOTrino app uses the **evergreen** WebView2 runtime — the shared Chromium runtime already installed
+on Windows, which Microsoft keeps patched. Two consequences, and the second is the one that matters here: the app
+stays small (no browser to ship), and **it inherits Chromium security fixes for free** — a CVE in the engine is
+Microsoft's to patch on the machine, not yours to chase.
+
+The trade is that you don't own the version. Evergreen updates on its own schedule, so in principle a future
+Chromium could change a rendering detail under your app. In practice this is rare, but for a kiosk, digital
+signage, an offline/air-gapped deployment, or anywhere you need every install to render *identically*, you may
+want to pin the engine instead.
+
+WebView2 supports that with **Fixed Version** distribution: you ship a specific Chromium build with the app and
+point AOTrino at its folder.
+
+```csharp
+// pin the engine: a Fixed Version runtime shipped next to the app, so the browser can't change under it
+var app = new AOTrinoApplication(browserExecutableFolder: Path.Combine(AppContext.BaseDirectory, "WebView2Runtime"));
+```
+
+Pass it to the constructor, as above, so the startup runtime check validates the *pinned* runtime — this matters
+on a machine that has your bundled runtime but no evergreen one (the air-gapped case), where an evergreen-only
+check would wrongly refuse to start. The `AOTrinoApplication.BrowserExecutableFolder` property is also settable,
+but a value set there *after* construction is used by the window and missed by that startup check, so the
+constructor is the one to reach for. For a per-window choice, override `WebViewWindow.GetBrowserExecutableFolder`;
+and if you'd rather not touch code at all, WebView2 honours the `WEBVIEW2_BROWSER_EXECUTABLE_FOLDER` environment
+variable whenever the folder is left null. Point any of them at a runtime you got from Microsoft's Fixed Version
+distribution (see the [WebView2 download page](https://developer.microsoft.com/microsoft-edge/webview2/)). If the
+folder is set but missing, AOTrino logs a warning and falls back to evergreen rather than failing to start.
+
+Two costs, stated plainly, because pinning is a decision with a bill attached:
+
+- **Size.** A Fixed Version runtime is roughly **150 MB, per architecture**. Your "single small exe" becomes an
+  exe plus a runtime folder. That's a fine trade when you've chosen it, and the wrong default for everyone else —
+  which is why evergreen stays the default.
+- **You now own Chromium security updates.** This is the real one. Pinning turns off the auto-patching that is
+  evergreen's best property: the day Chromium ships a security fix, *you* have to ship a refreshed runtime. Pin
+  the version and forget it, and you are distributing a browser with known, unpatched vulnerabilities. If you go
+  Fixed Version, put "refresh the WebView2 runtime" on your release checklist and keep it there.
+
+Recommendation: stay evergreen unless you have a concrete reason not to. When you do pin, do it with eyes open on
+the patching commitment above.
+
 ## Host objects belong to the window, not to your page
 
 A host object registered on a window is reachable from **every document that window loads**, whatever its
