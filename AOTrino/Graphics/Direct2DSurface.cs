@@ -1,6 +1,7 @@
 namespace AOTrino.Graphics;
 
-// renders an animated Direct2D scene in .NET on the GPU and displays it at high performance on a <canvas data-aotrino-surface="NAME">, via a WebView2 shared buffer + WebGL.
+// renders an animated Direct2D scene in .NET on the GPU and displays it at high performance on a <canvas data-aotrino-surface="NAME">,
+// via a WebView2 shared buffer + WebGL.
 // built ENTIRELY on the generic AOTrino.SharedBuffer (the transport is renderer-agnostic).
 // the scene is drawn on the GPU (the window's Direct2D device), copied GPU->CPU into the shared memory,
 // and the injected WebGL runtime uploads it (zero-copy) to the canvas every animation frame.
@@ -8,15 +9,15 @@ namespace AOTrino.Graphics;
 public sealed class Direct2DSurface : IDisposable
 {
     private const int _bytesPerPixel = 4;
-    private const int _defaultFrameIntervalMs = 16; // ~60 fps
+    private const int _defaultFrameIntervalMs = 16; // ~60 fps.
 
-    private readonly CompositionWebViewWindow _window; // needs the window's Direct2D device (composition hosting)
+    private readonly CompositionWebViewWindow _window; // needs the window's Direct2D device (composition hosting).
     private readonly string _name;
     private readonly SharedBuffer _buffer;
 
     private IComObject<ID2D1DeviceContext>? _dc;
-    private IComObject<ID2D1Bitmap1>? _target;   // GPU render target
-    private IComObject<ID2D1Bitmap1>? _staging;  // CPU-readable copy
+    private IComObject<ID2D1Bitmap1>? _target; // GPU render target.
+    private IComObject<ID2D1Bitmap1>? _staging; // CPU-readable copy.
     private int _requestedWidth;
     private int _requestedHeight;
     private int _width;
@@ -31,16 +32,16 @@ public sealed class Direct2DSurface : IDisposable
         ArgumentException.ThrowIfNullOrEmpty(name);
         _window = window;
         _name = name;
-        _buffer = window.CreateSharedBuffer(name, SharedBufferAccess.ReadOnly); // injects the generic __aotrino runtime
-        window.AddStartupScript(EmbeddedResource.Load("Direct2DSurface.Runtime.js")); // injects the WebGL display runtime (runs after the generic one)
+        _buffer = window.CreateSharedBuffer(name, SharedBufferAccess.ReadOnly); // injects the generic __aotrino runtime.
+        window.AddStartupScript(EmbeddedResource.Load("Direct2DSurface.Runtime.js")); // injects the WebGL display runtime (runs after the generic one).
         window.WebMessageJsonReceived += OnWebMessage;
     }
 
     public string Name => _name;
     public int FrameIntervalMs { get; set; } = _defaultFrameIntervalMs;
 
-    // begin an animation loop on the UI thread. 'draw' is called each frame with the Direct2D context
-    // (already BeginDraw'd), the pixel width/height and elapsed seconds. draw with ID2D1RenderTarget extensions.
+    // begin an animation loop on the UI thread. 'draw' is called each frame with the Direct2D context (already BeginDraw'd),
+    // the pixel width/height and elapsed seconds. draw with ID2D1RenderTarget extensions.
     public void StartAnimation(Action<IComObject<ID2D1RenderTarget>, int, int, float> draw)
     {
         ArgumentNullException.ThrowIfNull(draw);
@@ -78,7 +79,7 @@ public sealed class Direct2DSurface : IDisposable
             _requestedWidth = width;
             _requestedHeight = height;
 
-            // re-render on the spot so a resize shows fresh pixels immediately instead of after the next frame tick
+            // re-render on the spot so a resize shows fresh pixels immediately instead of after the next frame tick.
             if (changed)
             {
                 RenderFrame();
@@ -87,7 +88,7 @@ public sealed class Direct2DSurface : IDisposable
         catch (Exception ex)
         {
             AOTrinoApplication.Current?.TraceWarning($"Direct2DSurface '{_name}' message error: {ex.Message}");
-            // not one of our messages
+            // not one of our messages.
         }
     }
 
@@ -128,7 +129,7 @@ public sealed class Direct2DSurface : IDisposable
         draw(dc, width, height, seconds);
         dc.EndDraw();
 
-        // GPU -> CPU: copy the render target into the CPU-readable staging bitmap, map it, memcpy into shared memory
+        // GPU -> CPU: copy the render target into the CPU-readable staging bitmap, map it, memcpy into shared memory.
         _staging!.CopyFromBitmap(_target!);
         CopyToBuffer(width, height);
     }

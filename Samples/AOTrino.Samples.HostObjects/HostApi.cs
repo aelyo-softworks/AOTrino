@@ -8,21 +8,21 @@ public partial class HostApi(WebViewWindow window) : DispatchObject
 {
     // host-object members are invoked on the instance by the WebView2 bridge (BindingFlags.Instance),
     // so they must stay instance members to appear in the JS API even when they don't touch instance state.
-#pragma warning disable CA1822 // Mark members as static
+#pragma warning disable CA1822 // Mark members as static.
 
-    // --- properties: read from JS as dotnet.machineName, dotnet.architecture, ... ---
+    // --- properties: read from JS as dotnet.machineName, dotnet.architecture, ... ---.
     public string MachineName => Environment.MachineName;
     public string UserName => Environment.UserName;
     public string Architecture => RuntimeInformation.ProcessArchitecture.ToString();
     public string Framework => RuntimeInformation.FrameworkDescription;
     public string Now => DateTime.Now.ToString("HH:mm:ss");
 
-    // --- sync methods (primitives + arguments auto-converted from JS) ---
+    // --- sync methods (primitives + arguments auto-converted from JS) ---.
     public string Ping() => "pong from .NET";
     public int Add(int a, int b) => a + b;
     public string Upper(string? text) => text?.ToUpperInvariant() ?? string.Empty;
 
-    // an array crosses the bridge as a JS array
+    // an array crosses the bridge as a JS array.
     public int[] GetPrimes(int count)
     {
         var primes = new List<int>();
@@ -46,7 +46,7 @@ public partial class HostApi(WebViewWindow window) : DispatchObject
         return [.. primes];
     }
 
-    // complex data crosses as a JSON string (AOT-safe via source-gen); JS does JSON.parse
+    // complex data crosses as a JSON string (AOT-safe via source-gen), JS does JSON.parse.
     public string GetSystemInfo()
     {
         var info = new SystemInfo(
@@ -61,7 +61,7 @@ public partial class HostApi(WebViewWindow window) : DispatchObject
         return JsonSerializer.Serialize(info, HostJsonContext.Default.SystemInfo);
     }
 
-    // --- async methods: return a real JS Promise (awaited via the private-interface continuation) ---
+    // --- async methods: return a real JS Promise (awaited via the private-interface continuation) ---.
     public async Task<string> EchoAsync(string text)
     {
         await Task.Delay(150);
@@ -79,19 +79,18 @@ public partial class HostApi(WebViewWindow window) : DispatchObject
         return result;
     }
 
-    // exceptions thrown in .NET surface to JS (rejected promise / thrown from the sync proxy)
+    // exceptions thrown in .NET surface to JS (rejected promise / thrown from the sync proxy).
     public string Fail(string? message) => throw new InvalidOperationException(string.IsNullOrWhiteSpace(message) ? "boom from .NET" : message);
 
-    // a real native action driven from JS: open a URL in the user's default browser
+    // a real native action driven from JS: open a URL in the user's default browser.
     public bool OpenUrl(string url)
     {
         Process.Start(new ProcessStartInfo { UseShellExecute = true, FileName = url });
         return true;
     }
 
-    // bidirectional: .NET pushes to JS. the bridge invokes this on the UI thread and the awaits
-    // resume there (window sync context), so ExecuteScript is safe. calls window.aotrinoTick(i) each
-    // second, then window.aotrinoTick(0) when done.
+    // bidirectional: .NET pushes to JS. the bridge invokes this on the UI thread and the awaits resume there (window sync context),
+    // so ExecuteScript is safe. calls window.aotrinoTick(i) each second, then window.aotrinoTick(0) when done.
     public async Task<int> CountdownAsync(int seconds)
     {
         var n = Math.Clamp(seconds, 1, 10);
@@ -105,8 +104,8 @@ public partial class HostApi(WebViewWindow window) : DispatchObject
         return n;
     }
 
-    // captured JS console output (see the console.* override in index.html) routes to the app's
-    // overridable trace methods (AOTrinoApplication.Trace*), by level
+    // captured JS console output (see the console.* override in index.html) routes to the app's overridable trace methods (AOTrinoApplication.Trace*),
+    // by level.
     public void OnConsoleLog(string? level, string? message)
     {
         var app = AOTrinoApplication.Current;
@@ -123,7 +122,7 @@ public partial class HostApi(WebViewWindow window) : DispatchObject
         }
     }
 
-    // quit gracefully the whole app from JS (posts WM_CLOSE to the window)
+    // quit gracefully the whole app from JS (posts WM_CLOSE to the window).
     public void Quit() => window.Close();
 
 #pragma warning restore CA1822

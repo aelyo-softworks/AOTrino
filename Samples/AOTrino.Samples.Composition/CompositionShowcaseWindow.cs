@@ -1,11 +1,12 @@
 namespace AOTrino.Samples.Composition;
 
 // hosts the WebView as ONE visual in a composition tree, then composites live .NET layers ON TOP of it:
-//  - a soft glow that follows the OS mouse over the page,
-//  - a Direct2D-drawn "glass" HUD showing a live system-CPU graph (a real native 2D surface), and
-//  - a translucent status bar with a pulsing dot.
+// * a soft glow that follows the OS mouse over the page,
+// * a Direct2D-drawn "glass" HUD showing a live system-CPU graph (a real native 2D surface), and.
+// * a translucent status bar with a pulsing dot.
 // the page underneath stays fully interactive.
-// an HWND-hosted WebView is an opaque top-most child window, so native code can't draw anything over it, which is why the HWND window shows none of this.
+// an HWND-hosted WebView is an opaque top-most child window, so native code can't draw anything over it,
+// which is why the HWND window shows none of this.
 [System.Runtime.InteropServices.Marshalling.GeneratedComClass]
 public partial class CompositionShowcaseWindow : CompositionWebViewWindow
 {
@@ -14,13 +15,13 @@ public partial class CompositionShowcaseWindow : CompositionWebViewWindow
     private const float _hudWidth = 214;
     private const float _hudHeight = 84;
 
-    private readonly SpriteVisual _pageVisual; // the WebView renders here (full size, fully interactive)
-    private readonly SpriteVisual _glow;       // a soft glow that follows the cursor, over the page
-    private readonly SpriteVisual _overlay;    // a translucent status bar over the page
-    private readonly SpriteVisual _dot;        // a pulsing indicator inside the bar
-    private SpriteVisual? _hud;                // a Direct2D-drawn glass HUD (a live CPU graph)
+    private readonly SpriteVisual _pageVisual; // the WebView renders here (full size, fully interactive).
+    private readonly SpriteVisual _glow; // a soft glow that follows the cursor, over the page.
+    private readonly SpriteVisual _overlay; // a translucent status bar over the page.
+    private readonly SpriteVisual _dot; // a pulsing indicator inside the bar.
+    private SpriteVisual? _hud; // a Direct2D-drawn glass HUD (a live CPU graph).
     private CompositionDrawingSurface? _hudSurface;
-    private readonly float[] _cpu = new float[30]; // rolling CPU-usage history
+    private readonly float[] _cpu = new float[30]; // rolling CPU-usage history.
     private float _cpuValue;
     private long _prevIdle, _prevKernel, _prevUser;
     private IComObject<IDWriteTextFormat>? _labelFormat;
@@ -36,7 +37,7 @@ public partial class CompositionShowcaseWindow : CompositionWebViewWindow
         _pageVisual.Size = ClientSize();
         RootVisual.Children.InsertAtTop(_pageVisual);
 
-        // a native radial-gradient "flashlight" that tracks the mouse over the live page
+        // a native radial-gradient "flashlight" that tracks the mouse over the live page.
         _glow = Compositor.CreateSpriteVisual();
         _glow.Size = new Vector2(_glowSize, _glowSize);
         var radial = Compositor.CreateRadialGradientBrush();
@@ -46,7 +47,7 @@ public partial class CompositionShowcaseWindow : CompositionWebViewWindow
         _glow.Offset = new Vector3(-_glowSize, -_glowSize, 0);
         RootVisual.Children.InsertAtTop(_glow);
 
-        // a translucent status bar (the page shows through it)
+        // a translucent status bar (the page shows through it).
         _overlay = Compositor.CreateSpriteVisual();
         _overlay.Brush = Compositor.CreateColorBrush(new Color { A = 190, R = 13, G = 17, B = 23 });
         RootVisual.Children.InsertAtTop(_overlay);
@@ -66,13 +67,13 @@ public partial class CompositionShowcaseWindow : CompositionWebViewWindow
     protected override void ControllerCreated()
     {
         base.ControllerCreated();
-        EnsureSharedRuntime(); // window.__aotrino (Close button) on the page
-        BuildHud();            // the Direct2D graphics device is ready by now
+        EnsureSharedRuntime(); // window.__aotrino (Close button) on the page.
+        BuildHud(); // the Direct2D graphics device is ready by now.
         _ = NavigateToWebRootAsync();
     }
 
-    // the window sees every mouse move (it forwards them to the composition-hosted WebView), so we move a
-    // native visual to follow the cursor over the page
+    // the window sees every mouse move (it forwards them to the composition-hosted WebView),
+    // so we move a native visual to follow the cursor over the page.
     protected override void OnMouseMove(object? sender, MouseEventArgs e)
     {
         base.OnMouseMove(sender, e);
@@ -91,7 +92,7 @@ public partial class CompositionShowcaseWindow : CompositionWebViewWindow
         _dot.StartAnimation("Opacity", pulse);
     }
 
-    // a HUD rendered with Direct2D onto a composition surface: two live monitors (CPU + GPU) with DWrite labels
+    // a HUD rendered with Direct2D onto a composition surface: two live monitors (CPU + GPU) with DWrite labels.
     private void BuildHud()
     {
         if (GraphicsDevice == null)
@@ -171,10 +172,10 @@ public partial class CompositionShowcaseWindow : CompositionWebViewWindow
         }
     }
 
-    // sample CPU every second and redraw (on the UI thread via the window sync context)
+    // sample CPU every second and redraw (on the UI thread via the window sync context).
     private async Task MonitorAsync()
     {
-        SampleCpu(); // prime the CPU deltas
+        SampleCpu(); // prime the CPU deltas.
         try { await Task.Delay(1000); } catch { return; }
 
         while (!_disposed && _hudSurface != null)
@@ -201,7 +202,7 @@ public partial class CompositionShowcaseWindow : CompositionWebViewWindow
             return 0;
 
         var idleDelta = idle - _prevIdle;
-        var totalDelta = (kernel - _prevKernel) + (user - _prevUser); // kernel time includes idle time
+        var totalDelta = (kernel - _prevKernel) + (user - _prevUser); // kernel time includes idle time.
         _prevIdle = idle;
         _prevKernel = kernel;
         _prevUser = user;
@@ -228,7 +229,7 @@ public partial class CompositionShowcaseWindow : CompositionWebViewWindow
 
     protected override bool OnResized(WindowResizedType type, SIZE size)
     {
-        var handled = base.OnResized(type, size); // sizes RootVisual + sets the WebView bounds
+        var handled = base.OnResized(type, size); // sizes RootVisual + sets the WebView bounds.
         if (_pageVisual != null)
         {
             _pageVisual.Size = ClientSize();

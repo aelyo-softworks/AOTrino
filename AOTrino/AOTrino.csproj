@@ -24,7 +24,7 @@
 		<None Include="..\AOTrino256.png" Pack="true" PackagePath="\" />
 
 		<!-- NuGet imports build\<PackageId>.targets into the consumer's project, which is how a plain csproj gets
-		     WebRoot embedding without copying MSBuild into every app. this repo imports the same file from
+		     WebRoot embedding without copying MSBuild into every app. this repo imports the same file from.
 		     Directory.Build.targets, so what the samples build with is what ships. -->
 		<None Include="build\AOTrino.targets" Pack="true" PackagePath="build\" />
 		<None Include="build\AOTrino.app.manifest" Pack="true" PackagePath="build\" />
@@ -110,10 +110,10 @@
 	<!--
 	  The package's front page, with AOTRINO_VERSION filled in.
 
-	  Its "add this to your csproj" snippet names a version, and a version written by hand in a document is a
-	  version that says 1.0.0 for the rest of the package's life. Same trick as AOTrino.Templates: the file holds
-	  a token, and pack - which knows the real answer - resolves it. _GetPackageFiles is the last target that can
-	  still add package files; after it, this would pack with no README at all and not say so.
+	  Its "add this to your csproj" snippet names a version,
+	  and a version written by hand in a document is a version that says 1.0.0 for the rest of the package's life.
+	  Same trick as AOTrino.Templates: the file holds a token, and pack, which knows the real answer, resolves it.
+	  _GetPackageFiles is the last target that can still add package files, after it, this would pack with no README at all and not say so.
 	-->
 	<Target Name="AOTrinoPackReadme" BeforeTargets="_GetPackageFiles">
 		<PropertyGroup>

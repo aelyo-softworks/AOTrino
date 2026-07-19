@@ -1,16 +1,15 @@
 namespace AOTrino.Bridge;
 
-// A generic base host object for the WebView2 control must implement IDispatch
-// when we have say, this in javascript:
+// A generic base host object for the WebView2 control must implement IDispatch when we have say, this in javascript:
 //
 //         var options = JSON.parse(chrome.webview.hostObjects.dotnet.getInfo());
 //
-// 'dotnet' corresponds to this instance, and the WebView2 runtime will
+// 'dotnet' corresponds to this instance, and the WebView2 runtime will.
 //
-// 1) call "dotnet" asking for a "getInfo" method or property
-// 2) call this returned object's to do the function call (with 0 or more parameters). so only Invoke(0) should be called on this
+// 1) call "dotnet" asking for a "getInfo" method or property 2) call this returned object's to do the function call (with 0 or more parameters).
+// so only Invoke(0) should be called on this.
 //
-// that's why we have two implementations of IDispatch here
+// that's why we have two implementations of IDispatch here.
 [System.Runtime.InteropServices.Marshalling.GeneratedComClass]
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicProperties)]
 public partial class DispatchObject : IDispatch
@@ -44,15 +43,15 @@ public partial class DispatchObject : IDispatch
     }
 
     // unwraps the value of an async host method so it can cross to JS.
-    // a switch rather than reflection over Task<T>.Result or a dynamic cast, because those need types the AOT
-    // compiler cannot see coming and the bridge has to survive trimming.
+    // a switch rather than reflection over Task<T>.Result or a dynamic cast,
+    // because those need types the AOT compiler cannot see coming and the bridge has to survive trimming.
     // the well-known list below covers what JS can actually receive, so most host objects need nothing at all.
     // for a Task<T> of your own, override and chain to base (see docs/BRIDGE.md):
     //
-    //   protected override object? GetTaskResult(Task task) => task switch
+    // protected override object? GetTaskResult(Task task) => task switch.
     //   {
-    //       Task<MyThing> t => t.Result,
-    //       _ => base.GetTaskResult(task),
+    // Task<MyThing> t => t.Result,
+    // _ => base.GetTaskResult(task),
     //   };
     protected virtual object? GetTaskResult(Task task) => task switch
     {
@@ -77,7 +76,7 @@ public partial class DispatchObject : IDispatch
         Task<Uri> t => t.Result,
         Task<object> t => t.Result,
 
-        // arrays of the above cross as JS arrays
+        // arrays of the above cross as JS arrays.
         Task<string[]> t => t.Result,
         Task<bool[]> t => t.Result,
         Task<int[]> t => t.Result,
@@ -86,7 +85,7 @@ public partial class DispatchObject : IDispatch
         Task<float[]> t => t.Result,
         Task<object[]> t => t.Result,
 
-        // nullables, for a host method that returns Task<int?> and friends
+        // nullables, for a host method that returns Task<int?> and friends.
         Task<bool?> t => t.Result,
         Task<int?> t => t.Result,
         Task<long?> t => t.Result,
@@ -101,21 +100,19 @@ public partial class DispatchObject : IDispatch
     protected virtual bool TryConvertArgument(MethodInfo method, int index, ParameterInfo parameter, object? value, out object? converted) =>
         Conversions.TryChangeObjectType(value, parameter.ParameterType, out converted);
 
-    // when working with WebView2 and the HostObjectHelper is installed, set this to true
+    // when working with WebView2 and the HostObjectHelper is installed, set this to true.
     public static bool ContinueOnAsync { get; set; }
 
-    // when working with WebView2 and the HostObjectHelper is installed, set this to true
+    // when working with WebView2 and the HostObjectHelper is installed, set this to true.
     public static bool OneStepInvoke { get; set; }
 
-    // hides a member from JS without deleting it. [Browsable(false)] does the same at compile time when you
-    // own the class; this is for when you don't - dropping a property from a host object you inherited, say
-    // AOTrino's SystemInfo:
+    // hides a member from JS without deleting it. [Browsable(false)] does the same at compile time when you own the class,
+    // this is for when you don't, dropping a property from a host object you inherited, say AOTrino's SystemInfo:
     //
     //   protected override bool IsMemberVisible(string name) =>
     //       name != nameof(SystemInfo.Adapters) && base.IsMemberVisible(name);
     //
-    // adding members needs nothing: the dispatch cache is per runtime type, so a subclass's own public
-    // members show up on their own.
+    // adding members needs nothing: the dispatch cache is per runtime type, so a subclass's own public members show up on their own.
     protected virtual bool IsMemberVisible(string name) => true;
 
     public virtual bool IsMethod(string? name)
@@ -176,7 +173,7 @@ public partial class DispatchObject : IDispatch
             var dispId = dispatchType.GetDispId(name);
             if (dispId >= 0 && !IsMemberVisible(name))
             {
-                // hidden on purpose, so it isn't an error worth tracing: JS just doesn't see the member
+                // hidden on purpose, so it isn't an error worth tracing: JS just doesn't see the member.
                 dispId = -1;
             }
             else if (dispId < 0)
@@ -236,7 +233,7 @@ public partial class DispatchObject : IDispatch
         catch (Exception ex)
         {
             // a host method exception is handed back to JS below (via EXCEPINFO).
-            // it's control flow, not an app error to report
+            // it's control flow, not an app error to report.
             Application.TraceWarning($"Host object method exception: {ex.Message}");
             if (pExcepInfo != 0)
             {
@@ -279,7 +276,7 @@ public partial class DispatchObject : IDispatch
             try
             {
                 var result = method.Invoke(obj, arguments);
-                if (result is Task task) // it *should* be a task if we're here but just in case
+                if (result is Task task) // it *should* be a task if we're here but just in case.
                 {
                     switch (task.Status)
                     {
@@ -355,7 +352,7 @@ public partial class DispatchObject : IDispatch
                     IsAsync = IsAsync(method)
                 };
 
-                // note we don't support overloaded methods
+                // note we don't support overloaded methods.
                 _methods[method.Name] = id;
                 _getMethods[id.Id] = method;
 
@@ -385,7 +382,7 @@ public partial class DispatchObject : IDispatch
 
             void checkName(string name)
             {
-                if (name == nameof(ToString)) // don't warn
+                if (name == nameof(ToString)) // don't warn.
                     return;
 
                 if (_reservedJavascriptNames.Contains(name, StringComparer.OrdinalIgnoreCase))
@@ -454,9 +451,9 @@ public partial class DispatchObject : IDispatch
     [System.Runtime.InteropServices.Marshalling.GeneratedComClass]
     private partial class Function(DispatchObject obj, MethodInfo method) : IDispatch
     {
-#pragma warning disable IDE1006 // Naming Styles
+#pragma warning disable IDE1006 // Naming Styles.
         private const uint WM_COMPLETED = MessageDecoder.WM_APP + 1234;
-#pragma warning restore IDE1006 // Naming Styles
+#pragma warning restore IDE1006 // Naming Styles.
 
         public HRESULT GetTypeInfo(uint iTInfo, uint lcid, out ITypeInfo ppTInfo) => throw new NotSupportedException();
         public HRESULT GetTypeInfoCount(out uint pctinfo)
@@ -479,7 +476,7 @@ public partial class DispatchObject : IDispatch
             for (var i = 0; i < arguments.Length; i++)
             {
                 object? value;
-                // note arguments are stored in in reverse order
+                // note arguments are stored in in reverse order.
                 var varArgsIndex = parameters.cArgs - i - 1;
                 if (varArgsIndex < 0 || varArgsIndex >= parameters.cArgs)
                 {
@@ -539,7 +536,7 @@ public partial class DispatchObject : IDispatch
             if (rgszNames == null || rgszNames.Length == 0 || rgszNames.Length != cNames)
                 return DirectNConstants.E_INVALIDARG;
 
-            // we need to invoke first
+            // we need to invoke first.
             var target = (DispatchObject)method.Invoke(obj, null)!;
             return target.GetIDsOfNames(riid, rgszNames, cNames, lcid, rgDispId);
         }
@@ -551,7 +548,7 @@ public partial class DispatchObject : IDispatch
                 //Application.TraceVerbose($"Function dispIdMember '{dispIdMember}'");
                 if (dispIdMember != 0)
                 {
-                    // we need to invoke first
+                    // we need to invoke first.
                     var target = (DispatchObject)method.Invoke(obj, null)!;
                     return target.Invoke(dispIdMember, riid, lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr);
                 }
@@ -560,7 +557,7 @@ public partial class DispatchObject : IDispatch
                 var result = method.Invoke(obj, args);
                 if (result is Task task)
                 {
-                    // if you are here it's because ContinueOnAsync is false
+                    // if you are here it's because ContinueOnAsync is false.
                     switch (task.Status)
                     {
                         case TaskStatus.RanToCompletion:
@@ -577,10 +574,10 @@ public partial class DispatchObject : IDispatch
                         case TaskStatus.WaitingToRun:
                         case TaskStatus.Running:
                         case TaskStatus.WaitingForChildrenToComplete:
-                            // we need to run message loop, on the UI thread, until the task is completed
+                            // we need to run message loop, on the UI thread, until the task is completed.
                             var window = GetWindow();
 
-                            // note this code avoids using reflection on Task<T> to avoid trimming issues with AOT publishing
+                            // note this code avoids using reflection on Task<T> to avoid trimming issues with AOT publishing.
                             var completed = false;
                             var awaiter = task.GetAwaiter();
                             awaiter.OnCompleted(() =>
@@ -610,7 +607,7 @@ public partial class DispatchObject : IDispatch
             catch (Exception ex)
             {
                 // a host method exception is handed back to JS below (via EXCEPINFO).
-                // it's control flow, not an app error to report
+                // it's control flow, not an app error to report.
                 Application.TraceWarning($"Host object method exception: {ex.Message}");
                 if (pExcepInfo != 0)
                 {

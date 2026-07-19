@@ -7,7 +7,7 @@ public class KeyEventArgs(VIRTUAL_KEY vk, uint states, string? character) : Hand
     public string? Character { get; } = character;
     public int ScanCode { get; } = (int)(states >> 16 & 0xF);
     public int RepeatCount { get; } = (int)(states & 0xFF);
-    public bool IsUp { get; } = (states & 0x80000000) != 0; // bit 31
+    public bool IsUp { get; } = (states & 0x80000000) != 0; // bit 31.
     public bool IsDown => !IsUp;
     public bool IsExtendedKey { get; } = (states & 0x1000) != 0;
     public bool WasDown { get; } = (states & 0x40000000) != 0;

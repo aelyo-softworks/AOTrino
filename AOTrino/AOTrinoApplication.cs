@@ -4,16 +4,16 @@ namespace AOTrino;
 // owns the per-app services (Paths, WebRoot) so the SDK exposes no process-global static state.
 public partial class AOTrinoApplication : CompositionApplication
 {
-    // transparent, so the page paints its own background through the composition surface
+    // transparent, so the page paints its own background through the composition surface.
     private const string _defaultBackgroundColor = "00000000";
     private const int _webView2MissingExitCode = 1;
     private const int _unsupportedWindowsExitCode = 2;
 
-    // AOTrino renders into a Windows.UI.Composition tree pumped by a WindowsDispatcherQueueController
-    // (CreateDispatcherQueueController, coremessaging.dll) - all Windows 10 and later. On Windows 7/8/8.1 the
-    // very first of those calls faults in the base application constructor with "the procedure entry point ...
-    // could not be located", before any AOTrino code runs. That's why the check below is a module initializer
-    // and not a constructor hook like CheckWebView2Runtime: it has to run before that constructor.
+    // AOTrino renders into a Windows.UI.Composition tree pumped by a WindowsDispatcherQueueController (CreateDispatcherQueueController, coremessaging.dll),
+    // all Windows 10 and later.
+    // On Windows 7/8/8.1 the very first of those calls faults in the base application constructor with "the procedure entry point ...
+    // could not be located", before any AOTrino code runs.
+    // That's why the check below is a module initializer and not a constructor hook like CheckWebView2Runtime: it has to run before that constructor.
     private static readonly Version _minimumWindowsVersion = new(10, 0);
 
     // https://developer.microsoft.com/microsoft-edge/webview2/ evergreen bootstrapper
@@ -21,7 +21,7 @@ public partial class AOTrinoApplication : CompositionApplication
 
     public AOTrinoApplication(Assembly? appAssembly = null, string? browserExecutableFolder = null)
     {
-        // continuations after 'await' resume on the window message loop
+        // continuations after 'await' resume on the window message loop.
         WindowSynchronizationContext.Install();
 
         CheckErrorReporting();
@@ -34,12 +34,13 @@ public partial class AOTrinoApplication : CompositionApplication
         Paths = CreatePaths() ?? throw new InvalidOperationException($"CreatePaths returned null for assembly {assembly.FullName}");
         WebRoot = CreateWebRoot(assembly, Paths) ?? throw new InvalidOperationException($"CreateWebRoot returned null for assembly {assembly.FullName} and paths {Paths}");
 
-        // the native WebView2 loader is embedded in the AOTrino assembly (this one); the matching architecture is extracted
+        // the native WebView2 loader is embedded in the AOTrino assembly (this one), the matching architecture is extracted.
         WebView2Utilities.Initialize(typeof(AOTrinoApplication).Assembly);
 
         // no AOTrino app can run without a WebView2 runtime, this closes the process if it's missing (overridable).
         // detect the runtime the app will actually use, the pinned folder when one is set and present, else the evergreen runtime.
-        // the missing folder fallback mirrors WebViewWindow (which logs the warning), so a fixed-version app on a machine that also lacks evergreen isn't wrongly rejected at startup.
+        // the missing folder fallback mirrors WebViewWindow (which logs the warning),
+        // so a fixed-version app on a machine that also lacks evergreen isn't wrongly rejected at startup.
         var runtimeFolder = BrowserExecutableFolder;
         if (!string.IsNullOrWhiteSpace(runtimeFolder) && !Directory.Exists(runtimeFolder))
         {
@@ -59,19 +60,20 @@ public partial class AOTrinoApplication : CompositionApplication
     public AOTrinoPaths Paths { get; }
     public WebRoot WebRoot { get; }
 
-    // the installed WebView2 runtime version; guaranteed present (the app cannot start otherwise)
+    // the installed WebView2 runtime version, guaranteed present (the app cannot start otherwise).
     public string WebView2Version { get; }
 
-    // the folder of a specific WebView2 runtime to use instead of the machine's evergreen runtime "Fixed Version" distribution
-    // pins the browser engine so it can't change under the app, at the cost of shipping ~150 MB per architecture and taking on security updates yourself.
+    // the folder of a specific WebView2 runtime to use instead of the machine's evergreen one, the "Fixed Version" distribution.
+    // it pins the browser engine so it can't change under the app,
+    // at the cost of shipping ~150 MB per architecture and taking on security updates yourself.
     // null (the default) uses evergreen.
-    // Prefer the constructor's browserExecutableFolder parameter: a value set here after construction is used by windows, but the startup
-    // runtime check has already run against evergreen, so it won't validate the pinned runtime.
+    // Prefer the constructor's browserExecutableFolder parameter: a value set here after construction is used by windows,
+    // but the startup runtime check has already run against evergreen, so it won't validate the pinned runtime.
     // WebView2 also honours the WEBVIEW2_BROWSER_EXECUTABLE_FOLDER environment variable when this is null.
     // See docs/SECURITY.md.
     public string? BrowserExecutableFolder { get; set; }
 
-    // the AOTrino SDK version (this assembly)
+    // the AOTrino SDK version (this assembly).
     public string AOTrinoVersion { get; } = typeof(AOTrinoApplication).Assembly.GetInformationalVersion()!;
 
     protected virtual AOTrinoPaths CreatePaths() => new(Assembly.GetEntryAssembly() ?? typeof(AOTrinoApplication).Assembly);
@@ -86,12 +88,13 @@ public partial class AOTrinoApplication : CompositionApplication
     public virtual new void Trace(TraceLevel level, object? message = null, [CallerMemberName] string? methodName = null) => Application.Trace(level, message, methodName);
 
     // errors are reported in a task dialog, and TaskDialogIndirect only exists in comctl32 version 6,
-    // which a process only gets from a manifest (AOTrino ships one - see build\AOTrino.app.manifest.
-    // so this is about apps that bring their own and leave Common-Controls out of it).
-    // without it the first error dies inside the error reporter, and what the user is shown is "Unable to find an  entry point named 'TaskDialogIndirect'",
+    // which a process only gets from a manifest, and AOTrino ships one in build\AOTrino.app.manifest.
+    // so this is about apps that bring their own manifest and leave Common-Controls out of it.
+    // without it the first error dies inside the error reporter,
+    // and what the user is shown is "Unable to find an entry point named 'TaskDialogIndirect'",
     // a complaint about the messenger, while the actual exception is only in the trace.
     // so: check once, up front, and if the dialog can't work, report through MessageBox instead.
-    // the manifest is still the fix; this just makes the app say what went wrong while you find that out.
+    // the manifest is still the fix, this just makes the app say what went wrong while you find that out.
     protected virtual void CheckErrorReporting()
     {
         if (IsTaskDialogAvailable())
@@ -101,8 +104,9 @@ public partial class AOTrinoApplication : CompositionApplication
         ShowFatalErrorFunc = ShowFatalErrorWithoutTaskDialog;
     }
 
-    // comctl32 v6 exports TaskDialogIndirect; 5.82 (what an unmanifested process gets) doesn't.
-    // LoadLibrary rather than GetModuleHandle: at this point in startup nothing has needed comctl32 yet, and the activation context decides which version this resolves to.
+    // comctl32 v6 exports TaskDialogIndirect, 5.82 (what an unmanifested process gets) doesn't.
+    // LoadLibrary rather than GetModuleHandle: at this point in startup nothing has needed comctl32 yet,
+    // and the activation context decides which version this resolves to.
     private static bool IsTaskDialogAvailable()
     {
         var module = DirectNFunctions.LoadLibraryW(PWSTR.From("comctl32.dll"));
@@ -167,18 +171,19 @@ public partial class AOTrinoApplication : CompositionApplication
         return DirectNConstants.S_OK;
     }
 
-    // runs before the first access to any AOTrino type, so before the base constructor that would otherwise fault on a Windows 10-only composition API,
+    // runs before the first access to any AOTrino type,
+    // so before the base constructor that would otherwise fault on a Windows 10-only composition API,
     // and turns an unsupported Windows into a readable message instead of a missing-entry-point dialog.
     // See _minimumWindowsVersion above for why it must be this early.
     [ModuleInitializer]
     [SuppressMessage("Usage", "CA2255:The 'ModuleInitializer' attribute should not be used in libraries", Justification = "deliberate: this is the earliest managed hook, and it must run before the base application constructor reaches a Windows 10-only composition API. a constructor check would already be too late.")]
     internal static void CheckSupportedWindowsVersion()
     {
-        // Environment.OSVersion reports the true version (RtlGetVersion) on modern .NET, manifest or not
+        // Environment.OSVersion reports the true version (RtlGetVersion) on modern .NET, manifest or not.
         if (!OperatingSystem.IsWindows() || Environment.OSVersion.Version >= _minimumWindowsVersion)
             return;
 
-        // invariant English on purpose (like the WebView2 log): the dialog is what gets localized, not the trace
+        // invariant English on purpose (like the WebView2 log): the dialog is what gets localized, not the trace.
         Application.Trace(TraceLevel.Error, $"Windows {Environment.OSVersion.Version} is not supported; {_minimumWindowsVersion} or later is required.");
 
         try
@@ -187,8 +192,8 @@ public partial class AOTrinoApplication : CompositionApplication
         }
         catch
         {
-            // a throwing module initializer becomes a TypeInitializationException, which is exactly the opaque
-            // failure this method exists to prevent. exiting is the point; the dialog is best-effort.
+            // a throwing module initializer becomes a TypeInitializationException, which is exactly the opaque failure this method exists to prevent.
+            // exiting is the point, the dialog is best-effort.
         }
         Environment.Exit(_unsupportedWindowsExitCode);
     }
@@ -200,7 +205,7 @@ public partial class AOTrinoApplication : CompositionApplication
         var content = string.Format(Res.WindowsVersionNotSupportedDetail, Environment.OSVersion.VersionString);
 
         // a task dialog like the WebView2 one when comctl32 v6 is active (AOTrino's manifest provides it, and even Windows 7 has the DLL).
-        // a plain message box otherwise, so the message still gets through
+        // a plain message box otherwise, so the message still gets through.
         if (IsTaskDialogAvailable())
         {
             var td = new TaskDialog

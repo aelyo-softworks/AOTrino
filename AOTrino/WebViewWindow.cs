@@ -1,20 +1,21 @@
 namespace AOTrino;
 
 // hosting-agnostic WebView2 window base.
-// it owns the environment, the WebView, navigation, host objects, scripts, the shared-buffer transport and all window/input plumbing, everything except HOW the WebView is hosted.
+// it owns the environment, the WebView, navigation, host objects, scripts, the shared-buffer transport and all window/input plumbing,
+// everything except HOW the WebView is hosted.
 // the two hosting models are concrete subclasses:
-// * CompositionWebViewWindow (the WebView is one visual in a Windows.UI.Composition tree)
+// * CompositionWebViewWindow (the WebView is one visual in a Windows.UI.Composition tree).
 // * HwndWebViewWindow (the WebView is a classic child window).
 // the only differences are CreateController (below), input forwarding and the window's redirection style.
 public abstract partial class WebViewWindow : D3D11SwapChainWindow
 {
     private readonly bool[] _capturedButtons = new bool[Enum.GetNames<MouseButton>().Length];
     private readonly Dictionary<ulong, NavigationEventArgs> _navigationEvents = [];
-    // pointer ids whose gesture started over the WebView; read by the composition host to keep forwarding them
+    // pointer ids whose gesture started over the WebView, read by the composition host to keep forwarding them.
     private protected readonly HashSet<uint> _pointerIdsStartingInWebView = [];
     private ComObject<ICoreWebView2Environment12>? _environment;
     private ComObject<ICoreWebView2_17>? _webView;
-    private ICoreWebView2Controller? _baseController; // the controller as its common base type (bounds/focus); owned/disposed by the subclass
+    private ICoreWebView2Controller? _baseController; // the controller as its common base type (bounds/focus), owned/disposed by the subclass.
     private bool _mouseTracking;
     private bool _hostObjectHelperInstalled;
     private bool _sharedRuntimeReady;
@@ -44,7 +45,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     public event EventHandler? MonitorChanged;
     public event EventHandler<NavigationEventArgs>? NavigationStarting;
     public event EventHandler<NavigationEventArgs>? NavigationCompleted;
-    // raw JSON of messages posted from the page (window.__aotrino.post / chrome.webview.postMessage)
+    // raw JSON of messages posted from the page (window.__aotrino.post / chrome.webview.postMessage).
     public event EventHandler<ValueEventArgs<string>>? WebMessageJsonReceived;
 
     protected WebViewWindow(
@@ -54,7 +55,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         RECT? rect = null)
         : base(title, style: style, extendedStyle: extendedStyle, rect: rect)
     {
-        InvalidateOnTick = false; // the WebView renders itself; we don't tick a swap chain
+        InvalidateOnTick = false; // the WebView renders itself, we don't tick a swap chain.
 
         MonitorHandle = DirectNFunctions.MonitorFromWindow(Handle, MONITOR_FROM_FLAGS.MONITOR_DEFAULTTONULL);
         if (IsFullScreen)
@@ -69,7 +70,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         var options = GetEnvironmentOptions();
 
         // browserExecutableFolder:
-        // * null uses the evergreen runtime installed on the machine
+        // * null uses the evergreen runtime installed on the machine.
         // * a path points at a specific bundled WebView2 runtime ("Fixed Version").
         // see GetBrowserExecutableFolder.
         var browserFolder = GetBrowserExecutableFolder();
@@ -88,8 +89,8 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
                     var env3 = (ICoreWebView2Environment12)envObj;
                     _environment = new ComObject<ICoreWebView2Environment12>(env3);
 
-                    // the one hosting-specific step: create the composition or HWND controller. the subclass
-                    // sets the WebView + base controller (SetWebViewController) then calls onReady.
+                    // the one hosting-specific step: create the composition or HWND controller.
+                    // the subclass sets the WebView + base controller (SetWebViewController) then calls onReady.
                     CreateController(env3, () =>
                     {
                         WireNavigationEvents();
@@ -109,14 +110,14 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     protected ComObject<ICoreWebView2Environment12>? Environment => _environment;
     protected ICoreWebView2Controller? BaseController => _baseController;
 
-    // for SharedBuffer (same assembly) to reach the environment/webview without exposing them publicly
+    // for SharedBuffer (same assembly) to reach the environment/webview without exposing them publicly.
     internal ComObject<ICoreWebView2Environment12>? SharedEnvironment => _environment;
     internal ComObject<ICoreWebView2_17>? SharedWebView => _webView;
 
     public HMONITOR MonitorHandle { get; private set; }
     public bool IsFullScreen => GetFullScreenBounds() == WindowRect;
     public virtual bool CanChangeCursor { get; set; } = true;
-    public virtual bool SendDoubleClicks { get; set; } // WebView2 doesn't seem to care (chrome uses UP & DOWN events by itself)
+    public virtual bool SendDoubleClicks { get; set; } // WebView2 doesn't seem to care (chrome uses UP & DOWN events by itself).
 
     // create the WebView2 controller (composition or HWND). the implementation must, once its controller is ready,
     // call SetWebViewController(controller, coreWebView2) and then invoke onControllerReady.
@@ -129,7 +130,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     // forward a pointer event to a composition-hosted WebView. return true if handled (consumed). HWND: no-op.
     protected virtual bool TryForwardPointerInput(uint msg, WPARAM wParam, LPARAM lParam) => false;
 
-    // called by a subclass from CreateController once its controller and core WebView are available
+    // called by a subclass from CreateController once its controller and core WebView are available.
     protected void SetWebViewController(ICoreWebView2Controller controller, ICoreWebView2 webView)
     {
         _baseController = controller;
@@ -219,7 +220,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     {
         var monitor = GetMonitor(MONITOR_FROM_FLAGS.MONITOR_DEFAULTTONEAREST)!;
         var bounds = monitor.Bounds;
-        bounds = bounds.Inflate(1, 1, 1, 1); // work around a weird 1px gap that would otherwise appear on the right and bottom edges, probably due to some rounding issue in the DWM when using the exact monitor size
+        bounds = bounds.Inflate(1, 1, 1, 1); // work around a weird 1px gap that would otherwise appear on the right and bottom edges, probably due to some rounding issue in the DWM when using the exact monitor size.
         return bounds;
     }
 
@@ -259,8 +260,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         webView.Object.NavigateToString(PWSTR.From(html)).ThrowOnError();
     }
 
-    // registers a JS-callable host object: AddHostObject("dotnet", obj) exposes it as
-    // chrome.webview.hostObjects.dotnet (async) and chrome.webview.hostObjects.sync.dotnet (sync).
+    // registers a JS-callable host object: AddHostObject("dotnet", obj) exposes it as chrome.webview.hostObjects.dotnet (async) and chrome.webview.hostObjects.sync.dotnet (sync).
     // call after the controller is created (e.g. from AOTrinoWindow.RegisterHostObjects), before navigation.
     public virtual void AddHostObject(string name, DispatchObject hostObject)
     {
@@ -270,7 +270,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
 
         EnsureHostObjectHelper(webView);
 
-        // wrap the host object's IUnknown in a VARIANT and register it under 'name'
+        // wrap the host object's IUnknown in a VARIANT and register it under 'name'.
         ComObject.WithComInstance(hostObject, unk =>
         {
             using var variant = new Variant(unk, VARENUM.VT_UNKNOWN);
@@ -279,7 +279,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         }, true);
     }
 
-    // full .NET Task / Task<T> support for host objects, via undocumented private WebView2 interfaces (best effort)
+    // full .NET Task / Task<T> support for host objects, via undocumented private WebView2 interfaces (best effort).
     private void EnsureHostObjectHelper(ComObject<ICoreWebView2_17> webView)
     {
         if (_hostObjectHelperInstalled)
@@ -295,7 +295,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     }
 
     // creates a named shared-memory channel to the page (generic byte transport, .NET <-> JS).
-    // write to the returned SharedBuffer.Pointer; read it in JS via window.__aotrino.getBuffer(name).
+    // write to the returned SharedBuffer.Pointer, read it in JS via window.__aotrino.getBuffer(name).
     // see AOTrino.Graphics for a Direct2D -> WebGL surface built on top of this.
     public virtual SharedBuffer CreateSharedBuffer(string name, SharedBufferAccess access = SharedBufferAccess.ReadOnly)
     {
@@ -303,7 +303,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         return new SharedBuffer(this, name, access);
     }
 
-    // runs a script at the start of every document (and immediately on the current one)
+    // runs a script at the start of every document (and immediately on the current one).
     public virtual void AddStartupScript(string script)
     {
         ArgumentNullException.ThrowIfNull(script);
@@ -331,7 +331,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         DirectNFunctions.SendMessageW(Handle, MessageDecoder.WM_NCLBUTTONDOWN, new WPARAM { Value = (nuint)HT.HTCAPTION }, new LPARAM());
     }
 
-    // built-in window controls, driven from JS by window.__aotrino.dragWindow()/closeWindow()/minimizeWindow()/maximizeWindow()/setWindowTitle()
+    // built-in window controls, driven from JS by window.__aotrino.dragWindow()/closeWindow()/minimizeWindow()/maximizeWindow()/setWindowTitle().
     private void HandleWindowCommand(string? json)
     {
         if (string.IsNullOrEmpty(json))
@@ -367,14 +367,14 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         }
         catch
         {
-            // not a window command
+            // not a window command.
         }
     }
 
     // the Windows settings a page can't get from the web platform and can't afford to ask for.
     // deliberately tiny, and deliberately NOT an API surface: everything the browser already knows (theme,
-    // reduced motion, DPI, locale, screen size, clipboard) stays the browser's job, and everything an app
-    // wants (files, shell, dialogs) stays the app's, through a host object of its own.
+    // reduced motion, DPI, locale, screen size, clipboard) stays the browser's job,
+    // and everything an app wants (files, shell, dialogs) stays the app's, through a host object of its own.
     // this is only for values AOTrino's own front end needs, that Windows alone can answer.
     // it's injected with the runtime rather than exposed on a host object because a host call is async,
     // and the callers need it synchronously:
@@ -407,7 +407,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         var webView = _webView ?? throw new InvalidOperationException("The WebView2 controller is not ready yet.");
         _sharedRuntimeReady = true;
 
-        // the generic __aotrino runtime, on every future document and the current one
+        // the generic __aotrino runtime, on every future document and the current one.
         AddStartupScript(SharedBuffer.Runtime);
         AddStartupScript($"window.__aotrino.system = {GetSystemJson()};");
         AddStartupScript($"window.__aotrino.window = {GetWindowJson()};");
@@ -504,13 +504,13 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
 
     protected unsafe internal virtual void SetCorner(DWM_WINDOW_CORNER_PREFERENCE corner)
     {
-        // works only on Windows 11, does nothing on Windows 10, so we don't check error
+        // works only on Windows 11, does nothing on Windows 10, so we don't check error.
         DirectNFunctions.DwmSetWindowAttribute(Handle, (uint)DWMWINDOWATTRIBUTE.DWMWA_WINDOW_CORNER_PREFERENCE, (nint)(&corner), 4);
     }
 
-    // apply a Windows 11 system backdrop material (Mica / Acrylic / Tabbed) behind the window. it shows through
-    // wherever the window is transparent (a composition-hosted, transparent WebView); it makes no visible
-    // difference behind an opaque HWND-hosted WebView. no-op / ignored on Windows 10.
+    // apply a Windows 11 system backdrop material (Mica / Acrylic / Tabbed) behind the window.
+    // it shows through wherever the window is transparent (a composition-hosted, transparent WebView),
+    // it makes no visible difference behind an opaque HWND-hosted WebView. no-op / ignored on Windows 10.
     public unsafe void SetSystemBackdrop(DWM_SYSTEMBACKDROP_TYPE type)
     {
         var value = (int)type;
@@ -625,7 +625,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
                         {
                             unsafe
                             {
-                                // this is a NCCALCSIZE_PARAMS but we only need the first RECT
+                                // this is a NCCALCSIZE_PARAMS but we only need the first RECT.
                                 *(RECT*)lParam.Value = monitor.WorkingArea;
                             }
                         }
@@ -802,7 +802,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
                 OnPointerWheel(this, pwe);
                 if (!pwe.Handled)
                 {
-                    // send as mouse event
+                    // send as mouse event.
                     var winfo = pwe.PointerInfo;
                     var mwe = new MouseWheelEventArgs(pwe.Point, (MODIFIERKEYS_FLAGS)winfo.dwKeyStates, pwe.Delta, pwe.Orientation) { SourcePointerEvent = pwe };
                     OnMouseWheel(mwe);
@@ -855,7 +855,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
                 OnPointerUpdate(this, ppe);
                 if (!ppe.Handled)
                 {
-                    // send as mouse event
+                    // send as mouse event.
                     if (ppe.IsInContact)
                     {
                         OnMouseMove(new MouseEventArgs(ppe.Point, 0) { SourcePointerEvent = ppe });
@@ -880,7 +880,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
                 var info = pce.PointerInfo;
                 var isUp = msg == MessageDecoder.WM_POINTERUP;
 
-                // determine double click
+                // determine double click.
                 if (!isUp)
                 {
                     var cx = DirectNFunctions.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXDOUBLECLK);
@@ -902,11 +902,11 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
                 OnPointerContactChanged(this, pce);
                 if (!pce.Handled)
                 {
-                    // send as mouse event
+                    // send as mouse event.
                     var mb = pce.MouseButton;
                     if (!mb.HasValue)
                     {
-                        // huh? which button then?
+                        // huh? which button then?.
                         Application.TraceWarning("msg: " + MessageDecoder.MsgToString(msg) + " unhandled");
                         break;
                     }

@@ -3,7 +3,7 @@ using System.Runtime.InteropServices.Marshalling;
 namespace AOTrino.Bridge;
 
 // note we can't reuse the one from DirectN because of desing issues with COM interop on .NET core source generators,
-// so we need to define our own IDispatch interface here
+// so we need to define our own IDispatch interface here.
 [GeneratedComInterface, Guid("00020400-0000-0000-c000-000000000046")]
 public partial interface IDispatch
 {

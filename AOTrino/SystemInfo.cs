@@ -3,12 +3,12 @@ using Microsoft.Win32;
 namespace AOTrino;
 
 // read-only facts about the machine that the page has no other way of learning: versions down to the kernel,
-// the real cultures and keyboard layouts, DPI, the monitors, the graphics adapters, whether this is a VM or a
-// remote session. informative only - nothing here *does* anything.
+// the real cultures and keyboard layouts, DPI, the monitors, the graphics adapters, whether this is a VM or a remote session. informative only,
+// nothing here *does* anything.
 //
-// AOTrino does NOT register this for you, and that is the point. Any page a window navigates to can call every
-// host object registered on that window (WebView2's AddHostObjectToScript takes no origin), so exposing this
-// has to be your decision, per window:
+// AOTrino does NOT register this for you, and that is the point.
+// Any page a window navigates to can call every host object registered on that window (WebView2's AddHostObjectToScript takes no origin),
+// so exposing this has to be your decision, per window:
 //
 //     protected override void RegisterHostObjects() => AddHostObject("system", new SystemInfo(this));
 //
@@ -17,8 +17,7 @@ namespace AOTrino;
 // the values are a JSON DOM, built once, and yours to edit before you hand it over:
 //
 //     var info = new SystemInfo(this);
-//     info.Values.Remove("adapters");            // this app has no business reporting the GPU
-//     info.Values["tenant"] = currentTenant;     // ...but it does report this
+// info.Values.Remove("adapters"), // this app has no business reporting the GPU info.Values["tenant"] = currentTenant, // ...but it does report this.
 //     AddHostObject("system", info);
 //
 // or override Build() to compose it from scratch.
@@ -33,12 +32,12 @@ public partial class SystemInfo : DispatchObject
         Values = Build();
     }
 
-    // the window this describes, when there is one: it's what knows the DPI actually in use
+    // the window this describes, when there is one: it's what knows the DPI actually in use.
     [Browsable(false)]
     protected WebViewWindow? Window { get; }
 
     // everything the page will see, as a mutable JSON DOM.
-    // [Browsable(false)] keeps the DOM itself off the bridge - the page gets it through GetInfo().
+    // [Browsable(false)] keeps the DOM itself off the bridge, the page gets it through GetInfo().
     [Browsable(false)]
     public JsonObject Values { get; }
 
@@ -69,7 +68,7 @@ public partial class SystemInfo : DispatchObject
         ["webView2"] = app?.WebView2Version,
         ["dotNet"] = RuntimeInformation.FrameworkDescription,
         ["directN"] = typeof(DirectNFunctions).Assembly.GetInformationalVersion(),
-        // the marketing string, then what the kernel actually reports: OSVersion lies about builds, ntoskrnl doesn't
+        // the marketing string, then what the kernel actually reports: OSVersion lies about builds, ntoskrnl doesn't.
         ["windows"] = Environment.OSVersion.VersionString,
         ["kernel"] = WindowsVersionUtilities.KernelVersion?.ToString(),
     };
@@ -102,7 +101,7 @@ public partial class SystemInfo : DispatchObject
         ["current"] = CultureInfo.CurrentCulture.Name,
         ["currentDisplayName"] = CultureInfo.CurrentCulture.NativeName,
         ["currentUI"] = CultureInfo.CurrentUICulture.Name,
-        // the language Windows itself was installed in, which is not necessarily the two above
+        // the language Windows itself was installed in, which is not necessarily the two above.
         ["installedUI"] = CultureInfo.InstalledUICulture.Name,
     };
 
@@ -157,10 +156,10 @@ public partial class SystemInfo : DispatchObject
         var dpi = Window != null ? DpiUtilities.GetDpiForWindow(Window.Handle).width : DpiUtilities.GetDpiForDesktop().width;
         return new JsonObject
         {
-            // devicePixelRatio already tells the page its scale; this is the number that scale came from
+            // devicePixelRatio already tells the page its scale, this is the number that scale came from.
             ["dpi"] = dpi,
             ["scale"] = Math.Round(dpi / (double)DirectNConstants.USER_DEFAULT_SCREEN_DPI, 2),
-            // the accessibility text size, which nothing in CSS reports
+            // the accessibility text size, which nothing in CSS reports.
             ["textScaleFactor"] = DpiUtilities.TextScaleFactor,
         };
     }
@@ -187,8 +186,8 @@ public partial class SystemInfo : DispatchObject
                 ["deviceName"] = display.DeviceName,
                 ["deviceString"] = display.DeviceString,
                 ["deviceStateFlags"] = display.StateFlags.ToString(),
-                //["deviceID"] = display.DeviceID,
-                //["deviceKey"] = display.DeviceKey,
+                // ["deviceID"] = display.DeviceID,
+                // ["deviceKey"] = display.DeviceKey,
             };
             items.Add(obj);
 
@@ -275,13 +274,13 @@ public partial class SystemInfo : DispatchObject
         }
         catch (Exception ex)
         {
-            // a machine with no usable DXGI (some server/session configurations) is not a reason to fail
+            // a machine with no usable DXGI (some server/session configurations) is not a reason to fail.
             AOTrinoApplication.Current?.TraceWarning($"Cannot enumerate graphics adapters: {ex.Message}");
         }
         return new JsonArray([.. items]);
     }
 
-    // best-effort, from what the firmware says about itself. absent means "nothing detected", not "bare metal"
+    // best-effort, from what the firmware says about itself. absent means "nothing detected", not "bare metal".
     public static string? GetVirtualMachine()
     {
         try

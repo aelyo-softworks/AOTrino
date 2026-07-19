@@ -29,18 +29,18 @@ deny-all by default because it is empty until you fill it. Names cross case-inse
 `Add`.
 
 TypeScript apps should use [`@aotrino/client`](../npm/client/README.md) rather than touch
-`chrome.webview.hostObjects` directly — it's the same object with types on it.
+`chrome.webview.hostObjects` directly, it's the same object with types on it.
 
 ## What crosses, and how
 
 | In C# | In JS |
 | --- | --- |
-| a property | `await api.machineName` — a property **read is async too** |
+| a property | `await api.machineName`, a property **read is async too** |
 | a method | `await api.add(2, 40)` |
 | `async Task<T>` | a real `Promise` |
 | an array (`int[]`, `string[]`) | a JS array |
 | a `throw` | a rejected promise / a throw from the sync proxy |
-| anything else | serialize it — see below |
+| anything else | serialize it, see below |
 
 Everything is asynchronous through `hostObjects`, including reading a property. There is a synchronous proxy
 (`chrome.webview.hostObjects.sync.dotnet`) where members behave like plain JS, but each call blocks the page
@@ -67,7 +67,7 @@ So **a row of structured data has to reach the page as a single value**. Send JS
 
 ### Complex types: send JSON
 
-Serialize it — with **source-generated** `System.Text.Json`, because reflection-based serialization does not
+Serialize it, with **source-generated** `System.Text.Json`, because reflection-based serialization does not
 survive AOT:
 
 ```csharp
@@ -95,10 +95,10 @@ public object[] ListAsArray() => rows.Select(r => string.Join('|', r.Name, r.Pat
 It works. A returned array even arrives as a real JS array rather than a proxy, so reading `a[i]` is a plain
 property access. **It is still the wrong choice**, because it costs you real things and buys nothing:
 
-- Rows can't nest, so every structure collapses into a separator convention both sides must agree on, that no
+* Rows can't nest, so every structure collapses into a separator convention both sides must agree on, that no
   compiler checks, and that breaks the day a filename contains your separator.
-- No records, no types, no `@aotrino/client` interface worth the name — just `string.split`.
-- **It isn't faster.** Measured on the same directory listing (5 fields per row, min of 10–20 iterations, in
+* No records, no types, no `@aotrino/client` interface worth the name, just `string.split`.
+* **It isn't faster.** Measured on the same directory listing (5 fields per row, min of 10–20 iterations, in
   milliseconds):
 
 | rows | flat VARIANT array | JSON |
@@ -107,19 +107,19 @@ property access. **It is still the wrong choice**, because it costs you real thi
 | 1 000 | 3.2 | 2.4 |
 | 10 000 | 15.6 | 16.3 |
 
-Within a millisecond of each other at every size — the gap is smaller than the run-to-run noise, in both
+Within a millisecond of each other at every size, the gap is smaller than the run-to-run noise, in both
 directions. Post-processing is free either way (~1 ms per 10 000 rows, `split` and `JSON.parse` alike), and
 JSON keeps pace while carrying a *larger* payload (1265 kB at 10 000 rows).
 
 So: **use JSON**. The array path is a workaround for a bug, priced like the thing it works around.
 
-And if you're moving enough data for any of this to matter, you want the shared buffer instead — see the
+And if you're moving enough data for any of this to matter, you want the shared buffer instead, see the
 bottom of this page.
 
 ## Async results: `GetTaskResult`
 
 An `async` host method returns a `Task<T>`, and the bridge has to get the `T` out of it. It cannot use
-reflection or `dynamic` for that — the AOT compiler has to see every type ahead of time — so `DispatchObject`
+reflection or `dynamic` for that, the AOT compiler has to see every type ahead of time, so `DispatchObject`
 switches over a list of **well-known types** instead: `string`, `bool`, the integer and floating-point types,
 `decimal`, `char`, `DateTime`, `DateTimeOffset`, `TimeSpan`, `Guid`, `Uri`, `object`, arrays of the common
 ones, and the nullable value types.
@@ -143,7 +143,7 @@ The base still handles everything it knows, and your override adds the one type 
 A host method that throws is **control flow, not a crash**. It crosses as a rejected promise, so JS catches
 it, and AOTrino only traces a warning rather than reporting an error.
 
-What arrives is the **full .NET exception text** — message, inner exception, stack, and absolute source paths
+What arrives is the **full .NET exception text**, message, inner exception, stack, and absolute source paths
 from the build machine. That is right for a log and wrong for a UI:
 
 ```ts
@@ -168,7 +168,7 @@ value synchronously, or post a message back when the async work finishes.
 Async continuations resume on the window's UI thread (AOTrino installs a synchronization context), so calling
 `ExecuteScript` after an `await` inside a host method is safe.
 
-For bulk data — pixels, buffers, anything per-frame — don't use the bridge at all. Use
+For bulk data, pixels, buffers, anything per-frame, don't use the bridge at all. Use
 `WebViewWindow.CreateSharedBuffer`, which hands the page real shared memory (`AOTrino.Graphics.Direct2DSurface`
 is built on it).
 
@@ -205,23 +205,23 @@ window is renamed to match, pass nothing and the window's own name is drawn. Eit
 can't disagree.
 
 The native side is `SetWindowTitleFromPage()`. It follows `NavigationMode`: a `Local` window's page names its
-own window, and a `NavigationMode.Web` window's page is **refused** — the runtime reaches every document, so
+own window, and a `NavigationMode.Web` window's page is **refused**, the runtime reaches every document, so
 otherwise whatever site the window landed on would be naming your app. It's `virtual` either way: override it to
 decorate the title, or to refuse a rename your mode would have allowed.
 
 The line it's drawn on:
 
-- **The browser already knows it → the browser's job.** Theme (`prefers-color-scheme`), reduced motion,
+* **The browser already knows it → the browser's job.** Theme (`prefers-color-scheme`), reduced motion,
   DPI (`devicePixelRatio`), locale, screen size, clipboard, online state. Re-exposing those through a native
   API would be a second, worse source of truth. `@aotrino/fluent` follows the Windows theme this way and never
   touches .NET to do it.
-- **Only Windows knows it, and AOTrino's own front end needs it → here.** Today that is exactly one value.
+* **Only Windows knows it, and AOTrino's own front end needs it → here.** Today that is exactly one value.
   It's here because `useDragRegion` would otherwise guess, and a caption that ignores a user who set their
   double-click speed to 900 ms is a caption that feels broken to them.
-- **Your app wants it → your app's host object.** Files, shell, dialogs, printing, settings, power. AOTrino
-  neither grants nor blocks these (see [SECURITY.md](SECURITY.md)); it just doesn't pretend they're
+* **Your app wants it → your app's host object.** Files, shell, dialogs, printing, settings, power. AOTrino
+  neither grants nor blocks these (see [SECURITY.md](SECURITY.md)), it just doesn't pretend they're
   platform features. This is where AOTrino deliberately diverges from Electron, which ships `dialog`,
-  `shell`, `clipboard`, `powerMonitor` and the rest as framework surface — every one of those is API you
+  `shell`, `clipboard`, `powerMonitor` and the rest as framework surface, every one of those is API you
   inherit, version, and answer for. Here they're twenty lines in a class you own.
 
 To add a value, override `WebViewWindow.GetSystemJson`. If you find yourself wanting many, that's the signal
@@ -229,11 +229,11 @@ you want a host object instead.
 
 ## Rules the bridge imposes
 
-- **Host object classes need `[GeneratedComClass]` and `partial`.** They're COM objects underneath.
-- **Members must be instance members.** The bridge looks them up with `BindingFlags.Instance`, so a `static`
+* **Host object classes need `[GeneratedComClass]` and `partial`.** They're COM objects underneath.
+* **Members must be instance members.** The bridge looks them up with `BindingFlags.Instance`, so a `static`
   helper simply won't appear in JS. This trips CA1822 ("mark members as static") on members that don't touch
-  instance state; the samples suppress it with a comment saying why.
-- **Registration happens before navigation** — `RegisterHostObjects` is called for you at the right moment.
+  instance state, the samples suppress it with a comment saying why.
+* **Registration happens before navigation**, `RegisterHostObjects` is called for you at the right moment.
 
 ## Tweaking it
 
@@ -248,5 +248,5 @@ Most apps never touch these:
 ## The escape hatch
 
 If the bridge is not the shape you need, it isn't in the way: `WebViewWindow` exposes the raw
-`ICoreWebView2` and the window handle. `AddHostObjectToScript`, CDP, custom schemes — all still yours.
+`ICoreWebView2` and the window handle. `AddHostObjectToScript`, CDP, custom schemes, all still yours.
 AOTrino is a platform, not a cage.

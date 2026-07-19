@@ -17,7 +17,7 @@ public partial class AOTrinoWindow(
     // null (the default) keeps file://, which reads local files faster; see docs/SECURITY.md.
     protected virtual string? VirtualHostName => null;
 
-    // navigated to once the controller is created; defaults to the app's WebRoot index.html
+    // navigated to once the controller is created, defaults to the app's WebRoot index.html.
     protected virtual string? StartUrl => VirtualHostName != null
         ? $"https://{VirtualHostName}/{WebRoot.IndexFileName}"
         : AOTrinoApplication.Current?.WebRoot.IndexFilePath;
@@ -31,12 +31,12 @@ public partial class AOTrinoWindow(
     protected override void ControllerCreated()
     {
         base.ControllerCreated();
-        EnsureSharedRuntime(); // window.__aotrino (window controls + shared buffers) available on every AOTrino app
+        EnsureSharedRuntime(); // window.__aotrino (window controls + shared buffers) available on every AOTrino app.
         RegisterHostObjects();
         _ = NavigateToStartAsync();
     }
 
-    // override to expose JS-callable host objects (via AddHostObject) before the page navigates
+    // override to expose JS-callable host objects (via AddHostObject) before the page navigates.
     protected virtual void RegisterHostObjects()
     {
     }
@@ -51,7 +51,7 @@ public partial class AOTrinoWindow(
             return true;
 
         // Local: the app's own content (from disk, or from its virtual host) plus in-page schemes;
-        // anything else leaves the app
+        // anything else leaves the app.
         if (uri.Scheme == Uri.UriSchemeFile)
             return true;
 
@@ -89,7 +89,7 @@ public partial class AOTrinoWindow(
         }
     }
 
-    // hands a blocked navigation to the OS default handler (the real browser for web links)
+    // hands a blocked navigation to the OS default handler (the real browser for web links).
     protected virtual void OpenExternal(Uri uri)
     {
         ArgumentNullException.ThrowIfNull(uri);
@@ -103,8 +103,8 @@ public partial class AOTrinoWindow(
         }
     }
 
-    // serves the extracted WebRoot from VirtualHostName. DENY_CORS: the page loads its own files
-    // (they are its origin), while other origins are refused.
+    // serves the extracted WebRoot from VirtualHostName. DENY_CORS: the page loads its own files (they are its origin),
+    // while other origins are refused.
     protected virtual void MapVirtualHost()
     {
         var host = VirtualHostName;
@@ -121,14 +121,15 @@ public partial class AOTrinoWindow(
 
     protected virtual async Task NavigateToStartAsync()
     {
-        // extraction runs on a worker thread; the continuation resumes on the window's synchronization context, so Navigate is called back on the UI thread
+        // extraction runs on a worker thread, the continuation resumes on the window's synchronization context,
+        // so Navigate is called back on the UI thread.
         var app = AOTrinoApplication.Current;
         if (app != null)
         {
             await app.WebRoot.EnsureFilesAsync();
         }
 
-        MapVirtualHost(); // the folder must exist before it's served
+        MapVirtualHost(); // the folder must exist before it's served.
 
         var url = StartUrl;
         if (!string.IsNullOrEmpty(url))

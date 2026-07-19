@@ -2,8 +2,8 @@
 
 React hooks and components over [`@aotrino/client`](../client/README.md).
 
-**Headless by design.** This package ships *behaviour* — bridge calls, subscription lifetimes, pending and
-error state, the window drag region — and stable class names. It ships no CSS. Styling belongs to your app, or
+**Headless by design.** This package ships *behaviour*, bridge calls, subscription lifetimes, pending and
+error state, the window drag region, and stable class names. It ships no CSS. Styling belongs to your app, or
 to `@aotrino/fluent`.
 
 It is **not published to npm**; samples resolve it through npm workspaces. See
@@ -13,8 +13,8 @@ It is **not published to npm**; samples resolve it through npm workspaces. See
 
 ## useHostProperties
 
-Every host-object property read crosses the bridge as its own Promise. This reads a set of them together —
-one round of calls instead of one per property in sequence — and tracks loading/error for you.
+Every host-object property read crosses the bridge as its own Promise. This reads a set of them together,
+one round of calls instead of one per property in sequence, and tracks loading/error for you.
 
 ```tsx
 const { values, loading, error, refresh } = useHostProperties(api, ["machineName", "uptime"]);
@@ -23,7 +23,7 @@ const { values, loading, error, refresh } = useHostProperties(api, ["machineName
 <button onClick={refresh} disabled={loading}>refresh</button>
 ```
 
-For values that move, poll them — the timer is cleared on unmount and never starts when there's no host:
+For values that move, poll them, the timer is cleared on unmount and never starts when there's no host:
 
 ```tsx
 useHostProperties(api, ["uptime", "workingSet"], { refreshIntervalMs: 1000 });
@@ -54,11 +54,11 @@ const analyze = useHostCall((text: string) => api.analyzeAsync(text));
 <output>{analyze.result}</output>
 ```
 
-Pass a lambda rather than `api.analyzeAsync` — the bridge's proxy members shouldn't be detached from the
+Pass a lambda rather than `api.analyzeAsync`, the bridge's proxy members shouldn't be detached from the
 object they came from. `call` keeps a stable identity across renders, so it's safe in a dependency array.
 
 Note that a .NET exception arrives as the full exception text (message, inner exception, stack, absolute
-source paths). That's right for a log and wrong for a UI — show `error.message.split("\n", 1)[0]`.
+source paths). That's right for a log and wrong for a UI, show `error.message.split("\n", 1)[0]`.
 
 ## TitleBar
 
@@ -66,14 +66,14 @@ source paths). That's right for a log and wrong for a UI — show `error.message
 <TitleBar showMinimize showMaximize onClose={() => void api.quit()} />
 ```
 
-Renders the drag region (handled natively — no mousedown handler), the window buttons, and accessible names.
+Renders the drag region (handled natively, no mousedown handler), the window buttons, and accessible names.
 Class hooks: `aotrino-titlebar`, `-title`, `-buttons`, `-button`, `-close`.
 
 `title` defaults to the window's own caption (`WebViewWindow.Text`), so it matches what Windows shows in the
 taskbar and Alt-Tab without you repeating the string anywhere. Pass a string and the window is renamed to
-match — see `useWindowTitle()`.
+match, see `useWindowTitle()`.
 
-Double-clicking the caption maximizes or restores the window, as a native caption does — the bar stands in for
+Double-clicking the caption maximizes or restores the window, as a native caption does, the bar stands in for
 the OS one, so it owes users that gesture. A double-click that lands on a button is ignored. Turn it off for a
 window that shouldn't be maximized:
 
@@ -96,7 +96,7 @@ const caption = useWindowTitle(title);   // renames the window if `title` is a s
 ```
 
 A window has one name. If the bar says one thing while the taskbar, Alt-Tab and the thumbnails say another,
-the app answers to two names and nobody wrote that on purpose — so a string `title` is pushed to
+the app answers to two names and nobody wrote that on purpose, so a string `title` is pushed to
 `WebViewWindow.Text`, a node is only drawn (name that window in C#), and passing nothing draws the window's
 own name and costs no code at all.
 
@@ -110,5 +110,5 @@ const { buffer, meta } = useSharedBuffer("frame");       // re-renders when .NET
 useHostMessage<{ kind: string }>(msg => { /* ... */ });  // inline lambdas don't resubscribe
 ```
 
-`useSharedBuffer` re-renders with a *new* `ArrayBuffer` whenever .NET grows the buffer — never hold on to a
+`useSharedBuffer` re-renders with a *new* `ArrayBuffer` whenever .NET grows the buffer, never hold on to a
 previous one. `useHostMessage` and `useSharedBuffer` unsubscribe on unmount.

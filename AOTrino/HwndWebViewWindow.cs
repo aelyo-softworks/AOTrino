@@ -33,14 +33,14 @@ public partial class HwndWebViewWindow(
         })).ThrowOnError();
     }
 
-    // no D3D/D2D device is needed: the child WebView renders itself
+    // no D3D/D2D device is needed: the child WebView renders itself.
     protected override void CreateDeviceResources() { }
 
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
-            DetachController(); // before disposing the controller: teardown focus/size messages must not hit it
+            DetachController(); // before disposing the controller: teardown focus/size messages must not hit it.
             _controller?.Dispose();
         }
         base.Dispose(disposing);

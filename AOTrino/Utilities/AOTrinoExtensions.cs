@@ -36,7 +36,7 @@ public static class AOTrinoExtensions
         return obj ?? throw new InvalidCastException($"Object of type '{winRTObject.GetType().FullName}' is not of type '{typeof(T).FullName}'.");
     }
 
-    // a WinRT IDirect3DSurface (capture frame) -> its underlying DXGI interface (e.g. IDXGISurface)
+    // a WinRT IDirect3DSurface (capture frame) -> its underlying DXGI interface (e.g. IDXGISurface).
     public static IComObject<T>? AsDxgiComObject<T>(this object? winRTObject, CreateObjectFlags flags = CreateObjectFlags.UniqueInstance)
     {
         if (winRTObject == null)

@@ -8,14 +8,15 @@ rem   publish.bat -clean             delete the publish folder first
 rem   publish.bat -zip               ...and one zip per architecture (exes only, no pdbs)
 rem   publish.bat -release v1.0.0    ...and publish those zips as a GitHub release (gh.exe must be in the PATH)
 rem
-rem NOTE: do not name a variable here UPX. upx.exe reads an environment variable of that name for its default
-rem options, so "set UPX=true" makes every upx call fail with "invalid string 'true' in environment variable
-rem 'UPX'" - and MSBuild reads environment variables as properties, so it would set $(Upx) behind your back too.
+rem NOTE: do not name a variable here UPX. upx.exe reads an environment variable of that name for its default options,
+rem so "set UPX=true" makes every upx call fail with "invalid string 'true' in environment variable 'UPX'",
+rem and MSBuild reads environment variables as properties, so it would set $(Upx) behind your back too.
 rem
-rem AOT compilation ends in the MSVC linker, which ILCompiler finds by running vswhere.exe - and vswhere is
-rem only on the PATH inside a Visual Studio developer prompt. Putting the installer directory there is enough
-rem (ILCompiler takes it from there), so this doesn't need vcvars and doesn't care which architecture vcvars
-rem would have selected - which matters here, because one run publishes for three of them.
+rem AOT compilation ends in the MSVC linker, which ILCompiler finds by running vswhere.exe,
+rem and vswhere is only on the PATH inside a Visual Studio developer prompt.
+rem Putting the installer directory there is enough (ILCompiler takes it from there),
+rem so this doesn't need vcvars and doesn't care which architecture vcvars would have selected, which matters here,
+rem because one run publishes for three of them.
 
 setlocal
 if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" set "PATH=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer;%PATH%"

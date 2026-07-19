@@ -4,23 +4,24 @@ namespace AOTrino.Bridge;
 // this is a GENERIC byte channel, it knows nothing about rendering. .NET gets a raw pointer.
 // JS gets the same memory (zero-copy) as an ArrayBuffer via window.__aotrino.getBuffer(name) / onBuffer(name, cb).
 // grow-only, call Post() to (re)hand the buffer to the page (e.g. after a resize) with optional metadata.
-// created ReadWrite it is bidirectional (both sides read/write). specializations such as AOTrino.Graphics.Direct2DSurface build a renderer on top of this.
+// created ReadWrite it is bidirectional (both sides read/write).
+// specializations such as AOTrino.Graphics.Direct2DSurface build a renderer on top of this.
 public class SharedBuffer : IDisposable
 {
-    // the generic __aotrino runtime (embedded resource, loaded/cached from the assembly). injected once per
-    // window (WebViewWindow.EnsureSharedRuntime). exposes window.__aotrino: getBuffer/getMeta/onBuffer/post.
+    // the generic __aotrino runtime (embedded resource, loaded/cached from the assembly).
+    // injected once per window (WebViewWindow.EnsureSharedRuntime). exposes window.__aotrino: getBuffer/getMeta/onBuffer/post.
     internal static string Runtime => EmbeddedResource.Load("SharedBuffer.Runtime.js");
 
-    // shared memory grows a chunk at a time (never per byte) so a continuously resizing consumer rarely
-    // reallocates; the slack is bounded by one chunk and by screen size. call Trim() to reclaim it.
+    // shared memory grows a chunk at a time (never per byte) so a continuously resizing consumer rarely reallocates,
+    // the slack is bounded by one chunk and by screen size. call Trim() to reclaim it.
     private const int _growthChunk = 1024 * 1024;
 
     private readonly WebViewWindow _window;
     private readonly string _name;
     private readonly SharedBufferAccess _access;
     private ComObject<ICoreWebView2SharedBuffer>? _buffer;
-    private int _capacity; // allocated bytes (grows in _growthChunk steps)
-    private int _size;     // last requested bytes (the actually-needed size)
+    private int _capacity; // allocated bytes (grows in _growthChunk steps).
+    private int _size; // last requested bytes (the actually-needed size).
 
     public SharedBuffer(WebViewWindow window, string name, SharedBufferAccess access)
     {
@@ -35,13 +36,13 @@ public class SharedBuffer : IDisposable
     public string Name => _name;
     public SharedBufferAccess Access => _access;
 
-    // the last requested size in bytes (what the consumer actually needs)
+    // the last requested size in bytes (what the consumer actually needs).
     public int Size => _size;
 
-    // the allocated size in bytes (>= Size; grows a chunk at a time). reclaim slack with Trim().
+    // the allocated size in bytes (>= Size, grows a chunk at a time). reclaim slack with Trim().
     public int Capacity => _capacity;
 
-    // raw pointer to the shared memory, or 0 if not allocated yet
+    // raw pointer to the shared memory, or 0 if not allocated yet.
     public nint Pointer
     {
         get
@@ -54,9 +55,9 @@ public class SharedBuffer : IDisposable
         }
     }
 
-    // ensure the buffer holds at least byteLength bytes (grow-only). returns true if it was (re)allocated
-    // (in which case you must Post() it again so JS gets the new memory). the allocation grows a chunk at a
-    // time, so a continuously growing consumer (e.g. a window resize) only reallocates on chunk boundaries.
+    // ensure the buffer holds at least byteLength bytes (grow-only).
+    // returns true if it was (re)allocated (in which case you must Post() it again so JS gets the new memory).
+    // the allocation grows a chunk at a time, so a continuously growing consumer (e.g. a window resize) only reallocates on chunk boundaries.
     public virtual bool EnsureSize(int byteLength)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(byteLength);
@@ -89,8 +90,9 @@ public class SharedBuffer : IDisposable
         _capacity = capacity;
     }
 
-    // (re)hand the current buffer to the page. metadataJson is merged into the {"name":...} object the page
-    // receives (via 'sharedbufferreceived' → __aotrino), e.g. Post("\"width\":800,\"height\":600").
+    // (re)hand the current buffer to the page.
+    // metadataJson is merged into the {"name":...} object the page receives (via 'sharedbufferreceived' → __aotrino), e.g.
+    // Post("\"width\":800,\"height\":600").
     public virtual void Post(string? metadataJson = null)
     {
         if (_buffer == null || _buffer.IsDisposed)

@@ -8,9 +8,9 @@
 
 		<!--
 		  The one project here that needs a newer Windows SDK projection than the target framework gives it:
-		  GraphicsCaptureItem.TryCreateFromDisplayId, Windows.Graphics.DisplayId and
-		  GraphicsCaptureSession.IsBorderRequired (the Windows 11 capture without the yellow border) are not in the
-		  10.0.19041 projection, and this sample doesn't compile without them.
+		  GraphicsCaptureItem.TryCreateFromDisplayId,
+		  Windows.Graphics.DisplayId and GraphicsCaptureSession.IsBorderRequired (the Windows 11 capture without the yellow border) are not in the 10.0.19041 projection,
+		  and this sample doesn't compile without them.
 		-->
 		<WindowsSdkPackageVersion>10.0.26100.57</WindowsSdkPackageVersion>
 

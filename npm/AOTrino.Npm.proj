@@ -1,11 +1,10 @@
 <!--
-  Installs the npm workspaces and builds the @aotrino/* libraries - once per build, for the whole solution.
+  Installs the npm workspaces and builds the @aotrino/* libraries, once per build, for the whole solution.
 
-  Every npm-backed sample depends on this project (Directory.Build.targets adds the reference automatically
-  when AOTrinoNpmBuild is set) rather than running npm itself. MSBuild builds projects in parallel, so with
-  more than one npm sample each of them ran `npm install` against the same node_modules and `tsc` against the
-  same dist at the same time: the installs collided on the workspace symlinks (EEXIST) and two compilers wrote
-  one output folder. A project reference makes MSBuild run this exactly once, before any dependent.
+  Every npm-backed sample depends on this project (Directory.Build.targets adds the reference automatically when AOTrinoNpmBuild is set) rather than running npm itself.
+  MSBuild builds projects in parallel,
+  so with more than one npm sample each of them ran `npm install` against the same node_modules and `tsc` against the same dist at the same time: the installs collided on the workspace symlinks (EEXIST) and two compilers wrote one output folder.
+  A project reference makes MSBuild run this exactly once, before any dependent.
 -->
 <Project>
 
@@ -14,9 +13,9 @@
 	</PropertyGroup>
 
 	<!--
-	  Incremental on npm's own record of the installed tree. Checking whether node_modules merely exists was
-	  wrong twice over: an empty or half-written folder counted as installed, and adding a dependency to any
-	  manifest never reinstalled. Both surfaced later as "'tsc' is not recognized".
+	  Incremental on npm's own record of the installed tree.
+	  Checking whether node_modules merely exists was wrong twice over: an empty or half-written folder counted as installed,
+	  and adding a dependency to any manifest never reinstalled. Both surfaced later as "'tsc' is not recognized".
 	-->
 	<Target Name="AOTrinoNpmInstall"
 			Inputs="$(AOTrinoRepoRoot)package.json;$(AOTrinoRepoRoot)package-lock.json;$(AOTrinoRepoRoot)npm\*\package.json;$(AOTrinoRepoRoot)Samples\*\WebRoot\package.json"

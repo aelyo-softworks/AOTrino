@@ -4,16 +4,17 @@ namespace AOTrino.Samples.CaptureScreen;
 // * the LEFT pane is the web page (description, composited),
 // * the RIGHT pane is a LIVE screen capture (Windows.Graphics.Capture) rendered with Direct2D onto a composition surface.
 // a draggable divider resizes the split.
-// a web page fundamentally can't capture and display other OS windows, this is native-only, and only possible because the WebView is one composition layer we can lay beside another.
+// a web page fundamentally can't capture and display other OS windows, this is native-only,
+// and only possible because the WebView is one composition layer we can lay beside another.
 [System.Runtime.InteropServices.Marshalling.GeneratedComClass]
 public partial class CaptureWindow : AOTrinoWindow
 {
     private const float _dividerWidth = 6;
 
-    private readonly SpriteVisual _pageVisual; // left pane: the WebView
-    private readonly SpriteVisual _capture;    // right pane: the live screen capture
-    private readonly SpriteVisual _divider;    // the draggable splitter
-    private readonly bool _ready; // OnResized can fire (from the base ctor) before our visuals exist
+    private readonly SpriteVisual _pageVisual; // left pane: the WebView.
+    private readonly SpriteVisual _capture; // right pane: the live screen capture.
+    private readonly SpriteVisual _divider; // the draggable splitter.
+    private readonly bool _ready; // OnResized can fire (from the base ctor) before our visuals exist.
     private CompositionDrawingSurface? _captureSurface;
     private IDirect3DDevice? _direct3DDevice;
     private Direct3D11CaptureFramePool? _framePool;
@@ -69,7 +70,7 @@ public partial class CaptureWindow : AOTrinoWindow
         _screenWidth = _captureItem.Size.Width;
         _screenHeight = _captureItem.Size.Height;
 
-        // a screen-sized surface, drawn 1:1 each frame; the right-pane visual stretches it to fit (Uniform)
+        // a screen-sized surface, drawn 1:1 each frame, the right-pane visual stretches it to fit (Uniform).
         _captureSurface = GraphicsDevice.CreateDrawingSurface2(_captureItem.Size, DirectXPixelFormat.B8G8R8A8UIntNormalized, DirectXAlphaMode.Premultiplied);
         var brush = Compositor.CreateSurfaceBrush(_captureSurface);
         brush.Stretch = CompositionStretch.Uniform;
@@ -92,7 +93,7 @@ public partial class CaptureWindow : AOTrinoWindow
         _session.StartCapture();
     }
 
-    // FrameArrived is raised on our UI thread (AOTrino installs a DispatcherQueue), so drawing + Commit are safe
+    // FrameArrived is raised on our UI thread (AOTrino installs a DispatcherQueue), so drawing + Commit are safe.
     private void DrawFrame(Direct3D11CaptureFrame? frame)
     {
         if (frame == null || _disposed || _captureSurface == null)
@@ -125,7 +126,7 @@ public partial class CaptureWindow : AOTrinoWindow
         if (e.Button == MouseButton.Left && IsOnDivider(e.Point.x))
         {
             _draggingSplit = true;
-            e.Handled = true; // don't forward this to the WebView
+            e.Handled = true; // don't forward this to the WebView.
         }
     }
 
@@ -170,7 +171,7 @@ public partial class CaptureWindow : AOTrinoWindow
         var h = rc.Height;
         _splitX = Math.Clamp((int)(w * _splitFraction), 200, Math.Max(200, w - 240));
 
-        // left pane = the WebView
+        // left pane = the WebView.
         BaseController?.put_Bounds(new RECT { left = 0, top = 0, right = _splitX, bottom = h });
         _pageVisual.Size = new Vector2(_splitX, h);
         _pageVisual.Offset = new Vector3(0, 0, 0);

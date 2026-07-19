@@ -1,7 +1,7 @@
 # AOTrino
 
 **Electron-like desktop apps on .NET Native AOT + WebView2.** One executable, no runtime to install, no Chromium
-to ship — Windows already has both. x86, x64 and ARM64.
+to ship, Windows already has both. x86, x64 and ARM64.
 
 A window is a real HWND, the UI is a web page, and the two talk over a typed bridge.
 
@@ -53,7 +53,7 @@ projection AOTrino is compiled against.
 
 ## Requirements
 
-To **build and run**: the .NET 10 SDK. The WebView2 runtime is already on any up-to-date Windows — an AOTrino
+To **build and run**: the .NET 10 SDK. The WebView2 runtime is already on any up-to-date Windows, an AOTrino
 app offers a download link if it isn't.
 
 To **publish the single exe**: also the MSVC linker, because the SDK compiles to native code but doesn't ship a
@@ -69,7 +69,7 @@ if you already have Visual Studio. See https://aka.ms/nativeaot-prerequisites.
 ## The rest
 
 Twelve samples with screenshots, four optional levels (plain page → `@aotrino/client` → `@aotrino/react` →
-`@aotrino/fluent`), and the docs — the bridge, the security defaults, theming, front end, maintenance — are on
+`@aotrino/fluent`), and the docs, the bridge, the security defaults, theming, front end, maintenance, are on
 GitHub:
 
 **https://github.com/aelyo-softworks/AOTrino**

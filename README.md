@@ -3,7 +3,7 @@
 <img src="AOTrino256.png" width="128" align="right" alt="" />
 
 **Electron-like desktop apps on .NET Native AOT + WebView2.** One executable, no runtime to install, no Chromium
-to ship — Windows already has both. x86, x64 and ARM64.
+to ship, Windows already has both. x86, x64 and ARM64.
 
 A window is a real HWND, the UI is a web page, and the two talk over a typed bridge. That's the whole idea. The
 [Fluent UI gallery](#fluentui--gallery) below is an AOTrino app, and it weighs 4 MB.
@@ -22,12 +22,12 @@ dotnet run
 ## The four levels
 
 AOTrino is a stack of optional layers. Each one is useful without the ones above it, and **the bottom layer
-alone is a first-class way to use it** — most of the samples here are a hand-written `index.html` and no npm at
+alone is a first-class way to use it**, most of the samples here are a hand-written `index.html` and no npm at
 all.
 
 ```mermaid
 graph BT
-    A["<b>AOTrino</b> — the NuGet<br/><i>C#: the window, the WebView, the bridge, the exe</i>"]
+    A["<b>AOTrino</b>, the NuGet<br/><i>C#: the window, the WebView, the bridge, the exe</i>"]
     B["<b>@aotrino/client</b><br/><i>TypeScript types over the injected runtime</i>"]
     C["<b>@aotrino/react</b><br/><i>hooks and the caption gesture. Behaviour, no CSS</i>"]
     D["<b>@aotrino/fluent</b><br/><i>a Fluent UI look. A choice, not a mandate</i>"]
@@ -48,14 +48,14 @@ graph BT
 | **+ fluent** | Fluent UI | A window that follows the Windows theme, caption included | `dotnet new aotrino-fluent` |
 
 Nothing above the first level is required by the first level. And `@aotrino/client` adds **no runtime**: the C#
-side already injected it, so the package is types and a thin wrapper over what's on the page — which is what
+side already injected it, so the package is types and a thin wrapper over what's on the page, which is what
 keeps the two from drifting apart.
 
 ### What an app is, in one picture
 
 ```mermaid
 graph LR
-    subgraph EXE["MyApp.exe — one file, ~11 MB, or 4 MB packed"]
+    subgraph EXE["MyApp.exe, one file, ~11 MB, or 4 MB packed"]
         NET["<b>.NET AOT</b><br/>AOTrinoWindow<br/>your host objects"]
         WR["<b>WebRoot</b><br/><i>embedded resources,<br/>extracted at startup</i>"]
     end
@@ -73,11 +73,11 @@ graph LR
 ## Getting started
 
 **To build and run**, the [.NET 10 SDK](https://dotnet.microsoft.com/download) is all you need. The **WebView2
-runtime** is already on any up-to-date Windows — and an AOTrino app offers a download link if it isn't.
+runtime** is already on any up-to-date Windows, and an AOTrino app offers a download link if it isn't.
 
 **To publish the single exe**, add the MSVC linker. The SDK compiles to native code but doesn't ship a linker,
-so `dotnet publish` ends in `link.exe` and stops with *"Platform linker not found"* without it. No IDE required
-— the standalone build tools are enough:
+so `dotnet publish` ends in `link.exe` and stops with *"Platform linker not found"* without it. No IDE required,
+the standalone build tools are enough:
 
 ```
 winget install Microsoft.VisualStudio.BuildTools --override "--passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
@@ -87,7 +87,7 @@ Add `--add Microsoft.VisualStudio.Component.VC.Tools.ARM64` for ARM64. If you al
 same thing lives in the installer as **Desktop development with C++**. Full list:
 [aka.ms/nativeaot-prerequisites](https://aka.ms/nativeaot-prerequisites).
 
-### Plain — a page, no build step
+### Plain, a page, no build step
 
 ```
 dotnet new aotrino -o MyApp
@@ -113,7 +113,7 @@ dotnet new aotrino-react -o MyApp
 cd MyApp && dotnet run
 ```
 
-`dotnet build` runs `npm install` and Vite for you. The caption is yours to style; the *behaviour* comes from
+`dotnet build` runs `npm install` and Vite for you. The caption is yours to style, the *behaviour* comes from
 the package:
 
 ```tsx
@@ -151,13 +151,13 @@ Note: for AOT, ensure you have all the required prerequisites, documented at htt
 
 ## Samples
 
-Twelve of them, in [Samples](Samples) — each one is a single idea. The level each is written at is noted: most
+Twelve of them, in [Samples](Samples), each one is a single idea. The level each is written at is noted: most
 need **no npm at all**.
 
 ### Hello World
 
 *Plain HTML.* The smallest AOTrino app: a window, a page, a version string. If you read one sample, read this
-one — it's a complete desktop application in about 40 lines.
+one, it's a complete desktop application in about 40 lines.
 
 ![Hello World](docs/images/hello-world.png)
 
@@ -171,7 +171,7 @@ rejections, arrays, JSON. The live reference for [docs/BRIDGE.md](docs/BRIDGE.md
 ### Direct2D
 
 *Plain HTML.* .NET draws with Direct2D into a **shared buffer** and the page shows it in a `<canvas>` with no
-copy — the path for pixels, which the bridge is the wrong tool for.
+copy, the path for pixels, which the bridge is the wrong tool for.
 
 ![Direct2D](docs/images/direct2d.png)
 
@@ -184,22 +184,22 @@ default) and as a classic child HWND. Same page, different windows.
 
 ### Translucid
 
-*Plain HTML.* A Windows 11 system backdrop — Mica, Acrylic, Tabbed — showing through a page that leaves its
+*Plain HTML.* A Windows 11 system backdrop, Mica, Acrylic, Tabbed, showing through a page that leaves its
 edges transparent. Only possible because the WebView is a composition layer and not an opaque child window.
 
 ![Translucid](docs/images/translucid.png)
 
 ### Capture Screen
 
-*Plain HTML.* The left half is the page; the right half is a live `Windows.Graphics.Capture` of the screen,
-drawn with Direct2D and composited *beside* the page by .NET — which is not something a web page gets to do.
+*Plain HTML.* The left half is the page, the right half is a live `Windows.Graphics.Capture` of the screen,
+drawn with Direct2D and composited *beside* the page by .NET, which is not something a web page gets to do.
 
 ![Capture Screen](docs/images/capture-screen.png)
 
 ### Web Browser
 
 *Plain HTML + an injected script.* `NavigationMode.Web`: the one sample that browses the real internet, its
-chrome injected into every document. It registers **no host objects** — [docs/SECURITY.md](docs/SECURITY.md)
+chrome injected into every document. It registers **no host objects**, [docs/SECURITY.md](docs/SECURITY.md)
 explains why that's worth being deliberate about. Takes `--url`.
 
 ![Web Browser](docs/images/web-browser.png)
@@ -220,32 +220,32 @@ whose drag and double-click come from the package rather than from this app.
 
 ### React · Dashboard
 
-*React + @aotrino/react.* Live .NET process state — working set, GC, threads — with auto-refresh. No
+*React + @aotrino/react.* Live .NET process state, working set, GC, threads, with auto-refresh. No
 `useEffect`, no `Promise.all` and no polling timer in the app: the hooks own all of it.
 
 ![React Dashboard](docs/images/react-dashboard.png)
 
 ### FluentUI · Hello World
 
-*Fluent UI — the whole pyramid.* One window that reads the host, calls .NET, and re-themes itself from the
+*Fluent UI, the whole pyramid.* One window that reads the host, calls .NET, and re-themes itself from the
 caption's sun/moon button. Almost no CSS of its own: Fluent's tokens do it.
 
 ![FluentUI Hello World](docs/images/fluentui-hello-world.png)
 
 ### FluentUI · Gallery
 
-*Fluent UI — the flagship.* A WinUI-Gallery-shaped tour where every card is a live demo with the code that
+*Fluent UI, the flagship.* A WinUI-Gallery-shaped tour where every card is a live demo with the code that
 produced it. Includes a table of **500,000 rows** that lives in .NET and crosses the bridge 200 at a time.
 
 ![FluentUI Gallery](docs/images/fluentui-gallery.png)
 
 ## Documentation
 
-- [Architecture and maintenance](docs/MAINTENANCE.md) — what the repo is made of, where every version lives, what to do weekly/monthly/every six months, and the traps.
-- [Security model](docs/SECURITY.md) — what the defaults are (local-first, `NavigationMode`), what they aren't, and where the decisions stay yours.
-- [The bridge](docs/BRIDGE.md) — how JS calls .NET and back: host objects, what crosses, async results, exceptions, and the escape hatch.
-- [Front end](docs/FRONTEND.md) — hand-written pages need nothing; the optional `@aotrino/client` types the bridge for React/TypeScript apps, without a registry.
-- [Theming](docs/THEMING.md) — light/dark that follows Windows, picked from the caption and remembered — what the `FluentUI` samples get for two lines, and how to change it.
+* [Architecture and maintenance](docs/MAINTENANCE.md), what the repo is made of, where every version lives, what to do weekly/monthly/every six months, and the traps.
+* [Security model](docs/SECURITY.md), what the defaults are (local-first, `NavigationMode`), what they aren't, and where the decisions stay yours.
+* [The bridge](docs/BRIDGE.md), how JS calls .NET and back: host objects, what crosses, async results, exceptions, and the escape hatch.
+* [Front end](docs/FRONTEND.md), hand-written pages need nothing, the optional `@aotrino/client` types the bridge for React/TypeScript apps, without a registry.
+* [Theming](docs/THEMING.md), light/dark that follows Windows, picked from the caption and remembered, what the `FluentUI` samples get for two lines, and how to change it.
 
 ## Building this repo
 
@@ -262,7 +262,7 @@ That should be all of it: the interop assemblies come from the published
 
 If you happen to be working on those libraries at the same time, drop their local builds into an `External\`
 folder at the root: when it's there, the projects reference those DLLs instead of the packages, so a change in
-DirectN can be tried here without a round trip through nuget.org. It's detected rather than configured —
+DirectN can be tried here without a round trip through nuget.org. It's detected rather than configured,
 `-p:UseLocalExternal=false` overrides it either way. See [docs/MAINTENANCE.md](docs/MAINTENANCE.md).
 
 ## License

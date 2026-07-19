@@ -3,11 +3,11 @@
 	<!--
 	  `dotnet new aotrino` and friends.
 
-	  A template package is not a library: it has no code, no target framework, and NuGet ships its content
-	  verbatim. Hence the odd-looking properties below - they're what the template engine requires.
+	  A template package is not a library: it has no code, no target framework, and NuGet ships its content verbatim.
+	  Hence the odd-looking properties below, they're what the template engine requires.
 
-	  The three templates are the three levels of the platform: plain page, React, Fluent UI. Each one is the
-	  smallest thing that runs, not a sample - the samples are the place to show what else is possible.
+	  The three templates are the three levels of the platform: plain page, React, Fluent UI. Each one is the smallest thing that runs, not a sample,
+	  the samples are the place to show what else is possible.
 	-->
 	<PropertyGroup>
 		<PackageType>Template</PackageType>
@@ -45,9 +45,9 @@
 	  Everything under templates\, except what a build leaves behind: a template that carries someone's bin\,
 	  obj\ or node_modules\ generates a project that starts out dirty (and weighs 200 MB).
 
-	  dist\ is excluded for the two bundler templates only, where it really is build output. The plain template's
-	  WebRoot\dist\index.html is hand-written - it IS the app - and excluding it by pattern produced a template
-	  that generates a project with no page in it.
+	  dist\ is excluded for the two bundler templates only, where it really is build output.
+	  The plain template's WebRoot\dist\index.html is hand-written, it IS the app,
+	  and excluding it by pattern produced a template that generates a project with no page in it.
 	-->
 	<ItemGroup>
 		<Content Include="templates\**\*"
@@ -59,24 +59,23 @@
 	  The @aotrino/* tarballs, packed straight into the React and Fluent templates.
 
 	  They're a build output (npm/pack, gitignored), so they're fetched here at pack time rather than committed.
-	  A generated app installs them by path - see the templates' package.json - because nothing is published to a
-	  registry: "@aotrino/react": "^1.0.0" would resolve to nothing at all.
+	  A generated app installs them by path, see the templates' package.json,
+	  because nothing is published to a registry: "@aotrino/react": "^1.0.0" would resolve to nothing at all.
 
-	  Hooked to GenerateNuspec, not Build: making tarballs is not part of compiling anything, and doing it on
-	  every build meant a plain `dotnet build` of the solution ran tsc - which needs node_modules, which a machine
-	  that has never run npm install doesn't have. That passed here forever and failed on the first clean CI run,
-	  with the least helpful error available: "npm error command failed ... tsc -p tsconfig.json" out of a
-	  template project.
+	  Hooked to GenerateNuspec, not Build: making tarballs is not part of compiling anything,
+	  and doing it on every build meant a plain `dotnet build` of the solution ran tsc, which needs node_modules,
+	  which a machine that has never run npm install doesn't have. That passed here forever and failed on the first clean CI run,
+	  with the least helpful error available: "npm error command failed .. tsc -p tsconfig.json" out of a template project.
 
-	  _GetPackageFiles is what turns Content into package files, and it is the last moment these items can be
-	  added: hooking Pack or even GenerateNuspec runs after it, and the tarballs then vanish from the package
-	  without a word - it packs happily, just without them. The items can't be declared statically either,
+	  _GetPackageFiles is what turns Content into package files,
+	  and it is the last moment these items can be added: hooking Pack or even GenerateNuspec runs after it,
+	  and the tarballs then vanish from the package without a word, it packs happily, just without them. The items can't be declared statically either,
 	  because npm hasn't produced the files yet when the project is evaluated.
 
-	  AOTrino.Npm.proj first, for the same reason: it's what installs the workspace, once, for the whole
-	  solution. Without it, `dotnet pack` on a fresh clone still has no tsc.
+	  AOTrino.Npm.proj first, for the same reason: it's what installs the workspace, once, for the whole solution. Without it,
+	  `dotnet pack` on a fresh clone still has no tsc.
 
-	  This is also where the templates get told the version of the thing they're a template for - see below.
+	  This is also where the templates get told the version of the thing they're a template for, see below.
 	-->
 	<Target Name="AOTrinoPackNpmLibs" BeforeTargets="_GetPackageFiles">
 		<MSBuild Projects="$(MSBuildThisFileDirectory)..\npm\AOTrino.Npm.proj" Targets="Build" />
@@ -89,12 +88,11 @@
 
 		<!--
 		  npm pack names a tarball after the version inside it (aotrino-client-1.0.0.tgz), so a package.json that
-		  installs one by path has to name that version too - in five places, across two templates, every bump.
-		  Staging them under a version-less name lets the templates stop caring: npm reads the real version out of
-		  the tarball it's handed.
+		  installs one by path has to name that version too, in five places, across two templates, every bump.
+		  Staging them under a version-less name lets the templates stop caring: npm reads the real version out of the tarball it's handed.
 
-		  PackagePath, not Link: pack ignores Link and would put every tarball at the root of content\, where the
-		  second template's copy collides with the first (NU5118).
+		  PackagePath, not Link: pack ignores Link and would put every tarball at the root of content\,
+		  where the second template's copy collides with the first (NU5118).
 		  each template carries only what it depends on: fluent sits on react, react sits on client.
 		-->
 		<ItemGroup>
@@ -120,13 +118,12 @@
 		<!--
 		  The generated app's <PackageReference Include="AOTrino">, filled in with the version being packed.
 
-		  A template of AOTrino 1.0.1 that generates an app referencing AOTrino 1.0.0 is a broken template, and a
-		  literal version in the checked-in csproj becomes exactly that the moment nobody remembers to edit three
-		  copies of it. So the csproj carries AOTRINO_VERSION and this rewrites it on the way into the package,
+		  A template of AOTrino 1.0.1 that generates an app referencing AOTrino 1.0.0 is a broken template,
+		  and a literal version in the checked-in csproj becomes exactly that the moment nobody remembers to edit three copies of it.
+		  So the csproj carries AOTRINO_VERSION and this rewrites it on the way into the package,
 		  which is the one moment the answer is known to be right.
 
-		  Escape the text: WriteLinesToFile takes an item list, and RuntimeIdentifiers' semicolons would otherwise
-		  come out as line breaks.
+		  Escape the text: WriteLinesToFile takes an item list, and RuntimeIdentifiers' semicolons would otherwise come out as line breaks.
 		-->
 		<ItemGroup>
 			<_AOTrinoTemplateProject Include="templates\**\AOTrinoApp1.csproj" />

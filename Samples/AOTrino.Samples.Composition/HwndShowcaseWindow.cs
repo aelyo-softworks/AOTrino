@@ -13,7 +13,7 @@ public partial class HwndShowcaseWindow : HwndWebViewWindow
     protected override void ControllerCreated()
     {
         base.ControllerCreated();
-        EnsureSharedRuntime(); // window.__aotrino (Close button) on the page
+        EnsureSharedRuntime(); // window.__aotrino (Close button) on the page.
         _ = NavigateToWebRootAsync();
     }
 }

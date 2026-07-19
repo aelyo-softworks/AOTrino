@@ -20,7 +20,7 @@ public partial class MainWindow : AOTrinoWindow
         base.ControllerCreated();
     }
 
-    // a self-contained animated scene: orbiting, pulsing, hue-cycling circles on a dark field
+    // a self-contained animated scene: orbiting, pulsing, hue-cycling circles on a dark field.
     private static void DrawScene(IComObject<ID2D1RenderTarget> rt, int width, int height, float t)
     {
         rt.Clear(new(1, 0.05f, 0.07f, 0.11f));

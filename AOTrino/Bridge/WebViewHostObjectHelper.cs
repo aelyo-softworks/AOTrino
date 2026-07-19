@@ -3,7 +3,7 @@ namespace AOTrino.Bridge;
 [System.Runtime.InteropServices.Marshalling.GeneratedComClass]
 public partial class WebViewHostObjectHelper : ICoreWebView2PrivateHostObjectHelper, ICoreWebView2PrivateHostObjectHelper2
 {
-    // determine if IDispatch Invoke is called using DISPATCH_PROPERTYGET or DISPATCH_METHOD
+    // determine if IDispatch Invoke is called using DISPATCH_PROPERTYGET or DISPATCH_METHOD.
     HRESULT ICoreWebView2PrivateHostObjectHelper.IsMethodMember(
         ref VARIANT @object,
         PWSTR memberName,

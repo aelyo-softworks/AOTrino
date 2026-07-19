@@ -8,7 +8,7 @@ public partial class MainWindow : AOTrinoWindow
     {
     }
 
-    // expose the host API to JS as chrome.webview.hostObjects.dotnet
+    // expose the host API to JS as chrome.webview.hostObjects.dotnet.
     protected override void RegisterHostObjects() => AddHostObject("dotnet", new HostApi(this));
 
     protected override void OnNavigationCompleted(object? sender, NavigationEventArgs e)

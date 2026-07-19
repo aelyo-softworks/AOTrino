@@ -3,7 +3,7 @@
 Every `AOTrino.Samples.FluentUI.*` app ships light and dark, follows Windows by default, lets the user
 override it from the caption, and remembers the choice. This page is what that costs and how to change it.
 
-None of it is a platform feature. AOTrino itself has no opinion about colour — this all lives in
+None of it is a platform feature. AOTrino itself has no opinion about colour, this all lives in
 [`@aotrino/fluent`](../npm/fluent/README.md), the opinionated floor of the stack. A hand-written page or an
 app on `@aotrino/react` themes itself however it likes.
 
@@ -23,7 +23,7 @@ across restarts. There is no theme state to own, no CSS variables to wire, no `u
 
 ## The three states
 
-The picker sits **left of the window buttons** — the sun/moon button before minimize — and offers:
+The picker sits **left of the window buttons**, the sun/moon button before minimize, and offers:
 
 | Choice | Behaviour |
 | --- | --- |
@@ -37,7 +37,7 @@ at a glance which way it resolved.
 ## How following Windows works
 
 WebView2 maps the Windows app theme onto the CSS `prefers-color-scheme` media query. So the whole mechanism is
-`matchMedia("(prefers-color-scheme: dark)")` plus a `change` listener — **no host object, no .NET, no polling**.
+`matchMedia("(prefers-color-scheme: dark)")` plus a `change` listener, **no host object, no .NET, no polling**.
 That is `useSystemThemeName()`, and `useSystemTheme()` returns the matching Fluent theme if you want it
 directly.
 
@@ -51,7 +51,7 @@ while the app runs.
 This is one of the places where [`AOTrinoWindow.VirtualHostName`](SECURITY.md#how-your-content-is-served-file-or-a-virtual-host)
 earns its keep: storage is keyed by origin, and a `file://` page has an **opaque** origin, so the choice would
 not reliably survive a restart. Served from a virtual host the page has a real `https` origin and storage
-behaves normally. Every `FluentUI` sample sets `VirtualHostName` — it has to anyway, for its ES modules.
+behaves normally. Every `FluentUI` sample sets `VirtualHostName`, it has to anyway, for its ES modules.
 
 Storage access is wrapped in `try`/`catch` throughout: a theme is never worth crashing an app over.
 
@@ -80,7 +80,7 @@ const themes = [
 ```
 
 The list drives the menu in order, and `key` is what gets stored. `isDark` does two things: it picks the
-caption icon, and it's how **System** resolves — the provider matches the OS light/dark against your list, so
+caption icon, and it's how **System** resolves, the provider matches the OS light/dark against your list, so
 system-following keeps working with a custom set as long as one entry is light and one is dark.
 
 `label` is user-visible text, which is why it lives in your list rather than inside the package: an app that
@@ -98,7 +98,7 @@ ships in French passes French labels. The picker's own two strings go the same w
 ```
 
 Pinning a theme empties `options`, and the caption hides the picker rather than showing a menu with nothing to
-choose. Same if there's no `AOTrinoProvider` above it at all — `useAOTrinoTheme()` returns `null` and the
+choose. Same if there's no `AOTrinoProvider` above it at all, `useAOTrinoTheme()` returns `null` and the
 caption simply renders without the button.
 
 ## Reading the theme yourself

@@ -3,22 +3,21 @@
 	<!--
 	  Publishes every sample, for every architecture, into one folder.
 
-	  This is not part of a normal build: it's the "cut a drop" operation - AOT-compile all of them, three times
-	  each, and put the exes somewhere you can look at them side by side (or hand them to someone).
+	  This is not part of a normal build: it's the "cut a drop" operation, AOT-compile all of them, three times each,
+	  and put the exes somewhere you can look at them side by side (or hand them to someone).
 
-	      publish.bat                 all samples, all architectures -> publish\win-x64\*.exe, etc.
-	      publish.bat -upx            ...and squeeze the exes with UPX
-	      publish.bat -rid win-arm64  just one architecture
-	      publish.bat -zip            ...and one zip per architecture
-	      publish.bat -release v1.0.0 ...and hand those zips to a GitHub release
+	  publish.bat                 all samples, all architectures -> publish\win-x64\*.exe, etc.
+	  publish.bat -upx            ...and squeeze the exes with UPX
+	  publish.bat -rid win-arm64  just one architecture
+	  publish.bat -zip            ...and one zip per architecture
+	  publish.bat -release v1.0.0 ...and hand those zips to a GitHub release
 
 	  or, from anywhere MSBuild runs (including VS's terminal):
 
-	      dotnet build PublishSamples.proj -t:PublishAll
-	      dotnet build PublishSamples.proj -t:PublishAll -p:Upx=true -p:Rids=win-x64
+	  dotnet build PublishSamples.proj -t:PublishAll
+	  dotnet build PublishSamples.proj -t:PublishAll -p:Upx=true -p:Rids=win-x64
 
-	  The default target is Help, deliberately: this file publishes a dozen native binaries and nobody wants that
-	  from a stray "build everything".
+	  The default target is Help, deliberately: this file publishes a dozen native binaries and nobody wants that from a stray "build everything".
 	-->
 
 	<PropertyGroup>
@@ -34,8 +33,9 @@
 
 		<!-- a RID and the Platform that goes with it: the samples declare x86;x64;ARM64 and no AnyCPU, so
 		     publishing win-arm64 as x64 would compile the wrong thing (or fail to find the platform at all).
-		     the condition selects at Include time - a <Rid Remove> with a %(Identity) condition doesn't batch
-		     the way it reads and silently removed all three, which shows up much later as an empty
+		     the condition selects at Include time,
+		     a <Rid Remove> with a %(Identity) condition doesn't batch the way it reads and silently removed all three,
+		     which shows up much later as an empty.
 		     RuntimeIdentifier. -->
 		<Rid Include="win-x86" Platform="x86" Condition="$(Rids.Contains('win-x86'))" />
 		<Rid Include="win-x64" Platform="x64" Condition="$(Rids.Contains('win-x64'))" />
@@ -70,9 +70,9 @@
 	<Target Name="RestoreAll">
 		<!--
 		  One restore for all architectures: the samples declare RuntimeIdentifiers (see Directory.Build.targets),
-		  so a single restore writes every RID's target into project.assets.json and each Publish below finds its
-		  own. Restoring per RID instead looks equivalent and isn't - NuGet skips a restore it considers up to
-		  date, and the publish that follows then fails with NETSDK1047 for the RID that was never restored.
+		  so a single restore writes every RID's target into project.assets.json and each Publish below finds its own.
+		  Restoring per RID instead looks equivalent and isn't, NuGet skips a restore it considers up to date,
+		  and the publish that follows then fails with NETSDK1047 for the RID that was never restored.
 		-->
 		<Message Importance="High" Text="AOTrino: restoring @(SampleProject->Count()) samples" />
 		<MSBuild Projects="@(SampleProject)" Targets="Restore" Properties="Configuration=Release;Platform=x64" />
@@ -81,9 +81,9 @@
 	<Target Name="PublishRid" Outputs="%(Rid.Identity)">
 		<Message Importance="High" Text="AOTrino: publishing @(SampleProject->Count()) samples for %(Rid.Identity) into $(PublishRoot)\%(Rid.Identity)" />
 		<!--
-		  _IsPublishing is not decoration: `dotnet publish` sets it, and without it the SDK drops the
-		  RuntimeIdentifier we pass, so ILCompiler stops with "RuntimeIdentifier is required for native
-		  compilation" - a confusing way to be told the Publish target was invoked, but not by publish.
+		  _IsPublishing is not decoration: `dotnet publish` sets it, and without it the SDK drops the RuntimeIdentifier we pass,
+		  so ILCompiler stops with "RuntimeIdentifier is required for native compilation", a confusing way to be told the Publish target was invoked,
+		  but not by publish.
 		-->
 		<MSBuild Projects="@(SampleProject)"
 				 Targets="Publish"
@@ -101,18 +101,17 @@
 	<!--
 	  UPX, on request only.
 
-	  Measured, UPX 5.2.0: x86 and x64 come down to about 36% (a 11 MB sample ends at 4 MB), and arm64 doesn't
-	  compress at all - "CantPackException: win64/arm64 is not yet supported". That's why failure here is a
-	  warning, not an error: an uncompressed exe is a fine outcome, a failed drop isn't. Skipping arm64 outright
-	  would be tidier and wrong - the day UPX learns arm64, this starts working with no change here.
+	  Measured, UPX 5.2.0: x86 and x64 come down to about 36% (a 11 MB sample ends at 4 MB), and arm64 doesn't compress at all,
+	  "CantPackException: win64/arm64 is not yet supported". That's why failure here is a warning, not an error: an uncompressed exe is a fine outcome,
+	  a failed drop isn't. Skipping arm64 outright would be tidier and wrong, the day UPX learns arm64, this starts working with no change here.
 
-	  It also rewrites the exe in place, so a second run over the same folder meets an already-packed file; the
-	  force flag keeps that from ending the drop.
+	  It also rewrites the exe in place, so a second run over the same folder meets an already-packed file,
+	  the force flag keeps that from ending the drop.
 
-	  Careful with the name: upx.exe reads default options from an environment variable called UPX, so a caller
-	  that does `set UPX=true` breaks every invocation with "invalid string 'true' in environment variable 'UPX'"
-	  - and MSBuild reads environment variables as properties, so that same variable would quietly set $(Upx)
-	  as well. publish.bat uses AOTRINO_UPX for both reasons.
+	  Careful with the name: upx.exe reads default options from an environment variable called UPX,
+	  so a caller that does `set UPX=true` breaks every invocation with "invalid string 'true' in environment variable 'UPX'".
+	  * and MSBuild reads environment variables as properties, so that same variable would quietly set $(Upx) as well.
+	    publish.bat uses AOTRINO_UPX for both reasons.
 	-->
 	<Target Name="Upx">
 		<ItemGroup>
@@ -125,12 +124,12 @@
 	</Target>
 
 	<!--
-	  One zip per architecture, because that's what a release page can actually offer: twelve samples times three
-	  architectures is 36 loose assets, and nobody downloads 36 things.
+	  One zip per architecture, because that's what a release page can actually offer: twelve samples times three architectures is 36 loose assets,
+	  and nobody downloads 36 things.
 
-	  Staged through a temp folder rather than zipping publish\<rid> directly: that folder also holds the .pdb
-	  next to every exe, and symbols have no business in a "here are the samples" download - they'd more than
-	  double it. ZipDirectory takes a directory, not a file list, so the exes are copied out first.
+	  Staged through a temp folder rather than zipping publish\<rid> directly: that folder also holds the .pdb next to every exe,
+	  and symbols have no business in a "here are the samples" download, they'd more than double it. ZipDirectory takes a directory, not a file list,
+	  so the exes are copied out first.
 	-->
 	<Target Name="Zip" Outputs="%(Rid.Identity)">
 		<PropertyGroup>
@@ -153,9 +152,9 @@
 	<!--
 	  Hands the zips to a GitHub release, the way rel.bat does it elsewhere: gh, a tag, generated notes.
 
-	  This one is different in kind from every other target here - it publishes, to the internet, under a tag that
-	  is awkward to take back. Hence: nothing happens without an explicit -release <tag>, and the assets have to
-	  exist already (a release of nothing, or of a stale publish, is worse than no release).
+	  This one is different in kind from every other target here, it publishes, to the internet, under a tag that is awkward to take back.
+	  Hence: nothing happens without an explicit -release <tag>,
+	  and the assets have to exist already (a release of nothing, or of a stale publish, is worse than no release).
 	  gh.exe must be on the PATH and already authenticated.
 	-->
 	<Target Name="Release">
@@ -172,10 +171,8 @@
 	</Target>
 
 	<!--
-	  What came out, and how big. Size is the whole reason UPX is an option here, so it's worth printing rather
-	  than leaving to explorer.
-	  Shelled out because MSBuild can't read a file's length: property functions are a fixed list, and
-	  System.IO.FileInfo isn't on it.
+	  What came out, and how big. Size is the whole reason UPX is an option here, so it's worth printing rather than leaving to explorer.
+	  Shelled out because MSBuild can't read a file's length: property functions are a fixed list, and System.IO.FileInfo isn't on it.
 	-->
 	<Target Name="Report">
 		<Message Importance="High" Text=" " />

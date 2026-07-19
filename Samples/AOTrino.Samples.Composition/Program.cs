@@ -5,13 +5,14 @@ internal static class Program
     [STAThread]
     static void Main()
     {
-        // two windows, same page, different hosting: one on the composition engine (the WebView is a visual we
-        // can transform + composite with other visuals), one classic HWND-hosted (an opaque child window).
+        // two windows, same page,
+        // different hosting: one on the composition engine (the WebView is a visual we can transform + composite with other visuals),
+        // one classic HWND-hosted (an opaque child window).
         using var app = new AOTrinoApplication();
         using var composition = new CompositionShowcaseWindow();
         using var hwnd = new HwndShowcaseWindow();
 
-        // the app treats the FIRST window as the main one and later windows as "background"; make them peers,
+        // the app treats the FIRST window as the main one and later windows as "background", make them peers,
         // then close one when the other closes so Close / Alt+F4 on either window shuts down the whole demo.
         hwnd.IsBackground = false;
         composition.Destroyed += (s, e) => { if (!hwnd.IsDisposed) hwnd.Close(); };
@@ -35,7 +36,7 @@ internal static class Program
         var x = (screenWidth - total) / 2;
         var y = (screenHeight - height) / 2;
 
-        // these are custom-frame windows (client fills the window), so window size ~= client size
+        // these are custom-frame windows (client fills the window), so window size ~= client size.
         DirectNFunctions.SetWindowPos(left.Handle, HWND.Null, x, y, width, height, SET_WINDOW_POS_FLAGS.SWP_NOZORDER | SET_WINDOW_POS_FLAGS.SWP_NOACTIVATE);
         DirectNFunctions.SetWindowPos(right.Handle, HWND.Null, x + width + gap, y, width, height, SET_WINDOW_POS_FLAGS.SWP_NOZORDER | SET_WINDOW_POS_FLAGS.SWP_NOACTIVATE);
     }

@@ -14,7 +14,7 @@ public partial class MainWindow : AOTrinoWindow
         if (!e.IsSuccess)
             return;
 
-        // push the WebView2 runtime version and the AOTrino SDK version into the page
+        // push the WebView2 runtime version and the AOTrino SDK version into the page.
         var app = AOTrinoApplication.Current!;
         ExecuteScript($"window.setVersions && window.setVersions('{app.WebView2Version}', '{app.AOTrinoVersion}');");
     }

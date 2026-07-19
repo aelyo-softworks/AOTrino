@@ -1,9 +1,9 @@
 namespace AOTrino.Samples.Translucid;
 
-// a window whose border is translucent (a Windows 11 system backdrop — Mica / Acrylic / Tabbed — shows through) while the center pane stays opaque.
+// a window whose border is translucent (a Windows 11 system backdrop, Mica / Acrylic / Tabbed, shows through) while the center pane stays opaque.
 // this works because the window is composition-hosted and transparent:
-// the WebView renders with a transparent background (AOTrino sets WEBVIEW2_DEFAULT_BACKGROUND_COLOR = transparent)
-// so the material shows wherever the page is transparent, an HWND-hosted, opaque WebView could not do this.
+// the WebView renders with a transparent background (AOTrino sets WEBVIEW2_DEFAULT_BACKGROUND_COLOR = transparent) so the material shows wherever the page is transparent,
+// an HWND-hosted, opaque WebView could not do this.
 [System.Runtime.InteropServices.Marshalling.GeneratedComClass]
 public partial class TranslucidWindow : AOTrinoWindow
 {
@@ -15,7 +15,7 @@ public partial class TranslucidWindow : AOTrinoWindow
     protected override void ControllerCreated()
     {
         base.ControllerCreated();
-        SetSystemBackdrop(DWM_SYSTEMBACKDROP_TYPE.DWMSBT_MAINWINDOW); // Mica by default
+        SetSystemBackdrop(DWM_SYSTEMBACKDROP_TYPE.DWMSBT_MAINWINDOW); // Mica by default.
     }
 
     // the page buttons post { __aotrino: "backdrop", type: "mica" | "acrylic" | "tabbed" | "none" }
@@ -42,7 +42,7 @@ public partial class TranslucidWindow : AOTrinoWindow
         }
         catch
         {
-            // not one of our messages
+            // not one of our messages.
         }
     }
 }

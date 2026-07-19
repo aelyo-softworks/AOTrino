@@ -1,40 +1,39 @@
 ﻿<Project>
 
 	<!--
-	  The build logic AOTrino ships lives in AOTrino\build\AOTrino.targets, and it is imported here rather than
-	  copied: a consumer gets that file from the package (NuGet imports build\<PackageId>.targets on its own),
-	  while the samples reference the project instead - so without this import they would be exercising build
-	  logic no consumer ever runs, and the shipped copy would rot unnoticed.
+	  The build logic AOTrino ships lives in AOTrino\build\AOTrino.targets,
+	  and it is imported here rather than copied: a consumer gets that file from the package (NuGet imports build\<PackageId>.targets on its own),
+	  while the samples reference the project instead, so without this import they would be exercising build logic no consumer ever runs,
+	  and the shipped copy would rot unnoticed.
 	  What stays in this file is what only makes sense inside this repo.
 	-->
 	<Import Project="$(MSBuildThisFileDirectory)AOTrino\build\AOTrino.targets" />
 
 	<!--
-	  Where DirectN, DirectN.Extensions and WebView2 come from - the same three assemblies, reached two ways, for
-	  every project here.
+	  Where DirectN, DirectN.Extensions and WebView2 come from, the same three assemblies, reached two ways, for every project here.
 
 	  If External\ is present, they're taken from it: local builds of the sibling DirectNAot / WebView2Aot repos,
-	  refreshed by a script of mine that isn't in this repo (it points at paths on my machine). That's what lets a
-	  change in one of them be tried here immediately, without a round trip through nuget.org.
+	  refreshed by a script of mine that isn't in this repo (it points at paths on my machine).
+	  That's what lets a change in one of them be tried here immediately, without a round trip through nuget.org.
 
-	  If External\ is absent - which is what a fresh clone looks like, since it's git-ignored - the published
-	  packages are used instead and the build just works. Nobody has to be told to run anything first.
+	  If External\ is absent, which is what a fresh clone looks like, since it's git-ignored,
+	  the published packages are used instead and the build just works. Nobody has to be told to run anything first.
 
-	  Auto-detected rather than a flag someone must set, because the failure mode of getting this wrong is twelve
-	  projects failing on a missing DLL nobody outside this machine has ever heard of. Force it either way with
-	  -p:UseLocalExternal=true|false.
+	  Auto-detected rather than a flag someone must set,
+	  because the failure mode of getting this wrong is twelve projects failing on a missing DLL nobody outside this machine has ever heard of.
+	  Force it either way with -p:UseLocalExternal=true|false.
 
-	  C# projects only. The npm .esproj projects are in this solution too, and handing them a PackageReference
-	  makes their JavaScript SDK try to restore packages and stop with "NU1012: Platform version is not present
-	  ... net6.0-none". A <Reference> to a file, being nothing to restore, never provoked it - so the fresh-clone
-	  path was the only one that showed it.
+	  C# projects only. The npm .esproj projects are in this solution too,
+	  and handing them a PackageReference makes their JavaScript SDK try to restore packages,
+	  and stop with "NU1012: Platform version is not present ... net6.0-none".
+	  A <Reference> to a file, being nothing to restore, never provoked it, so the fresh-clone path was the only one that showed it.
 	-->
 	<PropertyGroup Condition="'$(AOTrinoReferencesDirectN)' != 'false' and '$(MSBuildProjectExtension)' == '.csproj'">
 		<!--
-		  Packing never uses External\, whatever is on this machine. A package must DECLARE what it needs, and a
-		  <Reference> to a DLL on my disk declares nothing: pack against it and the result restores for nobody.
+		  Packing never uses External\, whatever is on this machine. A package must DECLARE what it needs,
+		  and a <Reference> to a DLL on my disk declares nothing: pack against it and the result restores for nobody.
 		  Building the other way is also the only honest check that what's published is enough to compile AOTrino.
-		  (_IsPacking is set by `dotnet pack`, the way _IsPublishing is set by `dotnet publish`.)
+		  (_IsPacking is set by `dotnet pack`, the way _IsPublishing is set by `dotnet publish`).
 		-->
 		<UseLocalExternal Condition="'$(UseLocalExternal)' == '' and '$(_IsPacking)' == 'true'">false</UseLocalExternal>
 		<UseLocalExternal Condition="'$(UseLocalExternal)' == '' and Exists('$(MSBuildThisFileDirectory)External\DirectN.dll')">true</UseLocalExternal>
@@ -62,26 +61,26 @@
 	</ItemGroup>
 
 	<!--
-	  Default application icon (the brand icon at the repo root) for every executable project; a project can
-	  override with its own <ApplicationIcon>. Not in the shipped targets: a consumer's app has its own identity.
+	  Default application icon (the brand icon at the repo root) for every executable project, a project can override with its own <ApplicationIcon>.
+	  Not in the shipped targets: a consumer's app has its own identity.
 	-->
 	<PropertyGroup Condition="'$(ApplicationIcon)' == '' and ('$(OutputType)' == 'WinExe' or '$(OutputType)' == 'Exe')">
 		<ApplicationIcon>$(MSBuildThisFileDirectory)AOTrino.ico</ApplicationIcon>
 	</PropertyGroup>
 
 	<!--
-	  Every sample can be published for any of the three architectures (publish.bat does all of them), and this
-	  is what makes one restore cover all three: project.assets.json only carries the RIDs the project declares,
-	  so without this, publishing win-arm64 fails with NETSDK1047 ("assets file doesn't have a target for
-	  .../win-arm64") unless something restored for that exact RID immediately before - which NuGet is free to
-	  skip when it decides the restore is up to date.
-	  Set here rather than in Directory.Build.props because OutputType isn't known that early, and set rather than
-	  defaulted because something upstream already leaves RuntimeIdentifiers as ";win-x64" - so a
-	  Condition="'$(RuntimeIdentifiers)' == ''" silently never fires and only x64 can be published.
+	  Every sample can be published for any of the three architectures (publish.bat does all of them),
+	  and this is what makes one restore cover all three: project.assets.json only carries the RIDs the project declares,
+	  so without this,
+	  publishing win-arm64 fails with NETSDK1047 ("assets file doesn't have a target for ../win-arm64") unless something restored for that exact RID immediately before,
+	  which NuGet is free to skip when it decides the restore is up to date.
+	  Set here rather than in Directory.Build.props because OutputType isn't known that early,
+	  and set rather than defaulted because something upstream already leaves RuntimeIdentifiers as ";win-x64",
+	  so a Condition="'$(RuntimeIdentifiers)' == ''" silently never fires and only x64 can be published.
 
-	  Scoped to .csproj, not to OutputType: the npm .esproj projects in this solution report OutputType=exe and
-	  TargetFramework=net6.0 (their JavaScript SDK's own defaults), so keying off OutputType handed them three
-	  RIDs to restore and Visual Studio stopped with "Your project does not reference '.NETCoreApp,Version=v6.0'".
+	  Scoped to .csproj,
+	  not to OutputType: the npm .esproj projects in this solution report OutputType=exe and TargetFramework=net6.0 (their JavaScript SDK's own defaults),
+	  so keying off OutputType handed them three RIDs to restore and Visual Studio stopped with "Your project does not reference '.NETCoreApp,Version=v6.0'".
 	  They are not something anyone publishes.
 	-->
 	<PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj' and ('$(OutputType)' == 'WinExe' or '$(OutputType)' == 'Exe')">
@@ -89,9 +88,9 @@
 	</PropertyGroup>
 
 	<!--
-	  The shipped targets install a project's front end themselves (AOTrinoNpmInstall). This repo doesn't want
-	  that: node_modules is one workspace shared by every npm sample, and installing it per project in parallel
-	  collided on the workspace symlinks (EEXIST). AOTrino.Npm.proj does it once instead - see below.
+	  The shipped targets install a project's front end themselves (AOTrinoNpmInstall).
+	  This repo doesn't want that: node_modules is one workspace shared by every npm sample,
+	  and installing it per project in parallel collided on the workspace symlinks (EEXIST). AOTrino.Npm.proj does it once instead, see below.
 	-->
 	<PropertyGroup>
 		<AOTrinoNpmInstall>false</AOTrinoNpmInstall>
@@ -101,16 +100,15 @@
 	  Replaces the shipped AOTrinoNpmBuild (a plain "npm run build") for this repo only: same target name,
 	  defined after the import, so this one wins.
 
-	  The difference is the workspace. The repo-root package.json declares npm workspaces, which link @aotrino/*
-	  into node_modules as symlinks: no registry, no publishing, and the front end resolves "@aotrino/client"
-	  normally. A consumer has no workspace - it installs the @aotrino/* tarballs like any other dependency, so
-	  the shipped target only has to run their own build.
+	  The difference is the workspace. The repo-root package.json declares npm workspaces,
+	  which link @aotrino/* into node_modules as symlinks: no registry, no publishing, and the front end resolves "@aotrino/client" normally.
+	  A consumer has no workspace, it installs the @aotrino/* tarballs like any other dependency,
+	  so the shipped target only has to run their own build.
 
-	  node_modules and the @aotrino/* libraries belong to the whole solution, not to one project, so they live in
-	  AOTrino.Npm.proj. Calling it through the MSBuild task (rather than a ProjectReference) runs it at exactly
-	  this point in the build, and MSBuild still caches the result per project+targets, so with several npm
-	  samples building in parallel it executes once. Doing the npm work per-project raced: two installs collided
-	  on the workspace symlinks (EEXIST) and two compilers wrote one dist.
+	  node_modules and the @aotrino/* libraries belong to the whole solution, not to one project, so they live in AOTrino.Npm.proj.
+	  Calling it through the MSBuild task (rather than a ProjectReference) runs it at exactly this point in the build,
+	  and MSBuild still caches the result per project+targets, so with several npm samples building in parallel it executes once.
+	  Doing the npm work per-project raced: two installs collided on the workspace symlinks (EEXIST) and two compilers wrote one dist.
 	-->
 	<Target Name="AOTrinoNpmBuild"
 			BeforeTargets="AOTrinoEmbedWebRoot"

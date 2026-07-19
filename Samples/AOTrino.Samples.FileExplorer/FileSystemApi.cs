@@ -6,10 +6,10 @@ namespace AOTrino.Samples.FileExplorer;
 [System.Runtime.InteropServices.Marshalling.GeneratedComClass]
 public partial class FileSystemApi : DispatchObject
 {
-    // bridge invokes members on the instance, so they stay instance members even without instance state
-#pragma warning disable CA1822 // Mark members as static
+    // bridge invokes members on the instance, so they stay instance members even without instance state.
+#pragma warning disable CA1822 // Mark members as static.
 
-    // the folder the browser opens on
+    // the folder the browser opens on.
     public string GetHome() => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
     // list a folder (empty/null path lists the drive roots). returns DirListing as JSON.
@@ -33,7 +33,7 @@ public partial class FileSystemApi : DispatchObject
                 .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
                 .Select(f => new DirEntry(f.Name, f.FullName, false, f.Length, Stamp(f.LastWriteTime)));
 
-            // empty parent = back to the drives root; the JS "Up" button navigates there
+            // empty parent = back to the drives root, the JS "Up" button navigates there.
             var parent = Directory.GetParent(full)?.FullName ?? string.Empty;
             return Serialize(new DirListing(full, parent, null, [.. dirs, .. files]));
         }
@@ -43,14 +43,14 @@ public partial class FileSystemApi : DispatchObject
         }
     }
 
-    // open a file with its default app (folders are browsed in-app via List, not opened here)
+    // open a file with its default app (folders are browsed in-app via List, not opened here).
     public bool Open(string path)
     {
         Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
         return true;
     }
 
-    // open the given folder in Windows File Explorer
+    // open the given folder in Windows File Explorer.
     public bool RevealInExplorer(string path)
     {
         Process.Start(new ProcessStartInfo { FileName = "explorer.exe", Arguments = $"\"{path}\"", UseShellExecute = true });

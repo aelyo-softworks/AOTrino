@@ -23,7 +23,7 @@ public class AOTrinoPaths
     public string ConfigurationDirectoryPath { get; }
     public string WebView2UserDataPath { get; }
 
-    // WebRoot resources are versioned so an app update re-extracts a fresh copy
+    // WebRoot resources are versioned so an app update re-extracts a fresh copy.
     public string WebRootPath { get; }
     public string WebRootDistPath { get; }
 }

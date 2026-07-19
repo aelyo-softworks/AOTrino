@@ -1,11 +1,11 @@
 namespace AOTrino;
 
-// extracts the embedded front-end (resources whose logical name starts with "WebRoot\") from an
-// assembly to a versioned folder on disk, so the WebView can navigate to it as a local file.
+// extracts the embedded front-end (resources whose logical name starts with "WebRoot\") from an assembly to a versioned folder on disk,
+// so the WebView can navigate to it as a local file.
 // instance (not static) so two apps in one process don't share extraction state (owned by AOTrinoApplication).
 public class WebRoot
 {
-    // public: a window that serves the WebRoot from a virtual host builds its own start URL from it
+    // public: a window that serves the WebRoot from a virtual host builds its own start URL from it.
     public const string IndexFileName = "index.html";
 
     private const string _prefix = @"WebRoot\";
@@ -53,9 +53,9 @@ public class WebRoot
             return;
         }
 
-        // the cache key is a hash of the embedded content itself, not the folder/version name: an incremental
-        // build that re-embeds a changed WebRoot (same assembly version) still produces a new signature, so the
-        // edit is always re-extracted. keying on the version folder alone served a stale copy without a full rebuild.
+        // the cache key is a hash of the embedded content itself,
+        // not the folder/version name: an incremental build that re-embeds a changed WebRoot (same assembly version) still produces a new signature,
+        // so the edit is always re-extracted. keying on the version folder alone served a stale copy without a full rebuild.
         var signature = ComputeSignature(names);
         var signaturePath = Path.Combine(_paths.WebRootPath, _signatureFileName);
         if (!forceRefresh && File.Exists(signaturePath) && File.ReadAllText(signaturePath) == signature)
@@ -65,7 +65,7 @@ public class WebRoot
             return;
         }
 
-        // wipe every extracted version, then extract the current one
+        // wipe every extracted version, then extract the current one.
         var parent = Path.GetDirectoryName(_paths.WebRootPath);
         if (parent != null && Directory.Exists(parent))
         {

@@ -12,7 +12,8 @@ public partial class MainWindow : AOTrinoWindow
     }
 
     // Vite emits ES modules, and a file:// page has an opaque origin that CORS-blocks them.
-    // a virtual host gives the page a real https origin: modules load, localStorage (the theme choice) survives a restart, and no browser security flag is involved.
+    // a virtual host gives the page a real https origin: modules load, localStorage (the theme choice) survives a restart,
+    // and no browser security flag is involved.
     // see docs/SECURITY.md.
     protected override string? VirtualHostName => "aotrino.example";
 

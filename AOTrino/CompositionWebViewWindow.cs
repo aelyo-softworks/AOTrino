@@ -1,7 +1,8 @@
 namespace AOTrino;
 
 // hosts the WebView as ONE visual in a Windows.UI.Composition tree (ICoreWebView2CompositionController + RootVisualTarget).
-// the window is a NoRedirectionBitmap composition window, so the WebView composes with any other visuals you add to RootVisual, and can be transformed/animated/effected like any layer.
+// the window is a NoRedirectionBitmap composition window, so the WebView composes with any other visuals you add to RootVisual,
+// and can be transformed/animated/effected like any layer.
 // because a composition-hosted WebView receives no OS input, this class forwards mouse/pointer input to it.
 [System.Runtime.InteropServices.Marshalling.GeneratedComClass]
 public partial class CompositionWebViewWindow : WebViewWindow, IDropTarget
@@ -21,7 +22,7 @@ public partial class CompositionWebViewWindow : WebViewWindow, IDropTarget
         DoUseDirect2D = UseDirect2D;
         if (DoUseDirect2D)
         {
-            DeviceCreateFlags |= D3D11_CREATE_DEVICE_FLAG.D3D11_CREATE_DEVICE_BGRA_SUPPORT; // need Direct2D support
+            DeviceCreateFlags |= D3D11_CREATE_DEVICE_FLAG.D3D11_CREATE_DEVICE_BGRA_SUPPORT; // need Direct2D support.
         }
 
         CompositorController = new CompositorController();
@@ -39,8 +40,8 @@ public partial class CompositionWebViewWindow : WebViewWindow, IDropTarget
     public CompositorController CompositorController { get; }
     public SpriteVisual RootVisual { get; }
     public Compositor Compositor => CompositorController.Compositor;
-    public CompositionGraphicsDevice? GraphicsDevice { get; private set; } // not null after device resources are created
-    public IComObject<ID2D1Device>? D2D1Device { get; private set; }       // not null when UseDirect2D, after device resources are created
+    public CompositionGraphicsDevice? GraphicsDevice { get; private set; } // not null after device resources are created.
+    public IComObject<ID2D1Device>? D2D1Device { get; private set; } // not null when UseDirect2D, after device resources are created.
 
     protected ComObject<ICoreWebView2CompositionController>? Controller => _controller;
     protected bool DoUseDirect2D { get; }
@@ -87,7 +88,7 @@ public partial class CompositionWebViewWindow : WebViewWindow, IDropTarget
         })).ThrowOnError();
     }
 
-    // a composition-hosted WebView gets no OS input; inject it via the composition controller
+    // a composition-hosted WebView gets no OS input, inject it via the composition controller.
     protected override void ForwardMouseInput(COREWEBVIEW2_MOUSE_EVENT_KIND kind, COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS keys, uint data, POINT point)
         => _controller?.Object.SendMouseInput(kind, keys, data, point).ThrowOnError();
 
@@ -130,7 +131,7 @@ public partial class CompositionWebViewWindow : WebViewWindow, IDropTarget
         object? device;
         if (DoUseDirect2D)
         {
-            // a D2D device is needed for the composition graphics device (ICompositionDrawingSurfaceInterop.BeginDraw)
+            // a D2D device is needed for the composition graphics device (ICompositionDrawingSurfaceInterop.BeginDraw).
             using var fac = D2D1Functions.D2D1CreateFactory1();
             D2D1Device = fac.CreateDevice(Device.As<IDXGIDevice>()!);
             device = D2D1Device.Object;
@@ -175,8 +176,8 @@ public partial class CompositionWebViewWindow : WebViewWindow, IDropTarget
 
             if (value)
             {
-                // we need to ensure this as STAThread doesn't always call it for some reason
-                DirectNFunctions.OleInitialize(0); // don't check error
+                // we need to ensure this as STAThread doesn't always call it for some reason.
+                DirectNFunctions.OleInitialize(0); // don't check error.
                 var hr = DirectNFunctions.RegisterDragDrop(Handle, this);
                 if (hr.IsError && hr != DirectNConstants.DRAGDROP_E_ALREADYREGISTERED)
                     throw new Exception("Cannot enable drag & drop operations. Make sure the thread is initialized as an STA thread.", Marshal.GetExceptionForHR((int)hr)!);
@@ -224,7 +225,7 @@ public partial class CompositionWebViewWindow : WebViewWindow, IDropTarget
     {
         if (disposing)
         {
-            DetachController(); // before disposing the controller: teardown focus/size messages must not hit it
+            DetachController(); // before disposing the controller: teardown focus/size messages must not hit it.
 
             if (_cursorChangedToken.value != 0)
             {

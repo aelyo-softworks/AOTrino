@@ -16,6 +16,6 @@ public partial class MainWindow : AOTrinoWindow
     protected override string? VirtualHostName => "aotrino.example";
 
     // the page reaches this as chrome.webview.hostObjects.dotnet,
-    // typed on the TS side by the DemoApi interface in WebRoot/src/api.ts (see @aotrino/client's host<T>())
+    // typed on the TS side by the DemoApi interface in WebRoot/src/api.ts (see @aotrino/client's host<T>()).
     protected override void RegisterHostObjects() => AddHostObject("dotnet", new DemoApi(this));
 }

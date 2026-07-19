@@ -3,11 +3,11 @@
 Typed access to the AOTrino host from the page: window controls, .NET host objects, shared buffers and messages.
 
 This package **adds no runtime**. AOTrino's C# side already injects `window.__aotrino` into every page
-(`WebViewWindow.EnsureSharedRuntime`); this is a typed facade over it plus the WebView2 host-object bridge.
-That is deliberate — the runtime ships inside the executable, so there is nothing here that can drift out of
+(`WebViewWindow.EnsureSharedRuntime`), this is a typed facade over it plus the WebView2 host-object bridge.
+That is deliberate, the runtime ships inside the executable, so there is nothing here that can drift out of
 sync with it beyond the type shape.
 
-It is **not published to npm**. Samples in this repo resolve it through npm workspaces; see
+It is **not published to npm**. Samples in this repo resolve it through npm workspaces, see
 [docs/FRONTEND.md](../../docs/FRONTEND.md) for how it is consumed and eventually shipped.
 
 ## Host objects
@@ -30,12 +30,12 @@ const api = host<DemoApi>();        // "dotnet" by default
 
 await api.ping();                   // Promise<string>
 await api.add(2, 3);                // Promise<number>
-await api.machineName;              // Promise<string> — property reads are async too
+await api.machineName;              // Promise<string>, property reads are async too
 ```
 
 Every member is asynchronous through the bridge: methods return a `Promise`, and so do property reads.
 `hostSync<T>()` gives the blocking proxy (`chrome.webview.hostObjects.sync`) where members behave like plain
-JS — it stalls the page until .NET answers, so prefer `host<T>()`.
+JS, it stalls the page until .NET answers, so prefer `host<T>()`.
 
 ## Window controls
 

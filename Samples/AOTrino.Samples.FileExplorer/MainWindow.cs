@@ -14,7 +14,7 @@ public partial class MainWindow : AOTrinoWindow
     {
     }
 
-    // expose the file-system backend to JS as chrome.webview.hostObjects.fs
+    // expose the file-system backend to JS as chrome.webview.hostObjects.fs.
     protected override void RegisterHostObjects()
     {
         AddHostObject("fs", new FileSystemApi());
@@ -38,8 +38,8 @@ public partial class MainWindow : AOTrinoWindow
     }
 
     // the preview pane loads local files (file://) in an <iframe>; allow a file:// page to reach other local files.
-    // safe here: the window stays Local (it never loads remote content) and this is the developer's
-    // explicit environment choice, exactly where docs/SECURITY.md says the trust decision belongs.
+    // safe here: the window stays Local (it never loads remote content) and this is the developer's explicit environment choice,
+    // exactly where docs/SECURITY.md says the trust decision belongs.
     protected override CoreWebView2EnvironmentOptions? GetEnvironmentOptions()
     {
         var options = new CoreWebView2EnvironmentOptions();
