@@ -28,8 +28,16 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<!-- every sample, found rather than listed: a new sample joins the drop by existing -->
-		<SampleProject Include="$(MSBuildThisFileDirectory)Samples\*\*.csproj" />
+		<!--
+		  every sample, found rather than listed: a new sample joins the drop by existing.
+
+		  the one exclusion is a Blazor WebAssembly front end, "*.Wasm.csproj": it targets browser-wasm rather than
+		  Windows, so publishing it for win-x86 stops with NETSDK1032, and it is not a standalone app in any case.
+		  its host project publishes it itself, embedded, which is also why the solution marks it Build="false".
+		  the shared source project is a .shproj, and this .csproj glob never sees it.
+		-->
+		<SampleProject Include="$(MSBuildThisFileDirectory)Samples\*\*.csproj"
+					   Exclude="$(MSBuildThisFileDirectory)Samples\*\*.Wasm.csproj" />
 
 		<!-- a RID and the Platform that goes with it: the samples declare x86;x64;ARM64 and no AnyCPU, so
 		     publishing win-arm64 as x64 would compile the wrong thing (or fail to find the platform at all).
