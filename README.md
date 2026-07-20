@@ -151,7 +151,7 @@ Note: for AOT, ensure you have all the required prerequisites, documented at htt
 
 ## Samples
 
-Twelve of them, in [Samples](Samples), each one is a single idea. The level each is written at is noted: most
+Fourteen of them, in [Samples](Samples), each one is a single idea. The level each is written at is noted: most
 need **no npm at all**.
 
 ### Hello World
@@ -207,7 +207,9 @@ explains why that's worth being deliberate about. Takes `--url`.
 ### File Explorer
 
 *Plain HTML.* A local file browser over a host object, with a preview pane: what "a desktop app, not a web
-page" actually buys. Also where `SystemInfo` is demonstrated.
+page" actually buys. **Drag files out to Explorer and drop them back in**, which a page can do in neither
+direction, and dropping copies into the folder on screen with real paths rather than `File` objects. Also where
+`SystemInfo` is demonstrated.
 
 ![File Explorer](docs/images/file-explorer.png)
 
@@ -239,12 +241,34 @@ produced it. Includes a table of **500,000 rows** that lives in .NET and crosses
 
 ![FluentUI Gallery](docs/images/fluentui-gallery.png)
 
+### Localization
+
+*Plain HTML.* Every string in the window, the page and the caption alike, comes from a `.resx` compiled into the
+executable, and a combo switches language with nothing restarting. It also shows the negotiation
+a page cannot do for itself: the ordered list of languages the user chose in Windows, and the best match the app
+can actually serve from it.
+
+![Localization](docs/images/localization.png)
+
+### Blazor · DiskMap
+
+*Blazor WebAssembly.* C# on both sides of the bridge, wasm in the page and Native AOT in the host, with the
+DTOs and the source-generated JSON in one shared source project, so the two cannot disagree about the wire
+format. It scans a drive by walking it, or by reading the NTFS **master file table** in seconds when it is
+elevated, and draws the result as a **full depth treemap**, every directory on the drive, tens of thousands of
+tiles redrawn while the scan is still growing the tree. That map is Direct2D into a shared buffer rather than
+DOM, and the reason is worth reading in `Treemap.cs`: the drawing is not the hard part, carrying that many
+rectangles across the bridge every frame is.
+
+![Blazor DiskMap](docs/images/blazor-diskmap.png)
+
 ## Documentation
 
 * [Architecture and maintenance](docs/MAINTENANCE.md), what the repo is made of, where every version lives, what to do weekly/monthly/every six months, and the traps.
 * [Security model](docs/SECURITY.md), what the defaults are (local-first, `NavigationMode`), what they aren't, and where the decisions stay yours.
 * [The bridge](docs/BRIDGE.md), how JS calls .NET and back: host objects, what crosses, async results, exceptions, and the escape hatch.
 * [Front end](docs/FRONTEND.md), hand-written pages need nothing, the optional `@aotrino/client` types the bridge for React/TypeScript apps, without a registry.
+* [Localization](docs/LOCALIZATION.md), one place where a string is written, whatever the front end is made of, and why the catalog crosses the bridge instead of each string.
 * [Theming](docs/THEMING.md), light/dark that follows Windows, picked from the caption and remembered, what the `FluentUI` samples get for two lines, and how to change it.
 
 ## Building this repo

@@ -1,0 +1,3 @@
+# Visual Studio recreates launchSettings.json (dev server and IIS Express profiles) whenever the project
+# is opened or run. this front end is only ever embedded, so those profiles mean nothing here and never belong in the repo.
+Properties/

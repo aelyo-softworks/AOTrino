@@ -103,6 +103,9 @@ public partial class SystemInfo : DispatchObject
         ["currentUI"] = CultureInfo.CurrentUICulture.Name,
         // the language Windows itself was installed in, which is not necessarily the two above.
         ["installedUI"] = CultureInfo.InstalledUICulture.Name,
+        // the languages the user chose, in the order they chose them, fallbacks included.
+        // a page sees one locale in navigator.language and none of this ordering, see Localization.
+        ["preferredUI"] = new JsonArray([.. CultureUtilities.GetUserPreferredUILanguages()]),
     };
 
     protected virtual JsonObject BuildInput()

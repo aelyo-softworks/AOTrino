@@ -5,6 +5,15 @@
     <Platform Name="x86" />
   </Configurations>
   <Folder Name="/Samples/">
+    <Project Path="Samples/AOTrino.Samples.Blazor.DiskMap/AOTrino.Samples.Blazor.DiskMap.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="Samples/AOTrino.Samples.Blazor.DiskMap.Shared/AOTrino.Samples.Blazor.DiskMap.Shared.shproj" />
+    <Project Path="Samples/AOTrino.Samples.Blazor.DiskMap.Wasm/AOTrino.Samples.Blazor.DiskMap.Wasm.csproj">
+      <Platform Project="AnyCPU" />
+    </Project>
     <Project Path="Samples/AOTrino.Samples.CaptureScreen/AOTrino.Samples.CaptureScreen.csproj">
       <Platform Solution="*|ARM64" Project="ARM64" />
       <Platform Solution="*|x64" Project="x64" />
@@ -36,6 +45,11 @@
       <Platform Solution="*|x86" Project="x86" />
     </Project>
     <Project Path="Samples/AOTrino.Samples.HelloWorld/AOTrino.Samples.HelloWorld.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="Samples/AOTrino.Samples.Localization/AOTrino.Samples.Localization.csproj">
       <Platform Solution="*|ARM64" Project="ARM64" />
       <Platform Solution="*|x64" Project="x64" />
       <Platform Solution="*|x86" Project="x86" />

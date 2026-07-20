@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<!--
+    Shown in place of the browser's own failure page when a navigation fails, see WebViewWindow.GetNavigationErrorPage.
+    Tokens in braces are replaced before this is handed to NavigateToString.
+
+    Self contained on purpose. Whatever just failed to load, this page must not need anything loaded to display itself,
+    so there is no external stylesheet, font or image here, and there must never be one.
+-->
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>{title}</title>
+    <style>
+        /*
+            The Windows app theme, which WebView2 maps onto prefers-color-scheme.
+            This page can appear before an app has applied any theme of its own, so it carries both.
+        */
+        :root {
+            color-scheme: light dark;
+            --text: #14171a;
+            --dim: #5f6368;
+            --surface: #ffffff;
+            --line: rgba(0, 0, 0, 0.12);
+            --code: rgba(0, 0, 0, 0.05);
+            --accent: #c5221f;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --text: #f3f5f7;
+                --dim: #9aa0a6;
+                --surface: #1b1c1f;
+                --line: rgba(255, 255, 255, 0.14);
+                --code: rgba(255, 255, 255, 0.07);
+                --accent: #ff8a80;
+            }
+        }
+
+        html, body {
+            margin: 0;
+            height: 100%;
+            background: var(--surface);
+            color: var(--text);
+            font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+            font-size: 14px;
+            line-height: 1.55;
+        }
+
+        main {
+            box-sizing: border-box;
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 12vh 32px 32px;
+        }
+
+        h1 {
+            font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0 0 6px;
+        }
+
+        p {
+            margin: 0 0 14px;
+            color: var(--dim);
+        }
+
+        .bar {
+            width: 34px;
+            height: 3px;
+            border-radius: 2px;
+            background: var(--accent);
+            margin-bottom: 18px;
+        }
+
+        .detail {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-top: 22px;
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            padding: 3px 0;
+        }
+
+        .label {
+            flex: 0 0 78px;
+            color: var(--dim);
+        }
+
+        .value {
+            flex: 1;
+            min-width: 0;
+            font-family: Consolas, "Cascadia Mono", monospace;
+            font-size: 12.5px;
+            overflow-wrap: anywhere;
+            user-select: text;
+        }
+
+        .hint {
+            margin-top: 22px;
+            padding: 12px 14px;
+            border-radius: 8px;
+            background: var(--code);
+            color: var(--text);
+        }
+
+            .hint p:last-child {
+                margin-bottom: 0;
+            }
+
+        .app {
+            margin-top: 26px;
+            color: var(--dim);
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="bar"></div>
+        <h1>{title}</h1>
+        <p>{message}</p>
+
+        <div class="detail">
+            <div class="row"><span class="label">Address</span><span class="value">{url}</span></div>
+            <div class="row"><span class="label">Reason</span><span class="value">{status}</span></div>
+        </div>
+
+        {hint}
+
+        <div class="app">{app}</div>
+    </main>
+</body>
+</html>

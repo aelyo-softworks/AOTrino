@@ -1,0 +1,5 @@
+<Project>
+
+	<!-- see Directory.Build.props next to this file, this stops the repo-wide targets from reaching the wasm project. -->
+
+</Project>

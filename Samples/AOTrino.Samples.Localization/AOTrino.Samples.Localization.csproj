@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<PublishAot>true</PublishAot>
+		<RootNamespace>AOTrino.Samples.Localization</RootNamespace>
+
+		<!-- opt in to AOTrino's WebRoot embedding (see Directory.Build.targets) -->
+		<AOTrinoEmbedWebRoot>true</AOTrinoEmbedWebRoot>
+
+		<!--
+			The language the strings are written in, the one that lives in the main assembly rather than in a
+			satellite. Declaring it stops the runtime looking for an en satellite that will never exist.
+		-->
+		<NeutralLanguage>en</NeutralLanguage>
+
+		<Title>AOTrino Samples - Localization</Title>
+		<AssemblyTitle>AOTrino Samples - Localization</AssemblyTitle>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Using Include="AOTrino" />
+		<Using Include="AOTrino.Bridge" />
+		<Using Include="AOTrino.Input" />
+		<Using Include="AOTrino.Utilities" />
+		<Using Include="DirectN.Extensions.Utilities" />
+		<Using Include="System" />
+		<Using Include="System.Collections.Generic" />
+		<Using Include="System.Globalization" />
+		<Using Include="System.Linq" />
+		<Using Include="System.Reflection" />
+		<Using Include="System.Resources" />
+		<Using Include="System.Text.Json.Nodes" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\AOTrino\AOTrino.csproj" />
+	</ItemGroup>
+
+	<!--
+		Strings.resx and Strings.fr.resx are picked up as embedded resources by the SDK with no entry here,
+		and the French one becomes a satellite assembly beside the executable, fr\<app>.resources.dll,
+		which survives a Native AOT publish.
+		There is no generated designer class, the sample reads them through a ResourceManager by name,
+		which is also what lets the whole catalog be enumerated for the front end.
+	-->
+
+</Project>

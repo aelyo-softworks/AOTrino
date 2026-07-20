@@ -25,6 +25,8 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     private int _lastPointerDownPositionY = int.MinValue;
     private WebView2.EventRegistrationToken _navigationStarting;
     private WebView2.EventRegistrationToken _navigationCompleted;
+    private bool _navigationErrorShown;
+    private FileDropTarget? _dropTarget;
 
     public event EventHandler<MouseEventArgs>? MouseMove;
     public event EventHandler<MouseEventArgs>? MouseLeave;
@@ -47,6 +49,8 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     public event EventHandler<NavigationEventArgs>? NavigationCompleted;
     // raw JSON of messages posted from the page (window.__aotrino.post / chrome.webview.postMessage).
     public event EventHandler<ValueEventArgs<string>>? WebMessageJsonReceived;
+    // files dropped on the window from Explorer, with their real paths. see AcceptsFileDrops.
+    public event EventHandler<FileDropEventArgs>? FilesDropped;
 
     protected WebViewWindow(
         string? title = null,
@@ -94,6 +98,8 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
                     CreateController(env3, () =>
                     {
                         WireNavigationEvents();
+                        ApplySettings(); // before ControllerCreated, which is where an app navigates.
+                        RegisterFileDrops();
                         ControllerCreated();
                     });
                 }
@@ -114,10 +120,96 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     internal ComObject<ICoreWebView2Environment12>? SharedEnvironment => _environment;
     internal ComObject<ICoreWebView2_17>? SharedWebView => _webView;
 
+    // whether Explorer may drop files on this window.
+    //
+    // off by default, because registering a drop target changes what the cursor does over the whole window,
+    // and a window that would ignore a drop should not invite one.
+    // a window that turns it on handles OnFilesDropped, or subscribes to FilesDropped, and gets real paths:
+    // an HTML5 drop in the page gives a File, its bytes and its name, and never where it came from.
+    protected virtual bool AcceptsFileDrops => false;
+
+    // what this window would do with what is being dragged over it, out of what the source allows.
+    // copy by default, which is what Explorer offers for a file dragged to another program.
+    // override to refuse some drags, return DROPEFFECT_NONE and the cursor says so before the button is released.
+    protected internal virtual DROPEFFECT GetFileDropEffect(DROPEFFECT allowedEffects) =>
+        allowedEffects.HasFlag(DROPEFFECT.DROPEFFECT_COPY) ? DROPEFFECT.DROPEFFECT_COPY : DROPEFFECT.DROPEFFECT_NONE;
+
+    protected internal virtual void OnFilesDropped(FileDropEventArgs e) => FilesDropped?.Invoke(this, e);
+
+    // registered once the controller exists rather than in the constructor, so that AcceptsFileDrops is read
+    // after the deriving class has finished constructing itself and its override can depend on its own fields.
+    private void RegisterFileDrops()
+    {
+        if (!AcceptsFileDrops)
+            return;
+
+        try
+        {
+            // OLE rather than plain COM: RegisterDragDrop needs the OLE apartment.
+            // it is reference counted, so asking for it on a thread that already has it costs nothing.
+            DirectNFunctions.OleInitialize(0);
+            var target = new FileDropTarget(this);
+            DirectNFunctions.RegisterDragDrop(Handle, target).ThrowOnError();
+            _dropTarget = target;
+        }
+        catch (Exception ex)
+        {
+            // a window that cannot accept drops is still a window, it just does not light up for one.
+            AOTrinoApplication.Current?.TraceWarning($"File drops could not be enabled: {ex.Message}");
+        }
+    }
+
     public HMONITOR MonitorHandle { get; private set; }
     public bool IsFullScreen => GetFullScreenBounds() == WindowRect;
     public virtual bool CanChangeCursor { get; set; } = true;
     public virtual bool SendDoubleClicks { get; set; } // WebView2 doesn't seem to care (chrome uses UP & DOWN events by itself).
+
+    // WebView2 ships with the behaviours of a browser, because it is one.
+    // Most of them are wrong in an app window, where there is no address bar to explain them and nothing for them to act on:
+    // Reload on a page that is the app itself reads as the app resetting, and View source offers to show a user the
+    // front end of the program they are running.
+    // So the defaults here are the ones an app wants, and a window that really is a browser turns them back on,
+    // which is what AOTrinoWindow does for NavigationMode.Web.
+    //
+    // Each is a separate virtual so a window can change one without knowing any COM, and ConfigureSettings below
+    // is the escape hatch for everything not surfaced here.
+
+    // the right-click menu, with Back, Reload, Save as and View source. an app that wants a context menu
+    // almost always wants its own, in the page.
+    protected virtual bool AreDefaultContextMenusEnabled => false;
+
+    // the little strip that appears over the bottom left corner with the target of the link under the pointer.
+    protected virtual bool IsStatusBarEnabled => false;
+
+    // F12, and the context menu entry when that is enabled.
+    // left on, because being able to open the tools on a window that misbehaves is worth more during development
+    // than hiding them is worth in a shipped app, and an app that disagrees sets this to false.
+    protected virtual bool AreDevToolsEnabled =>
+#if DEBUG
+        true;
+#else
+        false;
+#endif
+
+    // Ctrl+R and F5 to reload, Ctrl+P to print, Ctrl+F to find, and the rest of the browser's own keys.
+    // off, because reloading an app window is not a thing the app asked to support: state in the page is lost
+    // and it looks like a crash. this leaves editing keys, Ctrl+C and Ctrl+V and so on, untouched.
+    protected virtual bool AreBrowserAcceleratorKeysEnabled => false;
+
+    // the browser's own failure page. off, because AOTrino replaces it with one that speaks about the app
+    // rather than about a web site, see GetNavigationErrorPage. Leaving it on shows Edge's page first,
+    // for as long as it takes the replacement to navigate, which reads as a flicker of something being wrong.
+    protected virtual bool IsBuiltInErrorPageEnabled => false;
+
+
+    // when a navigation fails the WebView shows the browser's own failure page, which is written for someone
+    // browsing the web: it says a site cannot be reached and offers to retry.
+    // in an app whose content is embedded in its own executable that is misleading in both halves,
+    // there is no site, and retrying cannot help. ERR_FILE_NOT_FOUND on a page nobody typed reads as a broken app
+    // rather than as what it nearly always is, which is content that was never embedded.
+    //
+    // set this to false to keep the browser's page, which is what a window that browses the real web wants.
+    protected virtual bool ReplacesNavigationErrorPage => true;
 
     // create the WebView2 controller (composition or HWND). the implementation must, once its controller is ready,
     // call SetWebViewController(controller, coreWebView2) and then invoke onControllerReady.
@@ -129,6 +221,8 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
 
     // forward a pointer event to a composition-hosted WebView. return true if handled (consumed). HWND: no-op.
     protected virtual bool TryForwardPointerInput(uint msg, WPARAM wParam, LPARAM lParam) => false;
+
+    protected virtual bool ExcludeFromCapture() => DirectNFunctions.SetWindowDisplayAffinity(Handle, WINDOW_DISPLAY_AFFINITY.WDA_EXCLUDEFROMCAPTURE);
 
     // called by a subclass from CreateController once its controller and core WebView are available.
     protected void SetWebViewController(ICoreWebView2Controller controller, ICoreWebView2 webView)
@@ -189,8 +283,50 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
 
                 _navigationEvents.Remove(id);
                 OnNavigationCompleted(this, e);
+
+                if (e.IsSuccess)
+                {
+                    _navigationErrorShown = false;
+                }
+                else
+                {
+                    ReplaceNavigationErrorPage(e);
+                }
             }
         }), ref _navigationCompleted).ThrowOnError();
+    }
+
+    // everything else on ICoreWebView2Settings, zoom, pinch zoom, swipe navigation, autofill, script dialogs.
+    // cast to a later revision of the interface for the newer ones, they are all on the same object.
+    protected virtual void ConfigureSettings(ICoreWebView2Settings settings)
+    {
+    }
+
+    protected virtual void ApplySettings()
+    {
+        var webView = _webView;
+        if (webView == null)
+            return;
+
+        try
+        {
+            webView.Object.get_Settings(out var settings).ThrowOnError();
+
+            settings.put_AreDefaultContextMenusEnabled(AreDefaultContextMenusEnabled).ThrowOnError();
+            settings.put_IsStatusBarEnabled(IsStatusBarEnabled).ThrowOnError();
+            settings.put_AreDevToolsEnabled(AreDevToolsEnabled).ThrowOnError();
+            settings.put_IsBuiltInErrorPageEnabled(IsBuiltInErrorPageEnabled).ThrowOnError();
+
+            // the accelerator keys arrived in the third revision of this interface,
+            // which is far older than the ICoreWebView2_17 this window already requires
+            ((ICoreWebView2Settings3)settings).put_AreBrowserAcceleratorKeysEnabled(AreBrowserAcceleratorKeysEnabled).ThrowOnError();
+
+            ConfigureSettings(settings);
+        }
+        catch (Exception ex)
+        {
+            AOTrinoApplication.Current?.TraceWarning($"The WebView settings could not be applied: {ex.Message}");
+        }
     }
 
     // the folder of a specific WebView2 runtime to use instead of the machine's evergreen runtime "Fixed Version".
@@ -259,6 +395,104 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         var webView = _webView ?? throw new InvalidOperationException();
         webView.Object.NavigateToString(PWSTR.From(html)).ThrowOnError();
     }
+
+    // whether a uri is the app's own content rather than somewhere on the web,
+    // which decides whether the page explains the app's own likely causes or simply reports what happened.
+    protected virtual bool IsAppContentUri(string uri)
+    {
+        if (string.IsNullOrEmpty(uri))
+            return false;
+
+        if (!Uri.TryCreate(uri, UriKind.Absolute, out var parsed))
+            return false;
+
+        return parsed.IsFile;
+    }
+
+    private void ReplaceNavigationErrorPage(NavigationEventArgs e)
+    {
+        // a cancelled navigation is not a failure worth a page. NavigationMode.Local cancels off-app navigations
+        // by design, and a link that turns into a download completes the same way.
+        // the flag is what keeps a failure of this page itself from replacing itself forever.
+        if (!ReplacesNavigationErrorPage || _navigationErrorShown)
+            return;
+
+        if (e.WebErrorStatus == COREWEBVIEW2_WEB_ERROR_STATUS.COREWEBVIEW2_WEB_ERROR_STATUS_OPERATION_CANCELED)
+            return;
+
+        try
+        {
+            _navigationErrorShown = true;
+            NavigateToString(GetNavigationErrorPage(e));
+        }
+        catch (Exception ex)
+        {
+            // failing to show the failure page leaves the browser's own, which is the thing this replaces,
+            // so there is nothing to do but say so.
+            AOTrinoApplication.Current?.TraceWarning($"The navigation error page could not be shown: {ex.Message}");
+        }
+    }
+
+    // override to word it differently, or to return a page of your own.
+    protected virtual string GetNavigationErrorPage(NavigationEventArgs e)
+    {
+        ArgumentNullException.ThrowIfNull(e);
+
+        var isApp = IsAppContentUri(e.Uri);
+        var title = isApp ? "This app could not load its content." : "This page could not be opened.";
+        var message = isApp
+            ? "The window asked for a file that belongs to the app itself, and it was not there."
+            : "The address could not be reached, so nothing was loaded into this window.";
+
+        // the causes worth naming, because between them they are nearly every time this page is seen during development.
+        var hint = isApp
+            ? """
+              <div class="hint">
+                  <p>In an AOTrino app the front end is embedded in the executable and unpacked beside it at startup, so this usually means one of:</p>
+                  <p>
+                      the build embedded no front end, which happens when neither AOTrinoEmbedWebRoot nor AOTrinoBlazorProject is set,
+                      or when the project they point at published nothing,<br />
+                      the executable that ran is not the one that was just built, which happens when the build and the launch
+                      use different configurations or platforms,<br />
+                      or the start file is not called index.html, and a single page app also has to have a route that matches it.
+                  </p>
+              </div>
+              """
+            : string.Empty;
+
+        // the entry assembly, not the application's own type, which is AOTrinoApplication itself
+        // for the many apps that never subclass it, and would leave this saying AOTrino twice.
+        var version = typeof(WebViewWindow).Assembly.GetName().Version;
+        var name = Assembly.GetEntryAssembly()?.GetName().Name;
+        var footer = string.IsNullOrEmpty(name) ? $"AOTrino {version}" : $"{name}, AOTrino {version}";
+
+        return EmbeddedResource.Load("NavigationError.html")
+            .Replace("{title}", Escape(title))
+            .Replace("{message}", Escape(message))
+            .Replace("{url}", Escape(string.IsNullOrEmpty(e.Uri) ? "(none)" : e.Uri))
+            .Replace("{status}", Escape(DescribeWebError(e.WebErrorStatus)))
+            .Replace("{hint}", hint)
+            .Replace("{app}", Escape(footer));
+    }
+
+    // the few statuses worth a sentence, and the enum name for the rest, which is more use than nothing
+    // and keeps this from having to track every value WebView2 adds.
+    protected static string DescribeWebError(COREWEBVIEW2_WEB_ERROR_STATUS status) => status switch
+    {
+        COREWEBVIEW2_WEB_ERROR_STATUS.COREWEBVIEW2_WEB_ERROR_STATUS_UNKNOWN => "the file or address does not exist, ERR_FILE_NOT_FOUND is reported this way.",
+        COREWEBVIEW2_WEB_ERROR_STATUS.COREWEBVIEW2_WEB_ERROR_STATUS_HOST_NAME_NOT_RESOLVED => "the host name could not be resolved.",
+        COREWEBVIEW2_WEB_ERROR_STATUS.COREWEBVIEW2_WEB_ERROR_STATUS_SERVER_UNREACHABLE => "the server could not be reached.",
+        COREWEBVIEW2_WEB_ERROR_STATUS.COREWEBVIEW2_WEB_ERROR_STATUS_CANNOT_CONNECT => "the connection was refused.",
+        COREWEBVIEW2_WEB_ERROR_STATUS.COREWEBVIEW2_WEB_ERROR_STATUS_TIMEOUT => "the request timed out.",
+        COREWEBVIEW2_WEB_ERROR_STATUS.COREWEBVIEW2_WEB_ERROR_STATUS_DISCONNECTED => "the connection was lost.",
+        COREWEBVIEW2_WEB_ERROR_STATUS.COREWEBVIEW2_WEB_ERROR_STATUS_CONNECTION_ABORTED => "the connection was aborted.",
+        COREWEBVIEW2_WEB_ERROR_STATUS.COREWEBVIEW2_WEB_ERROR_STATUS_CONNECTION_RESET => "the connection was reset.",
+        COREWEBVIEW2_WEB_ERROR_STATUS.COREWEBVIEW2_WEB_ERROR_STATUS_REDIRECT_FAILED => "the redirect could not be followed.",
+        COREWEBVIEW2_WEB_ERROR_STATUS.COREWEBVIEW2_WEB_ERROR_STATUS_ERROR_HTTP_INVALID_SERVER_RESPONSE => "the server answered with something that is not valid HTTP.",
+        _ => status.ToString(),
+    };
+
+    private static string Escape(string text) => System.Net.WebUtility.HtmlEncode(text);
 
     // registers a JS-callable host object: AddHostObject("dotnet", obj) exposes it as chrome.webview.hostObjects.dotnet (async) and chrome.webview.hostObjects.sync.dotnet (sync).
     // call after the controller is created (e.g. from AOTrinoWindow.RegisterHostObjects), before navigation.
@@ -467,7 +701,36 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     protected virtual void OnMouseButtonDown(object? sender, MouseButtonEventArgs e) => MouseButtonDown?.Invoke(sender, e);
     protected virtual void OnMouseButtonUp(object? sender, MouseButtonEventArgs e) => MouseButtonUp?.Invoke(sender, e);
     protected virtual void OnMouseButtonDoubleClick(object? sender, MouseButtonEventArgs e) => MouseButtonDoubleClick?.Invoke(sender, e);
-    protected virtual void OnKeyDown(object? sender, KeyEventArgs e) => KeyDown?.Invoke(sender, e);
+    protected virtual void OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        KeyDown?.Invoke(sender, e);
+
+        // marked handled only when the tools were actually opened, since a handled key stops here and never reaches
+        // the WebView. swallowing it in a window that kept the browser keys would stop the browser opening them itself.
+        if (!e.Handled && e.Key == VIRTUAL_KEY.VK_F12 && TryOpenDevTools())
+        {
+            e.Handled = true;
+        }
+    }
+
+    // F12 is one of the browser accelerator keys, so an app window that turns those off, which is the default,
+    // never receives it: AreDevToolsEnabled says the tools are allowed, the accelerator is what opens them,
+    // and turning the accelerators off takes the second away without touching the first.
+    // opening them here is what makes F12 work anyway, and it is the only way to have both.
+    protected virtual bool TryOpenDevTools()
+    {
+        // a window that kept the browser keys opens them itself, doing it here as well would open two.
+        if (!AreDevToolsEnabled || AreBrowserAcceleratorKeysEnabled)
+            return false;
+
+        var webView = _webView;
+        if (webView == null)
+            return false;
+
+        webView.Object.OpenDevToolsWindow();
+        return true;
+    }
+
     protected virtual void OnKeyUp(object? sender, KeyEventArgs e) => KeyUp?.Invoke(sender, e);
     protected virtual void OnKeyPress(object? sender, KeyPressEventArgs e) => KeyPress?.Invoke(sender, e);
     protected virtual void OnMonitorChanged(object? sender, EventArgs e) => MonitorChanged?.Invoke(sender, e);
@@ -993,6 +1256,12 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
             {
                 WebView?.Object.remove_NavigationStarting(_navigationStarting);
                 _navigationStarting.value = 0;
+            }
+
+            if (_dropTarget != null)
+            {
+                DirectNFunctions.RevokeDragDrop(Handle);
+                _dropTarget = null;
             }
 
             _environment?.Dispose();

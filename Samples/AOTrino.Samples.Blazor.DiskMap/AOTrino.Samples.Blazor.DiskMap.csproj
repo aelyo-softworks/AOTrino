@@ -1,0 +1,76 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<PublishAot>true</PublishAot>
+		<RootNamespace>AOTrino.Samples.Blazor.DiskMap</RootNamespace>
+
+		<!--
+			The front end, a Blazor WebAssembly project. AOTrino publishes it and embeds its wwwroot,
+			see AOTrinoEmbedBlazor in AOTrino\build\AOTrino.targets for what that involves and why.
+			It is a sibling project rather than a folder in this one, so that its sources stay out of this project's globs,
+			and the solution is told not to build it, so it is built once, here.
+		-->
+		<AOTrinoBlazorProject>..\AOTrino.Samples.Blazor.DiskMap.Wasm\AOTrino.Samples.Blazor.DiskMap.Wasm.csproj</AOTrinoBlazorProject>
+
+		<!--
+			AOTrino supplies a default manifest when a project has none, and this one takes it over for two reasons:
+			longPathAware, since a disk scanner meets paths past 260 characters on any machine with a node_modules on it,
+			and asInvoker written down where it can be read, because elevation is a decision worth being able to see.
+		-->
+		<ApplicationManifest>app.manifest</ApplicationManifest>
+
+		<!--
+			The window caption and the title the page draws are the same string, and this is where it comes from.
+			The other samples are named "AOTrino Samples - X", but this window has no native caption to hide it in,
+			so it says what the app is called and nothing else.
+		-->
+		<Title>AOTrino DiskMap</Title>
+		<AssemblyTitle>AOTrino DiskMap</AssemblyTitle>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Using Include="AOTrino" />
+		<Using Include="AOTrino.Bridge" />
+		<Using Include="AOTrino.Graphics" />
+		<Using Include="System" />
+		<Using Include="System.Collections.Generic" />
+		<Using Include="System.ComponentModel" />
+		<Using Include="System.Diagnostics" />
+		<Using Include="System.IO" />
+		<Using Include="System.Linq" />
+		<Using Include="System.Reflection" />
+		<Using Include="System.Runtime.InteropServices" />
+		<Using Include="System.Text.Json" />
+		<Using Include="System.Text.Json.Serialization" />
+		<Using Include="System.Threading" />
+		<Using Include="System.Threading.Tasks" />
+		<Using Include="DirectN" />
+		<Using Include="DirectN.Extensions" />
+		<Using Alias="DirectNFunctions" Include="DirectN.Functions" />
+		<Using Include="Microsoft.Win32.SafeHandles" />
+		<Using Include="DirectN.Extensions.Com" />
+		<Using Include="DirectN.Extensions.Utilities" />
+		<Using Include="WebView2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\AOTrino\AOTrino.csproj" />
+	</ItemGroup>
+
+
+	<!--
+		The C# both sides share, as a Visual Studio shared source project.
+
+		This is the point of the sample. The page and the host are two runtimes, wasm in the WebView and native AOT
+		in the process that owns the window, and they cannot share an assembly: one targets net10.0 and the other
+		net10.0-windows, and a project reference between them would drag the Windows target framework into a wasm build.
+		A shared project has neither problem, it contributes source rather than a reference,
+		so the DTOs, the size formatting and the source-generated serializer are written once and are the same on both
+		sides of the bridge by construction rather than by agreement.
+		A JavaScript front end would have to restate every one of them, and keep them in step by hand.
+	-->
+	<Import Project="..\AOTrino.Samples.Blazor.DiskMap.Shared\AOTrino.Samples.Blazor.DiskMap.Shared.projitems" Label="Shared" />
+
+
+</Project>

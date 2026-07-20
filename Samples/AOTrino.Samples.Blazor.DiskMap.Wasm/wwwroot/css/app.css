@@ -1,0 +1,472 @@
+/*
+    Colours come from the Windows app theme, with no host object and no .NET involved.
+    WebView2 maps that theme onto prefers-color-scheme, so a media query is the whole mechanism,
+    and switching Windows between light and dark in Settings changes a running window live.
+
+    Everything is a variable, so the two themes differ only in this block.
+*/
+:root {
+    color-scheme: dark;
+    --text: #ffffff;
+    --text-dim: #c7cbd1;
+    --text-faint: #9aa0a6;
+    --surface: rgba(24, 25, 28, 0.72);
+    --surface-border: rgba(255, 255, 255, 0.10);
+    --control: rgba(255, 255, 255, 0.10);
+    --control-hover: rgba(255, 255, 255, 0.18);
+    --control-border: rgba(255, 255, 255, 0.18);
+    --accent: #7cb0ff;
+    --accent-strong: #4285f4;
+    --bar-from: rgba(66, 133, 244, 0.62);
+    --bar-to: rgba(66, 133, 244, 0.24);
+    --bar-leaf-from: rgba(180, 186, 194, 0.44);
+    --bar-leaf-to: rgba(180, 186, 194, 0.16);
+    --danger: #ff8a80;
+    --hover-row: rgba(255, 255, 255, 0.08);
+    --caption-hover: rgba(255, 255, 255, 0.12);
+}
+
+@media (prefers-color-scheme: light) {
+    :root {
+        color-scheme: light;
+        --text: #14171a;
+        --text-dim: #3c4043;
+        --text-faint: #5f6368;
+        --surface: rgba(255, 255, 255, 0.72);
+        --surface-border: rgba(0, 0, 0, 0.10);
+        --control: rgba(0, 0, 0, 0.05);
+        --control-hover: rgba(0, 0, 0, 0.10);
+        --control-border: rgba(0, 0, 0, 0.16);
+        --accent: #1a56c4;
+        --accent-strong: #1a73e8;
+        --bar-from: rgba(26, 115, 232, 0.40);
+        --bar-to: rgba(26, 115, 232, 0.14);
+        --bar-leaf-from: rgba(95, 99, 104, 0.28);
+        --bar-leaf-to: rgba(95, 99, 104, 0.10);
+        --danger: #c5221f;
+        --hover-row: rgba(0, 0, 0, 0.05);
+        --caption-hover: rgba(0, 0, 0, 0.08);
+    }
+}
+
+/*
+    The page stays transparent, because the window sets a Windows 11 Acrylic backdrop
+    and a backdrop only shows where the page paints nothing.
+    Give body a solid colour and the backdrop disappears behind it, which reads as the window ignoring the setting.
+*/
+html, body {
+    user-select: none;
+    -webkit-user-select: none;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: transparent;
+    color: var(--text);
+    font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    overflow: hidden;
+}
+
+#app {
+    height: 100%;
+}
+
+.app {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 20px 20px;
+    box-sizing: border-box;
+}
+
+/*
+    The title bar is drawn by the page, there is no native caption.
+    AOTrino's injected runtime moves the window for any element carrying data-aotrino-drag,
+    so this needs no mousedown handler of its own.
+*/
+.titlebar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: -16px -20px 0;
+    padding: 8px 4px 8px 20px;
+    min-height: 34px;
+}
+
+.app-title {
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.app-subtitle {
+    color: var(--text-faint);
+    font-size: 12px;
+}
+
+.window-buttons {
+    margin-left: auto;
+    display: flex;
+}
+
+/* Segoe Fluent Icons is the shell's own glyph font, so these are the real caption glyphs rather than drawn ones. */
+.win {
+    font-family: "Segoe Fluent Icons", "Segoe MDL2 Assets";
+    font-size: 10px;
+    width: 46px;
+    height: 32px;
+    border: none;
+    border-radius: 0;
+    background: none;
+    color: var(--text);
+}
+
+    .win:hover {
+        background: var(--caption-hover);
+    }
+
+    .win.close:hover {
+        background: #c42b1c;
+        color: #fff;
+    }
+
+.panel, .rows, .crumbs {
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+
+    .panel h2 {
+        margin: 0 0 6px;
+        font-size: 15px;
+    }
+
+    .panel p {
+        margin: 0;
+        color: var(--text-dim);
+        line-height: 1.5;
+    }
+
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+button {
+    font: inherit;
+    color: var(--text);
+    cursor: pointer;
+    border-radius: 8px;
+    border: 1px solid var(--control-border);
+    background: var(--control);
+    padding: 8px 12px;
+    transition: background 120ms ease;
+}
+
+    button:hover:not(:disabled) {
+        background: var(--control-hover);
+    }
+
+    button:disabled {
+        opacity: 0.45;
+        cursor: default;
+    }
+
+/* one card per drive, so the choice of how to read it sits next to the drive it applies to. */
+.drives {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.drive-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 230px;
+    padding: 10px 12px 11px;
+    border-radius: 10px;
+    border: 1px solid var(--surface-border);
+    background: var(--control);
+}
+
+.drive-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.drive-name {
+    font-weight: 600;
+    font-size: 15px;
+}
+
+/* NTFS, ReFS and so on, because it is what decides whether a quick scan is possible at all. */
+.drive-format {
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    padding: 1px 6px;
+    border-radius: 999px;
+    border: 1px solid var(--control-border);
+    color: var(--text-faint);
+}
+
+.drive-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.scan {
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.drive-note {
+    margin-top: 2px;
+    line-height: 1.35;
+    max-width: 260px;
+}
+
+.cancel-row {
+    margin-top: 10px;
+}
+
+.drive-detail, .dim {
+    color: var(--text-faint);
+    font-size: 12px;
+}
+
+.cancel {
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.progress {
+    display: flex;
+    gap: 16px;
+    align-items: baseline;
+    margin-top: 10px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+}
+
+    .progress .dim {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+.error {
+    margin: 10px 0 0;
+    color: var(--danger);
+}
+
+.crumbs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    flex-wrap: wrap;
+}
+
+.crumb {
+    border: none;
+    background: none;
+    padding: 2px 6px;
+    color: var(--accent);
+    font-weight: 500;
+}
+
+    .crumb:hover {
+        background: var(--control-hover);
+    }
+
+.sep {
+    color: var(--text-faint);
+}
+
+.current {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-dim);
+}
+
+.explorer {
+    padding: 4px 10px;
+    font-size: 12px;
+}
+
+/*
+    The two views of the same level, side by side: the treemap drawn by Direct2D in the native process,
+    and the rows drawn by the DOM. The map gets the larger share, it is the one that shows shape.
+*/
+.view {
+    flex: 1;
+    display: flex;
+    gap: 12px;
+    min-height: 0;
+}
+
+.treemap {
+    flex: 3;
+    min-width: 0;
+    border-radius: 10px;
+    border: 1px solid var(--surface-border);
+    background: var(--surface);
+    overflow: hidden;
+}
+
+    /*
+    The canvas fills its box and is sized in CSS pixels only.
+    Its width and height attributes are set by AOTrino's display runtime to the device pixel size it reports
+    to the host, so nothing here should give it a pixel size of its own, that would fight the renderer.
+*/
+    .treemap canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+
+.rows {
+    flex: 2;
+    min-width: 280px;
+    overflow-y: auto;
+    padding: 6px;
+}
+
+/*
+    Each row is its own bar: the bar is a layer behind the labels, sized to the row's share of the parent.
+    One element, no chart library, and the proportions read at a glance.
+*/
+.entry {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+    .entry:hover {
+        background: var(--hover-row);
+    }
+
+    .entry.leaf {
+        cursor: default;
+    }
+
+.bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, var(--bar-from), var(--bar-to));
+    border-radius: 6px;
+    pointer-events: none;
+}
+
+.entry.leaf .bar {
+    background: linear-gradient(90deg, var(--bar-leaf-from), var(--bar-leaf-to));
+}
+
+.name {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.size, .share {
+    position: relative;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-dim);
+}
+
+.size {
+    min-width: 84px;
+    text-align: right;
+}
+
+.share {
+    min-width: 56px;
+    text-align: right;
+    color: var(--text-faint);
+}
+
+/* the estimate, best effort, and only offered for a whole drive. see ScanProgress in the shared project. */
+.meter {
+    margin-top: 12px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--control);
+    overflow: hidden;
+}
+
+.meter-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-strong), var(--accent));
+    transition: width 200ms ease;
+}
+
+.percent {
+    font-weight: 600;
+    min-width: 52px;
+    color: var(--text);
+}
+
+.current-path {
+    margin-top: 6px;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    direction: rtl;
+    text-align: left;
+}
+
+.current-path, .name, .size {
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.badge {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--control);
+    border: 1px solid var(--control-border);
+    color: var(--text-dim);
+    white-space: nowrap;
+}
+
+    .badge.fast {
+        background: rgba(52, 168, 83, 0.18);
+        border-color: rgba(52, 168, 83, 0.45);
+        color: #7fdca0;
+    }
+
+@media (prefers-color-scheme: light) {
+    .badge.fast {
+        color: #137333;
+    }
+}
+
+.shield {
+    font-family: "Segoe UI Emoji", "Segoe Fluent Icons", "Segoe MDL2 Assets";
+    font-size: 14px;
+}

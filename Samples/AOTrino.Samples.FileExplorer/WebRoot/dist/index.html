@@ -85,6 +85,24 @@
                 color: #fff;
             }
 
+        /* what a drop from Explorer left behind, said once and then gone. */
+        .dropnote {
+            margin: 0;
+            padding: 0.5rem 0.9rem;
+            background: #1f2a1f;
+            color: #b7e3b0;
+            font-size: 0.85rem;
+            border-bottom: 1px solid #2f4a2f;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* a row is a drag source, and dragging one should not sweep its text into a selection. */
+        .row {
+            user-select: none;
+        }
+
         .error {
             margin: 0;
             padding: 0.5rem 0.9rem;
@@ -272,10 +290,12 @@
         <button id="home" title="Home folder">⌂ Home</button>
         <button id="drives" title="This PC (drives)">🖥 This&nbsp;PC</button>
         <input class="path" id="path" spellcheck="false" placeholder="This PC — type a path and press Enter" />
+        <button id="reveal" title="Show the selection in Windows File Explorer"><span class="glyph">&#xE838;</span> Reveal</button>
         <button id="sysinfo" title="What only Windows knows"><span class="glyph">&#xE946;</span> System</button>
         <button id="close" class="close" title="Close">✕</button>
     </div>
     <p class="error" id="error" style="display:none"></p>
+    <p class="dropnote" id="dropnote" style="display:none"></p>
 
     <!-- AOTrino builds SystemInfo but never registers it: this window chose to (see MainWindow.RegisterHostObjects) -->
     <dialog id="sysdlg">
@@ -315,6 +335,7 @@
         const preview = document.getElementById("preview");
         const ph = document.getElementById("ph");
         let current = null;
+        let selected = null;   // the row the Reveal button acts on, null when only a folder is showing
 
         // file types the WebView can render directly in the preview iframe (images / videos / pdf / text & code)
         const PREVIEWABLE = /\.(png|apng|jpe?g|gif|webp|bmp|svg|ico|cur|avif|mp4|webm|ogg|wav|mp3|pdf|txt|log|md|json|xml|csv|html?|css|js|ts|ini|yml|yaml|c|cpp|h|hpp|cs|py)$/i;
@@ -346,6 +367,7 @@
 
         function render(listing) {
             current = listing;
+            selected = null;   // a new listing is a new set of rows, whatever was selected is not among them
             pathEl.value = listing.Path || "";
             upBtn.disabled = listing.Parent === null;
             errEl.style.display = listing.Error ? "block" : "none";
@@ -361,8 +383,10 @@
                     `<div class="name">${icon}<span></span></div>` +
                     `<div class="size">${e.IsDirectory ? "" : fmtSize(e.Size)}</div>` +
                     `<div class="mod">${e.Modified || ""}</div>`;
+                row.dataset.path = e.Path;   // so a dropped file can be found again without taking paths apart
                 row.querySelector("span").textContent = e.Name;
                 row.addEventListener("click", () => select(e, row));
+                row.addEventListener("mousedown", (ev) => beginDrag(ev, e));
                 row.addEventListener("dblclick", () => { if (!e.IsDirectory) try { fs().Open(e.Path); } catch (x) { showError(String(x)); } });
                 listEl.appendChild(row);
             }
@@ -374,9 +398,12 @@
                 load(entry.Path);
                 return;
             }
-            const sel = listEl.querySelector(".row.sel");
-            if (sel) sel.classList.remove("sel");
+            for (const other of listEl.querySelectorAll(".row.sel")) {
+                other.classList.remove("sel");
+            }
+
             row.classList.add("sel");
+            selected = entry;
             showPreview(entry);
         }
 
@@ -391,9 +418,86 @@
 
         function showError(msg) { errEl.style.display = "block"; errEl.textContent = msg; }
 
+        // dragging a row OUT, to Explorer or the desktop.
+        //
+        // started from mousedown once the pointer has moved far enough, because the host runs a real OLE drag
+        // and that has to begin while the button is still down. the page never sees the rest of it:
+        // BeginDrag does not return until the drop is over, and it comes back saying what happened.
+        function beginDrag(down, entry) {
+            if (down.button !== 0) return;
+
+            const startX = down.clientX, startY = down.clientY;
+            const threshold = 5;
+
+            function move(ev) {
+                if (Math.abs(ev.clientX - startX) < threshold && Math.abs(ev.clientY - startY) < threshold) return;
+                cleanup();
+                try {
+                    fs().BeginDrag(entry.Path);
+                } catch (x) {
+                    showError(String(x));
+                }
+            }
+
+            function cleanup() {
+                window.removeEventListener("mousemove", move);
+                window.removeEventListener("mouseup", cleanup);
+            }
+
+            window.addEventListener("mousemove", move);
+            window.addEventListener("mouseup", cleanup);
+        }
+
+        // dropping IN, from Explorer. dropping a file onto a file manager means copy it here, so the host has
+        // already done that by the time this runs, and says where each copy landed.
+        window.onFilesDropped = function (added, folder, message) {
+            dropNote(message);
+            if (folder) load(folder);
+            reveal(added);
+        };
+
+        // the copies are selected and scrolled to, because a copy you cannot see is hard to tell apart from
+        // nothing having happened. matched on the full path the host reported, which is the same string the row
+        // carries, so nothing here has to know how a Windows path is put together.
+        function reveal(paths) {
+            if (!paths || paths.length === 0) return;
+
+            const wanted = new Set(paths);
+            let first = null;
+            for (const row of listEl.querySelectorAll(".row")) {
+                if (!wanted.has(row.dataset.path)) continue;
+
+                row.classList.add("sel");
+                first = first || row;
+            }
+
+            if (first) first.scrollIntoView({ block: "nearest" });
+        }
+
+        function dropNote(message) {
+            const note = document.getElementById("dropnote");
+            note.textContent = message || "";
+            note.style.display = message ? "block" : "none";
+            clearTimeout(dropNote.timer);
+            dropNote.timer = setTimeout(function () { note.style.display = "none"; }, 5000);
+        }
+
         upBtn.addEventListener("click", () => { if (current && current.Parent !== null) load(current.Parent); });
         document.getElementById("home").addEventListener("click", () => load(fs().GetHome()));
         document.getElementById("drives").addEventListener("click", () => load(""));
+
+        // hands the path to Windows and lets Explorer show it. the selected file if there is one,
+        // otherwise the folder on screen, which Explorer highlights inside its own parent.
+        document.getElementById("reveal").addEventListener("click", () => {
+            const path = (selected && selected.Path) || (current && current.Path);
+            if (!path) return;
+
+            try {
+                fs().RevealInExplorer(path);
+            } catch (x) {
+                showError(String(x));
+            }
+        });
         document.getElementById("close").addEventListener("click", () => window.__aotrino && window.__aotrino.closeWindow());
         pathEl.addEventListener("keydown", (e) => { if (e.key === "Enter") load(pathEl.value.trim()); });
 

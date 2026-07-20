@@ -48,6 +48,7 @@
 		<Using Include="System.Linq" />
 		<Using Include="System.Numerics" />
 		<Using Include="System.Reflection" />
+		<Using Include="System.Resources" />
 		<Using Include="System.Runtime.CompilerServices" />
 		<Using Include="System.Runtime.InteropServices" />
 		<Using Include="System.Security.Cryptography" />
@@ -97,6 +98,16 @@
 		</EmbeddedResource>
 		<EmbeddedResource Include="Resources\Direct2DSurface.Runtime.js">
 			<LogicalName>Direct2DSurface.Runtime.js</LogicalName>
+		</EmbeddedResource>
+
+		<!-- shown in place of the browser's own failure page, see WebViewWindow.GetNavigationErrorPage -->
+		<EmbeddedResource Include="Resources\NavigationError.html">
+			<LogicalName>NavigationError.html</LogicalName>
+		</EmbeddedResource>
+
+		<!-- written into the extracted WebRoot when an app ships no icon of its own, see WebRoot.EnsureFavicon -->
+		<EmbeddedResource Include="Resources\favicon.ico">
+			<LogicalName>favicon.ico</LogicalName>
 		</EmbeddedResource>
 	</ItemGroup>
 

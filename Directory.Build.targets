@@ -38,7 +38,7 @@
 		<UseLocalExternal Condition="'$(UseLocalExternal)' == '' and '$(_IsPacking)' == 'true'">false</UseLocalExternal>
 		<UseLocalExternal Condition="'$(UseLocalExternal)' == '' and Exists('$(MSBuildThisFileDirectory)External\DirectN.dll')">true</UseLocalExternal>
 		<UseLocalExternal Condition="'$(UseLocalExternal)' == ''">false</UseLocalExternal>
-		<DirectNAotVersion Condition="'$(DirectNAotVersion)' == ''">1.6.4</DirectNAotVersion>
+		<DirectNAotVersion Condition="'$(DirectNAotVersion)' == ''">1.6.5</DirectNAotVersion>
 		<WebView2AotVersion Condition="'$(WebView2AotVersion)' == ''">1.5.0</WebView2AotVersion>
 	</PropertyGroup>
 

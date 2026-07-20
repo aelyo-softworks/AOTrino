@@ -4,6 +4,7 @@
 		<OutputType>WinExe</OutputType>
 		<PublishAot>true</PublishAot>
 		<ApplicationManifest>app.manifest</ApplicationManifest>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<RootNamespace>AOTrino.Samples.FileExplorer</RootNamespace>
 
 		<!-- opt in to AOTrino's WebRoot embedding (see Directory.Build.targets) -->
@@ -28,6 +29,11 @@
 		<Using Include="System.Text.Json.Serialization" />
 		<Using Include="System.Text.Json.Nodes" />
 		<Using Include="DirectN" />
+		<Using Include="System.Runtime.CompilerServices" />
+		<Using Include="DirectN.Extensions.Com" />
+		<Using Include="DirectN.Extensions.Utilities" />
+		<Using Alias="DirectNConstants" Include="DirectN.Constants" />
+		<Using Alias="DirectNFunctions" Include="DirectN.Functions" />
 		<Using Include="WebView2" />
 	</ItemGroup>
 

@@ -82,10 +82,44 @@ public class WebRoot
         }
 
         Directory.CreateDirectory(_paths.WebRootPath);
+        EnsureFavicon();
         File.WriteAllText(signaturePath, signature);
 
         _done = true;
         _task = null;
+    }
+
+    // Chromium asks every document it loads for /favicon.ico, whether or not the document mentions one,
+    // so a front end with no icon produces "Failed to load resource: net::ERR_FILE_NOT_FOUND ... /favicon.ico"
+    // in the console of every window, for a file nobody asked for and no page can avoid being asked for.
+    //
+    // answering it is the only thing that silences it, and intercepting the request does not work here:
+    // a WebRoot served through SetVirtualHostNameToFolderMapping is served inside WebView2 and never raises
+    // WebResourceRequested, so there is nothing to answer. a file on disk is served either way, over file:// too.
+    //
+    // an app that ships its own favicon.ico keeps it, this only fills the gap, and the default is fully transparent
+    // because an app's icon is the app's to choose.
+    protected virtual void EnsureFavicon()
+    {
+        try
+        {
+            var path = Path.Combine(_paths.WebRootDistPath, "favicon.ico");
+            if (File.Exists(path))
+                return;
+
+            using var stream = typeof(WebRoot).Assembly.GetManifestResourceStream("favicon.ico");
+            if (stream == null)
+                return;
+
+            Directory.CreateDirectory(_paths.WebRootDistPath);
+            using var file = new FileStream(path, FileMode.Create, FileAccess.Write);
+            stream.CopyTo(file);
+        }
+        catch (Exception ex)
+        {
+            // the front end works without it, the console message comes back and that is all.
+            AOTrinoApplication.Current?.TraceWarning($"The default favicon could not be written: {ex.Message}");
+        }
     }
 
     private string ComputeSignature(IEnumerable<string> names)

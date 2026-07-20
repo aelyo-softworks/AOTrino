@@ -28,6 +28,31 @@ public partial class AOTrinoWindow(
     // this governs navigation only and makes no security claim (web security / file access stay a developer choice via env options).
     public NavigationMode NavigationMode { get; set; } = NavigationMode.Local;
 
+    // a window that browses the real web keeps the browser's own failure page, which is written for exactly that
+    // and offers to retry. every other window shows AOTrino's, see WebViewWindow.GetNavigationErrorPage.
+    protected override bool ReplacesNavigationErrorPage => NavigationMode != NavigationMode.Web;
+
+    // the browser behaviours WebViewWindow turns off for app windows are exactly the ones a browser needs,
+    // so NavigationMode.Web puts every one of them back: a mini browser without a context menu, a status bar,
+    // Ctrl+R or the page telling you a site is unreachable is not a browser.
+    // see the comments on each of these in WebViewWindow for what they do and why an app wants them off.
+    private bool IsBrowser => NavigationMode == NavigationMode.Web;
+
+    protected override bool AreDefaultContextMenusEnabled => IsBrowser;
+    protected override bool IsStatusBarEnabled => IsBrowser;
+    protected override bool AreBrowserAcceleratorKeysEnabled => IsBrowser;
+    protected override bool IsBuiltInErrorPageEnabled => IsBrowser;
+
+    // the app's own content is the WebRoot, which is either read off disk over file:// or served from the virtual host.
+    protected override bool IsAppContentUri(string uri)
+    {
+        var host = VirtualHostName;
+        if (host != null && Uri.TryCreate(uri, UriKind.Absolute, out var parsed) && parsed.Host.EqualsIgnoreCase(host))
+            return true;
+
+        return base.IsAppContentUri(uri);
+    }
+
     protected override void ControllerCreated()
     {
         base.ControllerCreated();

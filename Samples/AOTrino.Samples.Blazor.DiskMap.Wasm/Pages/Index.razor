@@ -1,0 +1,427 @@
+@page "/"
+@page "/index.html"
+@using AOTrino.Samples.Blazor.DiskMap.Shared
+@using Microsoft.JSInterop
+@inject DiskMapHost Host
+@implements IDisposable
+
+@*
+    Two routes on purpose.
+
+    WebView2 maps the virtual host to a folder and serves files out of it, with no directory index,
+    so a request for "https://diskmap.example/" is answered with ERR_ACCESS_DENIED and only "/index.html" resolves.
+    That is the URL the window opens, so the router has to have a route that matches it,
+    otherwise Blazor boots correctly and then renders "Sorry, there's nothing at this address.".
+    The "/" route is kept for the dev server, where the app is served the usual way.
+*@
+
+<div class="app">
+    @*
+        The caption is drawn by the page, there is no native title bar.
+        data-aotrino-drag is handled by AOTrino's injected runtime, so the whole strip moves the window,
+        and data-aotrino-nodrag marks the buttons inside it as clickable rather than draggable.
+    *@
+    <header class="titlebar" data-aotrino-drag>
+        <span class="app-title">@Title</span>
+        <span class="app-subtitle">a Blazor WebAssembly page driving a Native AOT host</span>
+        <div class="window-buttons" data-aotrino-nodrag>
+            <button class="win" title="Minimize" @onclick="Host.MinimizeAsync">&#xE921;</button>
+            <button class="win" title="Maximize" @onclick="Host.MaximizeAsync">&#xE922;</button>
+            <button class="win close" title="Close" @onclick="Host.CloseAsync">&#xE8BB;</button>
+        </div>
+    </header>
+
+    @if (!_hosted)
+    {
+        <section class="panel">
+            <h2>Not running in AOTrino</h2>
+            <p>
+                This page is open in a plain browser, so there is no host to call and no file system to reach.
+                Everything below needs the native side, run the AOTrino.Samples.Blazor.DiskMap app instead.
+            </p>
+        </section>
+    }
+    else
+    {
+        <section class="panel">
+            @*
+                One card per drive, each carrying its own two ways to be read.
+                The choice is per drive because it depends on the drive: only NTFS has a master file table,
+                so a Dev Drive, which is ReFS, can only ever be walked, and the card says so rather than leaving it to be guessed.
+            *@
+            <div class="drives">
+                @foreach (var drive in _drives)
+                {
+                    var path = drive.Name;
+                    var quickable = drive.SupportsQuickScan;
+                    var needsShield = quickable && !_elevated;
+
+                    <div class="drive-card">
+                        <div class="drive-head">
+                            <span class="drive-name">@drive.Name</span>
+                            <span class="drive-format">@drive.Format</span>
+                        </div>
+                        <div class="drive-detail">@SizeFormat.Bytes(drive.UsedSize) used of @SizeFormat.Bytes(drive.TotalSize)</div>
+
+                        <div class="drive-actions">
+                            <button class="scan" disabled="@_scanning" @onclick="() => Scan(path, quick: false)">Normal scan</button>
+
+                            @*
+                                The shield is the Windows convention for a button that raises a prompt,
+                                so it shows exactly when clicking would raise one.
+                                On a drive with no master file table the button is disabled instead, since no prompt would help.
+                            *@
+                            <button class="scan quick" disabled="@(_scanning || !quickable)" @onclick="() => QuickScan(path)">
+                                @if (needsShield)
+                                {
+                                    <span class="shield">&#x1F6E1;</span>
+                                }
+                                <span>Quick scan</span>
+                            </button>
+                        </div>
+
+                        <div class="drive-note dim">
+                            @if (!quickable)
+                            {
+                                @($"Quick scan needs NTFS, and this drive is {drive.Format}.")
+                            }
+                            else if (needsShield)
+                            {
+                                @("Quick scan reads the volume directly, which asks for administrator rights.")
+                            }
+                            else
+                            {
+                                @("Quick scan reads the volume's own index of every file, in seconds rather than minutes.")
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (_scanning)
+            {
+                <div class="row cancel-row">
+                    <button class="cancel" @onclick="Cancel">Cancel</button>
+                </div>
+            }
+
+            @if (_progress is { } p && (p.IsRunning || p.IsComplete))
+            {
+                @* no meter without an honest denominator, a subfolder scan has no total to measure against. *@
+                @if (p.RecordsTotal > 0 || p.EstimatedTotalBytes > 0)
+                {
+                    <div class="meter">
+                        <div class="meter-fill" style="width:@Percent(p.PercentComplete)%"></div>
+                    </div>
+                }
+                <div class="progress">
+                    @if (p.RecordsTotal > 0 || p.EstimatedTotalBytes > 0)
+                    {
+                        <span class="percent">@p.PercentComplete.ToString("F1", Culture)%</span>
+                    }
+                    <span>@p.DirectoriesScanned.ToString("N0") folders, @p.FilesScanned.ToString("N0") files, @SizeFormat.Bytes(p.BytesScanned)</span>
+                    <span class="dim">
+                        @if (p.IsRunning)
+                        {
+                            @*
+                                a time left figure only where the units being counted cost the same as each other,
+                                which is true of master file table records and not of bytes.
+                                the walk shows elapsed time instead, rather than an extrapolation that was wrong by minutes.
+                            *@
+                            @(p.HasEstimate && p.EstimatedMillisecondsRemaining > 0
+                                ? $"about {SizeFormat.Duration(p.EstimatedMillisecondsRemaining)} left"
+                                : SizeFormat.Duration(p.ElapsedMilliseconds))
+                        }
+                        else
+                        {
+                            @($"done in {SizeFormat.Duration(p.ElapsedMilliseconds)}")
+                        }
+                    </span>
+                    @if (p.ErrorCount > 0)
+                    {
+                        <span class="dim">@p.ErrorCount.ToString("N0") skipped</span>
+                    }
+                    @if (!string.IsNullOrEmpty(p.Method))
+                    {
+                        <span class="badge @(p.UsedMasterFileTable ? "fast" : "")">@p.Method</span>
+                    }
+                </div>
+                @if (p.IsRunning && !string.IsNullOrEmpty(p.CurrentPath))
+                {
+                    <div class="current-path dim">@p.CurrentPath</div>
+                }
+            }
+
+            @if (_error is not null)
+            {
+                <p class="error">@_error</p>
+            }
+        </section>
+
+        @if (_entries.Length > 0)
+        {
+            <nav class="crumbs">
+                @foreach (var crumb in _crumbs)
+                {
+                    var target = crumb.FullPath;
+                    <button class="crumb" @onclick="() => Open(target)">@crumb.Name</button>
+                    <span class="sep">\</span>
+                }
+                <span class="current">@SizeFormat.Bytes(_current.TotalSize)</span>
+                @if (!string.IsNullOrEmpty(_current.FullPath))
+                {
+                    var here = _current.FullPath;
+                    <button class="explorer" @onclick="() => Host.OpenInExplorerAsync(here)">Open in Explorer</button>
+                }
+            </nav>
+        }
+
+        @*
+            The treemap is not drawn here. It is a canvas whose pixels are rendered by Direct2D on the GPU in the native process and handed over through a shared buffer, 
+            which is memory both sides can see rather than a copy. 
+            See Treemap.cs in the host project.
+
+            This is the one thing in the sample that wasm genuinely could not do: 
+            a level of a real drive is thousands of rectangles, relaid out every frame while the scan is still growing the tree it reads.
+            The rows beside it are ordinary DOM, so the two ways of drawing the same data sit side by side.
+
+            It stays in the DOM whether or not there is anything to show, deliberately.
+            Blazor destroys and recreates the elements inside a block whose condition flips, 
+            and the canvas carries a WebGL context and a shared buffer attached to it, which would not survive that.
+            When there is no scan the host draws its own empty state onto it.
+        *@
+        <div class="view">
+            <section class="treemap">
+                <canvas data-aotrino-surface="treemap"></canvas>
+            </section>
+
+            @if (_entries.Length > 0)
+            {
+                <section class="rows">
+                    @foreach (var entry in _entries)
+                    {
+                        var share = _current.TotalSize > 0 ? (double)entry.TotalSize / _current.TotalSize : 0;
+                        var target = entry.FullPath;
+                        <div class="entry @(entry.IsFileBucket ? "leaf" : "")" @onclick="() => Open(target)">
+                            <div class="bar" style="width:@Percent(share * 100)%"></div>
+                            <span class="name">@entry.Name</span>
+                            <span class="size">@SizeFormat.Bytes(entry.TotalSize)</span>
+                            <span class="share">@((share * 100).ToString("F1", Culture))%</span>
+                        </div>
+                    }
+                </section>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private const string Title = "AOTrino DiskMap";
+
+    private static readonly System.Globalization.CultureInfo Culture = System.Globalization.CultureInfo.InvariantCulture;
+
+    private bool _hosted;
+    private bool _scanning;
+    private bool _elevated;
+    private string? _error;
+    private DriveEntry[] _drives = [];
+    private NodeEntry[] _entries = [];
+    private NodeEntry _current = new();
+    private List<NodeEntry> _crumbs = [];
+    private ScanProgress? _progress;
+    private Timer? _poll;
+    private bool _polling;
+    private bool _treemapAttached;
+    private string _treemapPath = string.Empty;
+    private DotNetObjectReference<Index>? _self;
+    private string _scanRoot = string.Empty;
+    private int _ticks;
+
+    // the poll runs every 250 ms, so this refreshes the visible level once a second.
+    private const int LiveRefreshTicks = 4;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _hosted = await Host.IsHostedAsync();
+        if (_hosted)
+        {
+            // the caption the page draws and the caption Windows shows are the same string, set from here,
+            // so the taskbar, Alt-Tab and the title bar can never disagree.
+            await Host.SetTitleAsync(Title);
+            _drives = await Host.GetDrivesAsync();
+            _elevated = await Host.IsElevatedAsync();
+
+            // the chrome follows the Windows theme through a CSS media query on its own,
+            // but the treemap is pixels drawn in the other runtime, so the host has to be told which theme is showing.
+            await Host.SetTreemapThemeAsync(await Host.IsDarkThemeAsync());
+        }
+    }
+
+    // the canvas only exists once there is something to show, and AOTrino's display runtime already ran its auto-attach
+    // long before Blazor rendered anything, so this is where it gets attached. see attachTreemap in wwwroot\diskmap.js.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_hosted || _treemapAttached)
+            return;
+
+        _self ??= DotNetObjectReference.Create(this);
+        _treemapAttached = await Host.AttachTreemapAsync(_self);
+    }
+
+    // a click on the treemap descends, the same as a click on a row.
+    // hovering does not come through here, it goes straight from the canvas to the host, see diskmap.js.
+    [JSInvokable]
+    public async Task OnTreemapClick(string path) => await Open(path);
+
+    private static string Percent(double value) => Math.Clamp(value, 0, 100).ToString("F2", Culture);
+
+    // a quick scan reads the master file table, which means opening the volume, which means being an administrator.
+    // when this app is not one, the click raises the prompt rather than scanning, and Windows restarts it elevated.
+    // that is the same shape as any shielded button in Windows, so the second click is the one that scans.
+    private async Task QuickScan(string path)
+    {
+        if (!_elevated)
+        {
+            if (!await Host.RestartElevatedAsync())
+            {
+                _error = "the elevation prompt was refused, so a quick scan is not available. A normal scan reads the same drive by walking it.";
+                await InvokeAsync(StateHasChanged);
+            }
+            return;
+        }
+
+        await Scan(path, quick: true);
+    }
+
+    private async Task Scan(string path, bool quick)
+    {
+        _error = null;
+        _entries = [];
+        _crumbs = [];
+        _scanRoot = path;
+        _scanning = true;
+        _ticks = 0;
+
+        // a new scan starts at the root, and the treemap may still be pointed at a folder from the last one.
+        _treemapPath = string.Empty;
+        await Host.SetTreemapPathAsync(string.Empty);
+        await Host.StartScanAsync(path, quick);
+
+        // polled rather than pushed. a scan of a drive produces far more progress than a UI can draw,
+        // so the page asks for it at a rate it can actually render.
+        // the previous scan's timer is stopped rather than disposed, see StopPolling, so it is disposed here.
+        _poll?.Dispose();
+        _poll = new Timer(async _ => await Poll(), null, 0, 250);
+    }
+
+    private async Task Poll()
+    {
+        // the timer fires every 250 ms whether or not the previous tick has finished,
+        // and a tick that refreshes the level costs several bridge calls, which on a large tree runs longer than that.
+        // without this the ticks pile up on each other and the same state is fetched several times over.
+        if (_polling)
+            return;
+
+        _polling = true;
+        try
+        {
+            await PollCore();
+        }
+        finally
+        {
+            _polling = false;
+        }
+    }
+
+    private async Task PollCore()
+    {
+        var progress = await Host.GetProgressAsync();
+        _progress = progress;
+
+        if (progress.IsRunning)
+        {
+            // the top level, refreshed while the scan runs, so the folders grow on screen instead of appearing at the end.
+            // once a second rather than at the polling rate: the numbers move constantly and the order changes with them,
+            // and a list that reorders four times a second is harder to read than one that does it once.
+            if (++_ticks % LiveRefreshTicks == 0)
+            {
+                await RefreshLevel(string.Empty);
+            }
+        }
+        else
+        {
+            StopPolling();
+            _scanning = false;
+            _error = progress.Error;
+            if (progress.IsComplete)
+            {
+                // the exact totals, which only exist once the roll up has run.
+                await RefreshLevel(string.Empty);
+            }
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RefreshLevel(string path)
+    {
+        _current = await Host.GetNodeAsync(path);
+        _entries = await Host.GetChildrenAsync(path);
+        _crumbs = BuildCrumbs(_current);
+
+        // the treemap reads the tree itself and redraws on its own, it only needs to be told which folder to show.
+        // guarded because the poll refreshes the same level once a second while a scan runs, and that is not news.
+        if (_treemapPath != path)
+        {
+            _treemapPath = path;
+            await Host.SetTreemapPathAsync(path);
+        }
+    }
+
+    // an empty path means the root of the scan, and it is also what the file bucket row carries,
+    // which is a total rather than a directory, so it is not somewhere to descend into.
+    private async Task Open(string path)
+    {
+        // descending is for once the scan has finished, the levels below the top are still being built until then.
+        if (_scanning || (string.IsNullOrEmpty(path) && _entries.Length > 0))
+            return;
+
+        await RefreshLevel(path);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private List<NodeEntry> BuildCrumbs(NodeEntry node)
+    {
+        // the scanned root is the first crumb, then one per path segment below it.
+        var crumbs = new List<NodeEntry> { new() { Name = _scanRoot, FullPath = string.Empty } };
+        if (node.FullPath.Length <= _scanRoot.Length)
+            return crumbs;
+
+        var walked = _scanRoot;
+        foreach (var part in node.FullPath[_scanRoot.Length..].Split('\\', StringSplitOptions.RemoveEmptyEntries))
+        {
+            walked = walked.EndsWith('\\') ? walked + part : walked + "\\" + part;
+            crumbs.Add(new NodeEntry { Name = part, FullPath = walked });
+        }
+        return crumbs;
+    }
+
+    private async Task Cancel()
+    {
+        await Host.CancelScanAsync();
+        StopPolling();
+        _scanning = false;
+    }
+
+    // silencing the timer, which is not the same as disposing it.
+    // this runs inside the timer's own callback when a scan ends, and disposing a timer waits for its callbacks to finish,
+    // so awaiting that here would be the callback waiting for itself. on wasm, which is single threaded, that hangs the whole page.
+    // the timer is stopped here and disposed when the page goes away, or when the next scan replaces it.
+    private void StopPolling() => _poll?.Change(Timeout.Infinite, Timeout.Infinite);
+
+    public void Dispose()
+    {
+        _poll?.Dispose();
+        _self?.Dispose();
+    }
+}

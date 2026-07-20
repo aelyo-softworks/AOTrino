@@ -22,7 +22,7 @@ public partial class CompositionWebViewWindow : WebViewWindow, IDropTarget
         DoUseDirect2D = UseDirect2D;
         if (DoUseDirect2D)
         {
-            DeviceCreateFlags |= D3D11_CREATE_DEVICE_FLAG.D3D11_CREATE_DEVICE_BGRA_SUPPORT; // need Direct2D support.
+            DeviceCreateFlags |= D3D11_CREATE_DEVICE_FLAG.D3D11_CREATE_DEVICE_BGRA_SUPPORT; // needs Direct2D support.
         }
 
         CompositorController = new CompositorController();

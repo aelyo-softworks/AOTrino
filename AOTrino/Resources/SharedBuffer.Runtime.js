@@ -31,13 +31,30 @@
     setWindowTitle: function (t) { t = String(t); command("title", { title: t }); if (this.window) { this.window.title = t; } }
   };
 
-  // any element (or ancestor) marked [data-aotrino-drag] drags the window on left-mousedown;
-  // mark interactive children [data-aotrino-nodrag] to keep them clickable.
-  document.addEventListener("mousedown", function (e) {
-    if (e.button !== 0) return;
-    for (var t = e.target; t && t.getAttribute; t = t.parentElement) {
-      if (t.hasAttribute("data-aotrino-nodrag")) return;
-      if (t.hasAttribute("data-aotrino-drag")) { window.__aotrino.dragWindow(); return; }
+  // an element is part of the caption when it, or an ancestor, is marked [data-aotrino-drag],
+  // unless something nearer is marked [data-aotrino-nodrag], which is how a button inside the caption stays clickable.
+  function isCaption(target) {
+    for (var t = target; t && t.getAttribute; t = t.parentElement) {
+      if (t.hasAttribute("data-aotrino-nodrag")) return false;
+      if (t.hasAttribute("data-aotrino-drag")) return true;
     }
+    return false;
+  }
+
+  // the caption drags the window on left-mousedown, and maximizes or restores it on a double click,
+  // which is what a native caption does and what someone double clicking one expects.
+  //
+  // the second click is read from the click count on mousedown rather than from a dblclick event.
+  // dragging hands the window to Windows with WM_NCLBUTTONDOWN, which runs a modal move loop until the button
+  // comes back up, and no dblclick survives that. the next mousedown does arrive, and it carries the count.
+  document.addEventListener("mousedown", function (e) {
+    if (e.button !== 0 || !isCaption(e.target)) return;
+
+    if (e.detail === 2) {
+      window.__aotrino.maximizeWindow();
+      return;
+    }
+
+    window.__aotrino.dragWindow();
   });
 })();

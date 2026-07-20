@@ -1,0 +1,17 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>{08835E3D-41AD-4534-BC3E-C3EC5B8ABA00}</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>AOTrino.Samples.Blazor.DiskMap.Shared</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)DiskMapJsonContext.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)DriveEntry.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)NodeEntry.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ScanProgress.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)SizeFormat.cs" />
+  </ItemGroup>
+</Project>

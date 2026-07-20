@@ -1,0 +1,11 @@
+<Project>
+
+	<!--
+		Deliberately empty, and deliberately not importing the repo's Directory.Build.props above it.
+		MSBuild stops walking up as soon as it finds one of these, which is the point:
+		this front end compiles to wasm, and every repo-wide setting here exists for the AOT Windows host,
+		the windows TFM, the three Windows RIDs, DirectN and WebView2.
+		Inheriting them made the restore look for Microsoft.NETCore.App.Runtime.Mono.win-x64, which does not exist.
+	-->
+
+</Project>

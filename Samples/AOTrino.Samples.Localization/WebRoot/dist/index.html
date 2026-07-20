@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>AOTrino</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            --text: #14171a;
+            --dim: #5f6368;
+            --surface: #ffffff;
+            --line: rgba(0, 0, 0, 0.12);
+            --field: rgba(0, 0, 0, 0.04);
+            --accent: #1a73e8;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --text: #f3f5f7;
+                --dim: #9aa0a6;
+                --surface: #1b1c1f;
+                --line: rgba(255, 255, 255, 0.14);
+                --field: rgba(255, 255, 255, 0.06);
+                --accent: #7cb0ff;
+            }
+        }
+
+        html, body {
+            margin: 0;
+            height: 100%;
+            background: var(--surface);
+            color: var(--text);
+            font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+            font-size: 14px;
+            line-height: 1.55;
+            user-select: none;
+        }
+
+        main {
+            box-sizing: border-box;
+            max-width: 620px;
+            margin: 0 auto;
+            padding: 40px 32px;
+        }
+
+        h1 {
+            font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+            font-size: 22px;
+            font-weight: 600;
+            margin: 0 0 10px;
+        }
+
+        p {
+            margin: 0 0 20px;
+            color: var(--dim);
+        }
+
+        .picker {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 26px 0;
+        }
+
+        label {
+            font-weight: 600;
+        }
+
+        select {
+            font: inherit;
+            color: var(--text);
+            background: var(--field);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 6px 10px;
+            min-width: 160px;
+        }
+
+        .facts {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 4px 14px;
+            margin-bottom: 22px;
+        }
+
+        .row {
+            display: flex;
+            gap: 12px;
+            padding: 8px 0;
+        }
+
+        .row + .row {
+            border-top: 1px solid var(--line);
+        }
+
+        .key {
+            flex: 0 0 200px;
+            color: var(--dim);
+        }
+
+        .value {
+            flex: 1;
+            font-family: Consolas, "Cascadia Mono", monospace;
+            font-size: 12.5px;
+            user-select: text;
+        }
+
+        button {
+            font: inherit;
+            color: var(--text);
+            background: var(--field);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 7px 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            border-color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1 data-t="Heading"></h1>
+        <p data-t="Intro"></p>
+
+        <div class="picker">
+            <label data-t="LanguageLabel" for="language"></label>
+            <select id="language"></select>
+        </div>
+
+        <div class="facts">
+            <div class="row"><span class="key" data-t="PreferredLabel"></span><span class="value" id="preferred"></span></div>
+            <div class="row"><span class="key" data-t="ResolvedLabel"></span><span class="value" id="resolved"></span></div>
+        </div>
+
+        <p data-t="SwitchNote"></p>
+        <button id="close" data-t="Close"></button>
+    </main>
+
+    <script>
+        // the whole of the front end's translation code.
+        //
+        // one call gets every string for the language in use, and lookup is local from then on,
+        // so nothing in a render path ever waits on the bridge.
+        // there is no plural rule and no message format here on purpose, a front end that needs them
+        // hands this same catalog to an i18n library rather than to this function.
+        const host = chrome.webview.hostObjects.localization;
+        let catalog = {};
+
+        function t(key) {
+            return catalog[key] ?? key;
+        }
+
+        function render() {
+            for (const element of document.querySelectorAll("[data-t]")) {
+                element.textContent = t(element.getAttribute("data-t"));
+            }
+        }
+
+        async function load() {
+            catalog = JSON.parse(await host.GetCatalog());
+            document.getElementById("resolved").textContent = await host.GetCurrent();
+            render();
+        }
+
+        async function start() {
+            const cultures = JSON.parse(await host.GetCultures());
+            const select = document.getElementById("language");
+            for (const culture of cultures) {
+                const option = document.createElement("option");
+                option.value = culture.name;
+                option.textContent = culture.nativeName + " (" + culture.name + ")";
+                option.selected = culture.isCurrent;
+                select.appendChild(option);
+            }
+
+            select.addEventListener("change", async () => {
+                await host.SetCulture(select.value);
+                await load();
+            });
+
+            // what Windows asked for, which does not change while the app runs.
+            const preferred = JSON.parse(await host.GetPreferred());
+            document.getElementById("preferred").textContent = preferred.join(", ") || "(none)";
+
+            document.getElementById("close").addEventListener("click", () => host.Close());
+            await load();
+        }
+
+        start();
+    </script>
+</body>
+</html>

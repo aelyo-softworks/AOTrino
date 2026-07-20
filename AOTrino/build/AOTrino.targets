@@ -135,4 +135,92 @@
 		</ItemGroup>
 	</Target>
 
+	<!--
+		A Blazor WebAssembly front end.
+
+		An app points AOTrinoBlazorProject at a Blazor WebAssembly project and gets its published wwwroot embedded,
+		which is the same thing AOTrinoEmbedWebRoot does for a folder, from a project instead:
+
+			<PropertyGroup>
+				<AOTrinoBlazorProject>..\MyApp.Wasm\MyApp.Wasm.csproj</AOTrinoBlazorProject>
+			</PropertyGroup>
+
+		Three things this does that a ProjectReference cannot, which is why it exists at all:
+		* it takes the project's PUBLISHED output, its wwwroot, where a reference would give assemblies to link against.
+		* it strips the global properties of the host, since publishing an AOT app sets TargetFramework and RuntimeIdentifier
+		  for Windows, and a wasm project answers "assets file doesn't have a target for net10.0-windows..." when handed them.
+		* it empties the publish folder first, because Blazor names assets with a content hash and publishing only adds,
+		  so every edit would otherwise leave the previous copy behind to be embedded forever after.
+
+		Keep the wasm project OUTSIDE this project's folder. Nested, its sources fall into this project's default globs
+		and the build stops on CS0579, a duplicate of every assembly attribute, until they are excluded by hand.
+
+		Tell the solution not to build the wasm project, so it is built once, here.
+		In a .slnx that is <Build Project="false" /> on it, and it is also why this restores the project explicitly,
+		since a project the solution does not build is one it does not restore, which ends in NETSDK1004.
+	-->
+	<PropertyGroup Condition="'$(AOTrinoBlazorProject)' != ''">
+		<AOTrinoBlazorPublishDir Condition="'$(AOTrinoBlazorPublishDir)' == ''">$(MSBuildProjectDirectory)\$(IntermediateOutputPath)aotrino-blazor\</AOTrinoBlazorPublishDir>
+		<AOTrinoBlazorDropProperties Condition="'$(AOTrinoBlazorDropProperties)' == ''">TargetFramework;TargetFrameworks;RuntimeIdentifier;RuntimeIdentifiers;SelfContained;PublishAot;PublishTrimmed;PublishSingleFile;PublishReadyToRun;PublishProfile;_IsPublishing;_IsPacking;OutputPath;IntermediateOutputPath;BaseOutputPath;BaseIntermediateOutputPath;ApplicationManifest</AOTrinoBlazorDropProperties>
+	</PropertyGroup>
+
+	<!--
+		Visual Studio decides whether to build a project at all before MSBuild is ever asked, with its fast up-to-date check,
+		and that check only knows about the project's own files.
+		The front end's files belong to another project, one the solution is told not to build, so editing a stylesheet
+		or a page there marks nothing as out of date.
+		F5 then relaunches the last exe with the last front end still embedded in it, and the edit looks like it was ignored,
+		which it was, the build never ran.
+
+		Listing the front end's own files as inputs is what tells that check to look at them,
+		and it is the difference between editing a stylesheet and pressing F5, and having to rebuild the host by hand first.
+	-->
+	<PropertyGroup Condition="'$(AOTrinoBlazorProject)' != ''">
+		<AOTrinoBlazorProjectDir>$([System.IO.Path]::GetDirectoryName($([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\$(AOTrinoBlazorProject)'))))</AOTrinoBlazorProjectDir>
+	</PropertyGroup>
+
+	<ItemGroup Condition="'$(AOTrinoBlazorProject)' != ''">
+		<UpToDateCheckInput Include="$(AOTrinoBlazorProjectDir)\**\*"
+							Exclude="$(AOTrinoBlazorProjectDir)\bin\**;$(AOTrinoBlazorProjectDir)\obj\**;$(AOTrinoBlazorProjectDir)\node_modules\**" />
+	</ItemGroup>
+
+	<Target Name="AOTrinoEmbedBlazor" BeforeTargets="BeforeBuild" Condition="'$(AOTrinoBlazorProject)' != ''">
+		<RemoveDir Directories="$(AOTrinoBlazorPublishDir)" />
+
+		<!-- Platform is pinned to AnyCPU, an app built as x86, x64 or ARM64 would otherwise send the wasm project looking for a Mono runtime pack for that architecture. -->
+		<MSBuild Projects="$(AOTrinoBlazorProject)"
+				 Targets="Restore"
+				 Properties="Configuration=$(Configuration);Platform=AnyCPU"
+				 RemoveProperties="$(AOTrinoBlazorDropProperties)" />
+
+		<!-- PublishDir is deliberately not among the removed properties, dropping it sends the output to the wasm project's own default folder. -->
+		<MSBuild Projects="$(AOTrinoBlazorProject)"
+				 Targets="Publish"
+				 Properties="Configuration=$(Configuration);Platform=AnyCPU;PublishDir=$(AOTrinoBlazorPublishDir)"
+				 RemoveProperties="$(AOTrinoBlazorDropProperties)" />
+
+		<!--
+			Globbed into a private item first and transformed in a second step,
+			an Include carrying both a wildcard and %() metadata in one step does not batch the way it reads.
+			The .gz and .br copies are left out, they exist for a web server negotiating content encoding,
+			and an embedded front end is read from disk, so they would only double the size of the exe.
+		-->
+		<ItemGroup>
+			<_AOTrinoBlazorFile Include="$(AOTrinoBlazorPublishDir)wwwroot\**\*"
+								Exclude="$(AOTrinoBlazorPublishDir)wwwroot\**\*.gz;$(AOTrinoBlazorPublishDir)wwwroot\**\*.br" />
+		</ItemGroup>
+
+		<!-- an empty front end is the failure that looks like success, the build stays green and the app opens a blank window. -->
+		<Error Condition="'@(_AOTrinoBlazorFile)' == ''"
+			   Text="AOTrino: $(AOTrinoBlazorProject) published no files to $(AOTrinoBlazorPublishDir)wwwroot, so this app would start with a blank window." />
+
+		<ItemGroup>
+			<EmbeddedResource Include="@(_AOTrinoBlazorFile)">
+				<LogicalName>WebRoot\dist\%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+			</EmbeddedResource>
+		</ItemGroup>
+
+		<Message Importance="High" Text="AOTrino: embedded @(_AOTrinoBlazorFile->Count()) files from $(AOTrinoBlazorProject)." />
+	</Target>
+
 </Project>
