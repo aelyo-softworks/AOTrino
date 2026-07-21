@@ -30,7 +30,7 @@
 
 		  Only Version: the SDK derives AssemblyVersion, FileVersion and InformationalVersion from it.
 		-->
-		<Version>1.1.0</Version>
+		<Version>1.1.1</Version>
 		<!-- SourceRevisionId (build timestamp) flows into InformationalVersion, so the versioned WebRoot folder changes each build and never serves a stale cache -->
 		<SourceRevisionId>$([System.DateTime]::UtcNow.ToString("yyyyMMddHHmmss"))</SourceRevisionId>
 	</PropertyGroup>
