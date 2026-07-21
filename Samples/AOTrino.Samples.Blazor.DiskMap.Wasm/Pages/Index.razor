@@ -31,6 +31,12 @@
         </div>
     </header>
 
+    @*
+        Everything below the caption scrolls together. The treemap wants real height to be readable, so the view
+        keeps a floor rather than being squeezed into an unreadable strip on a short window, and the page gains a
+        vertical scrollbar to reach it. The caption stays put, it is the window's own chrome.
+    *@
+    <div class="scroll">
     @if (!_hosted)
     {
         <section class="panel">
@@ -100,8 +106,8 @@
 
             @if (_scanning)
             {
-                <div class="row cancel-row">
-                    <button class="cancel" @onclick="Cancel">Cancel</button>
+                <div class="row stop-row">
+                    <button class="stop" @onclick="Stop">Stop</button>
                 </div>
             }
 
@@ -158,7 +164,9 @@
             }
         </section>
 
-        @if (_entries.Length > 0)
+        @* the crumbs follow where you have navigated, not whether this level has rows, so a folder with nothing
+           to list still shows the trail back to the drive rather than stranding you. *@
+        @if (_crumbs.Count > 0)
         {
             <nav class="crumbs">
                 @foreach (var crumb in _crumbs)
@@ -201,8 +209,8 @@
                     @foreach (var entry in _entries)
                     {
                         var share = _current.TotalSize > 0 ? (double)entry.TotalSize / _current.TotalSize : 0;
-                        var target = entry.FullPath;
-                        <div class="entry @(entry.IsFileBucket ? "leaf" : "")" @onclick="() => Open(target)">
+                        var row = entry;
+                        <div class="entry @(entry.IsFileBucket ? "leaf" : "")" @onclick="() => OnRowClick(row)">
                             <div class="bar" style="width:@Percent(share * 100)%"></div>
                             <span class="name">@entry.Name</span>
                             <span class="size">@SizeFormat.Bytes(entry.TotalSize)</span>
@@ -213,6 +221,7 @@
             }
         </div>
     }
+    </div>
 </div>
 
 @code {
@@ -271,7 +280,18 @@
     // a click on the treemap descends, the same as a click on a row.
     // hovering does not come through here, it goes straight from the canvas to the host, see diskmap.js.
     [JSInvokable]
-    public async Task OnTreemapClick(string path) => await Open(path);
+    public async Task OnTreemapClick(string path)
+    {
+        try
+        {
+            await Open(path);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
 
     private static string Percent(double value) => Math.Clamp(value, 0, 100).ToString("F2", Culture);
 
@@ -353,11 +373,11 @@
             StopPolling();
             _scanning = false;
             _error = progress.Error;
-            if (progress.IsComplete)
-            {
-                // the exact totals, which only exist once the roll up has run.
-                await RefreshLevel(string.Empty);
-            }
+
+            // finished or stopped, show the tree that was built rather than leaving the view where it was.
+            // a finish has exact totals from the roll up, a stop keeps the interim ones, which is honest,
+            // a stopped scan is explicitly partial. an error before anything was built resolves to an empty level.
+            await RefreshLevel(string.Empty);
         }
 
         await InvokeAsync(StateHasChanged);
@@ -378,12 +398,18 @@
         }
     }
 
-    // an empty path means the root of the scan, and it is also what the file bucket row carries,
-    // which is a total rather than a directory, so it is not somewhere to descend into.
+    private async Task OnRowClick(NodeEntry entry)
+    {
+        if (entry.IsFileBucket)
+            return;
+
+        await Open(entry.FullPath);
+    }
+
     private async Task Open(string path)
     {
         // descending is for once the scan has finished, the levels below the top are still being built until then.
-        if (_scanning || (string.IsNullOrEmpty(path) && _entries.Length > 0))
+        if (_scanning)
             return;
 
         await RefreshLevel(path);
@@ -406,12 +432,7 @@
         return crumbs;
     }
 
-    private async Task Cancel()
-    {
-        await Host.CancelScanAsync();
-        StopPolling();
-        _scanning = false;
-    }
+    private async Task Stop() => await Host.CancelScanAsync();
 
     // silencing the timer, which is not the same as disposing it.
     // this runs inside the timer's own callback when a scan ends, and disposing a timer waits for its callbacks to finish,

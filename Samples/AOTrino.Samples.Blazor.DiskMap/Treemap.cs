@@ -84,18 +84,23 @@ public sealed class Treemap(DiskScanner scanner) : IDisposable
         _pointerY = y < 0 ? -1 : (float)(y * _height);
     }
 
-    // the folder under the pointer, which is what a click on the canvas descends into.
-    // deepest first, since children are drawn inside their parent and are the more specific answer.
+    // the folder a click on the canvas descends into, one level at a time.
     public string? HitTest(double x, double y)
     {
         var px = (float)(x * _width);
         var py = (float)(y * _height);
         var tiles = Volatile.Read(ref _tiles);
-        for (var i = tiles.Length - 1; i >= 0; i--)
+
+        // depth 0 tiles are the immediate children of the folder on show and they cover the whole map,
+        // so the first one that contains the point is the folder to open, or the files bucket, which is nowhere to go.
+        for (var i = 0; i < tiles.Length; i++)
         {
             var tile = tiles[i];
-            if (!tile.IsBucket && px >= tile.Rect.left && px <= tile.Rect.right && py >= tile.Rect.top && py <= tile.Rect.bottom)
-                return tile.Path;
+            if (tile.Depth != 0)
+                continue;
+
+            if (px >= tile.Rect.left && px <= tile.Rect.right && py >= tile.Rect.top && py <= tile.Rect.bottom)
+                return tile.IsBucket ? null : tile.Path;
         }
 
         return null;
@@ -141,21 +146,7 @@ public sealed class Treemap(DiskScanner scanner) : IDisposable
         if (string.IsNullOrEmpty(Path))
             return root;
 
-        return Find(root, Path) ?? root;
-    }
-
-    private static ScanNode? Find(ScanNode node, string path)
-    {
-        if (node.FullPath.EqualsIgnoreCase(path))
-            return node;
-
-        foreach (var child in node.Children.ToArray())
-        {
-            if (path.StartsWith(child.FullPath, StringComparison.OrdinalIgnoreCase))
-                return Find(child, path);
-        }
-
-        return null;
+        return root.Find(Path) ?? root;
     }
 
     // the layout is rebuilt when what it is showing changes, or on a clock while a scan is still growing the tree.
@@ -231,9 +222,13 @@ public sealed class Treemap(DiskScanner scanner) : IDisposable
 
         // the files sitting directly in this folder are one tile, so the map covers the folder's whole size
         // rather than quietly omitting whatever is not in a subfolder.
+        // the top level bucket names the folder it belongs to, since nothing above it does, a deeper one sits
+        // inside its labelled parent already, so "36 files" there is not ambiguous.
         if (node.OwnSize > 0)
         {
-            entries.Add(new Entry(node.FileCount == 1 ? "1 file" : $"{node.FileCount:N0} files", string.Empty, node.OwnSize, null));
+            var files = node.FileCount == 1 ? "1 file" : $"{node.FileCount:N0} files";
+            var name = depth == 0 && !string.IsNullOrEmpty(node.Name) ? $"{files} in {node.Name}" : files;
+            entries.Add(new Entry(name, string.Empty, node.OwnSize, null));
             total += node.OwnSize;
         }
 

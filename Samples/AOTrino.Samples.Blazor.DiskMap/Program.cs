@@ -8,7 +8,7 @@ internal static class Program
         // AOTrinoApplication closes the process itself (with a download link) if WebView2 is missing.
         using var app = new AOTrinoApplication();
         using var window = new MainWindow();
-        window.ResizeClient(1280, 820);
+        window.ResizeClient(1280, 920);
         window.Center();
         window.Show();
         app.Run();

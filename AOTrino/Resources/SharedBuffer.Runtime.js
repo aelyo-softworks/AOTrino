@@ -13,8 +13,36 @@
     var cbs = subs[name];
     if (cbs) for (var i = 0; i < cbs.length; i++) { try { cbs[i](buffers[name], e.additionalData); } catch (x) {} }
   });
+
   function post(msg) { try { window.chrome.webview.postMessage(msg); } catch (x) {} }
   function command(c, extra) { var m = { __aotrino: "window-command", command: c }; if (extra) for (var k in extra) m[k] = extra[k]; post(m); }
+
+  // page errors go to the host, which traces them, see WebViewWindow.OnPageError.
+  // an unhandled error in an app whose content is embedded in the exe has no browser console anyone is watching, so without this it is lost. 
+  // three sources, because no single one catches everything:
+  //  * window "error" catches uncaught exceptions and failed resource loads,
+  //  * window "unhandledrejection" catches promise rejections nothing awaited,
+  //  * console.error catches what a framework reports that way rather than by throwing, which is how Blazor surfaces an unhandled exception, 
+  //    it logs and shows its own banner rather than letting it reach the window.
+  function reportError(message, stack) { post({ __aotrino: "page-error", message: String(message == null ? "" : message), stack: stack ? String(stack) : "" }); }
+
+  window.addEventListener("error", function (e) {
+    if (e && e.error) { reportError(e.error.message || e.message, e.error.stack); }
+    else if (e && e.message) { reportError(e.message, e.filename ? e.filename + ":" + e.lineno : ""); }
+  });
+
+  window.addEventListener("unhandledrejection", function (e) {
+    var r = e ? e.reason : null;
+    reportError(r && r.message ? r.message : r, r && r.stack ? r.stack : "");
+  });
+
+    var _consoleError = window.console && console.error ? console.error.bind(console) : null;
+  if (_consoleError) {
+    console.error = function () {
+      try { reportError(Array.prototype.map.call(arguments, function (a) { return a && a.stack ? a.stack : String(a); }).join(" "), ""); } catch (x) {}
+      _consoleError.apply(console, arguments);
+    };
+  }
 
   window.__aotrino = {
     getBuffer: function (name) { return buffers[name] || null; },

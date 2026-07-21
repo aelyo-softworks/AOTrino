@@ -25,8 +25,12 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     private int _lastPointerDownPositionY = int.MinValue;
     private WebView2.EventRegistrationToken _navigationStarting;
     private WebView2.EventRegistrationToken _navigationCompleted;
+    private WebView2.EventRegistrationToken _acceleratorKeyPressed;
     private bool _navigationErrorShown;
     private FileDropTarget? _dropTarget;
+    // keep them alive for the window's lifetime.
+    private readonly List<DispatchObject> _hostObjects = [];
+    private WebViewHostObjectHelper? _hostObjectHelper;
 
     public event EventHandler<MouseEventArgs>? MouseMove;
     public event EventHandler<MouseEventArgs>? MouseLeave;
@@ -98,6 +102,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
                     CreateController(env3, () =>
                     {
                         WireNavigationEvents();
+                        WireControllerEvents();
                         ApplySettings(); // before ControllerCreated, which is where an app navigates.
                         RegisterFileDrops();
                         ControllerCreated();
@@ -111,6 +116,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     }
 
     protected override bool NeedsSwapChain => false;
+    protected virtual bool ForcesGarbageCollectionOnF11 => _forcesGarbageCollectionOnF11;
 
     protected ComObject<ICoreWebView2_17>? WebView => _webView;
     protected ComObject<ICoreWebView2Environment12>? Environment => _environment;
@@ -131,8 +137,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     // what this window would do with what is being dragged over it, out of what the source allows.
     // copy by default, which is what Explorer offers for a file dragged to another program.
     // override to refuse some drags, return DROPEFFECT_NONE and the cursor says so before the button is released.
-    protected internal virtual DROPEFFECT GetFileDropEffect(DROPEFFECT allowedEffects) =>
-        allowedEffects.HasFlag(DROPEFFECT.DROPEFFECT_COPY) ? DROPEFFECT.DROPEFFECT_COPY : DROPEFFECT.DROPEFFECT_NONE;
+    protected internal virtual DROPEFFECT GetFileDropEffect(DROPEFFECT allowedEffects) => allowedEffects.HasFlag(DROPEFFECT.DROPEFFECT_COPY) ? DROPEFFECT.DROPEFFECT_COPY : DROPEFFECT.DROPEFFECT_NONE;
 
     protected internal virtual void OnFilesDropped(FileDropEventArgs e) => FilesDropped?.Invoke(this, e);
 
@@ -294,6 +299,33 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
                 }
             }
         }), ref _navigationCompleted).ThrowOnError();
+    }
+
+    // keys pressed while the WebView has focus.
+    // the host window's own key handling only fires when the host has focus, and most of the time it does not, the page does.
+    // AcceleratorKeyPressed is how WebView2 hands the interesting keys, the F keys and the Ctrl combinations, back to the host so a shortcut works either way.
+    private void WireControllerEvents()
+    {
+        var controller = _baseController;
+        if (controller == null)
+            return;
+
+        controller.add_AcceleratorKeyPressed(new CoreWebView2AcceleratorKeyPressedEventHandler((sender, args) =>
+        {
+            var kind = COREWEBVIEW2_KEY_EVENT_KIND.COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN;
+            args.get_KeyEventKind(ref kind).ThrowOnError();
+            if (kind != COREWEBVIEW2_KEY_EVENT_KIND.COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN &&
+                kind != COREWEBVIEW2_KEY_EVENT_KIND.COREWEBVIEW2_KEY_EVENT_KIND_SYSTEM_KEY_DOWN)
+                return;
+
+            var vk = 0u;
+            args.get_VirtualKey(ref vk).ThrowOnError();
+            if (TryHandleShortcut((VIRTUAL_KEY)vk))
+            {
+                // handled here, so the WebView does not also act on it.
+                args.put_Handled(true).ThrowOnError();
+            }
+        }), ref _acceleratorKeyPressed).ThrowOnError();
     }
 
     // everything else on ICoreWebView2Settings, zoom, pinch zoom, swipe navigation, autofill, script dialogs.
@@ -503,6 +535,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         var webView = _webView ?? throw new InvalidOperationException("The WebView2 controller is not ready yet.");
 
         EnsureHostObjectHelper(webView);
+        _hostObjects.Add(hostObject);
 
         // wrap the host object's IUnknown in a VARIANT and register it under 'name'.
         ComObject.WithComInstance(hostObject, unk =>
@@ -522,7 +555,8 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         _hostObjectHelperInstalled = true;
         if (webView.Object is ICoreWebView2PrivatePartial partial)
         {
-            partial.AddHostObjectHelper(new WebViewHostObjectHelper()).ThrowOnError();
+            _hostObjectHelper = new WebViewHostObjectHelper();
+            partial.AddHostObjectHelper(_hostObjectHelper).ThrowOnError();
             DispatchObject.ContinueOnAsync = true;
             DispatchObject.OneStepInvoke = true;
         }
@@ -554,7 +588,41 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     protected virtual void OnWebMessageJsonReceived(object sender, ValueEventArgs<string> json)
     {
         HandleWindowCommand(json.Value);
+        HandlePageError(json.Value);
         WebMessageJsonReceived?.Invoke(this, json);
+    }
+
+    // an unhandled error in the page, forwarded by the injected runtime.
+    // every AOTrino app gets this, because an app whose front end is embedded in the exe has no browser console for an error to land in.
+    private void HandlePageError(string? json)
+    {
+        if (string.IsNullOrEmpty(json))
+            return;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("__aotrino", out var kind) || kind.GetString() != "page-error")
+                return;
+
+            var message = root.TryGetProperty("message", out var m) ? m.GetString() : null;
+            var stack = root.TryGetProperty("stack", out var s) ? s.GetString() : null;
+            OnPageError(message ?? string.Empty, string.IsNullOrEmpty(stack) ? null : stack);
+        }
+        catch
+        {
+            // continue
+        }
+    }
+
+    // where a page error arrives on the .NET side.
+    // the default traces it, override to handle it differently, to show it in the app's own UI, or to swallow it.
+    protected virtual void OnPageError(string message, string? stack)
+    {
+        var text = string.IsNullOrEmpty(stack) ? message : $"{message}{System.Environment.NewLine}{stack}";
+        AOTrinoApplication.Current?.TraceError($"page error: {text}");
     }
 
     // starts a native window move (as if the title bar was grabbed). call while a mouse button is down,
@@ -705,13 +773,45 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     {
         KeyDown?.Invoke(sender, e);
 
-        // marked handled only when the tools were actually opened, since a handled key stops here and never reaches
-        // the WebView. swallowing it in a window that kept the browser keys would stop the browser opening them itself.
-        if (!e.Handled && e.Key == VIRTUAL_KEY.VK_F12 && TryOpenDevTools())
+        // this path is reached when the host window has focus.
+        // when the WebView has focus the keys go to it, and the same shortcuts arrive through AcceleratorKeyPressed instead, see WireControllerEvents.
+        // both call TryHandleShortcut, so F11 and F12 work regardless of which side has the keyboard.
+        if (!e.Handled && TryHandleShortcut(e.Key))
         {
             e.Handled = true;
         }
     }
+
+    // F11 and F12, from either the host window or the WebView.
+    // returns true when it acted, which is what marks the key handled so it stops here and neither side processes it a second time.
+    protected virtual bool TryHandleShortcut(VIRTUAL_KEY key)
+    {
+        // marked handled only when the tools were actually opened, since a window that kept the browser keys opens
+        // them itself and handling it here as well would open two.
+        if (key == VIRTUAL_KEY.VK_F12)
+            return TryOpenDevTools();
+
+        // a diagnostic, not a feature: F11 forces a full collection, on demand.
+        if (key == VIRTUAL_KEY.VK_F11 && ForcesGarbageCollectionOnF11)
+        {
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
+            GC.WaitForPendingFinalizers();
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
+            AOTrinoApplication.Current?.TraceInfo("F11: forced a full garbage collection.");
+            return true;
+        }
+
+        return false;
+    }
+
+    // whether F11 forces a collection, see OnKeyDown.
+    // Debug builds always, Release only with --f11gc, evaluated once because the command line does not change while the app runs.
+    private static readonly bool _forcesGarbageCollectionOnF11 =
+#if DEBUG
+        true;
+#else
+        System.Environment.GetCommandLineArgs().Any(a => a.EqualsIgnoreCase("--f11gc"));
+#endif
 
     // F12 is one of the browser accelerator keys, so an app window that turns those off, which is the default,
     // never receives it: AreDevToolsEnabled says the tools are allowed, the accelerator is what opens them,

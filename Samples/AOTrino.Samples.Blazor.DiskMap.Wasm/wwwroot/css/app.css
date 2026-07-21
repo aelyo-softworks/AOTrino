@@ -50,8 +50,7 @@
 }
 
 /*
-    The page stays transparent, because the window sets a Windows 11 Acrylic backdrop
-    and a backdrop only shows where the page paints nothing.
+    The page stays transparent, because the window sets a Windows 11 Acrylic backdrop and a backdrop only shows where the page paints nothing.
     Give body a solid colour and the backdrop disappears behind it, which reads as the window ignoring the setting.
 */
 html, body {
@@ -67,7 +66,14 @@ html, body {
     overflow: hidden;
 }
 
-#app {
+/*
+    The Blazor layout wraps every page in a <main>, so the real chain is #app > main > .app. 
+    That <main> has no height of its own, so without this .app's height:100% resolves against an auto height and becomes content height: 
+    .app grows with its content, the scroll region below is never bounded to the window, overflow-y never engages, and a tall level spills past the bottom of the window with no scroll bar.
+    Keeping the height through <main> is what lets the page scroll at all.
+*/
+#app,
+#app > main {
     height: 100%;
 }
 
@@ -79,6 +85,51 @@ html, body {
     padding: 16px 20px 20px;
     box-sizing: border-box;
 }
+
+/*
+    Everything below the caption scrolls as one unit, so the treemap can keep a readable height on a short window instead of being crushed to a strip.
+    The caption is not in here, it stays fixed as the window's own chrome.
+*/
+.scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/*
+    WebView2 follows the Windows "automatically hide scroll bars" setting, which turns the bar into an overlay that only appears while scrolling, 
+    so a region that genuinely overflows looks as though it does not scroll.
+    Styling the scroll bar opts out of that. 
+    Chromium then draws a classic bar that stays visible whenever there is anything below the fold, which is the whole point of a scroll bar here.
+    scrollbar-gutter keeps the space reserved, so the treemap width does not jump as the bar comes and goes.
+*/
+.scroll, .rows {
+    scrollbar-gutter: stable;
+}
+
+    .scroll::-webkit-scrollbar,
+    .rows::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    .scroll::-webkit-scrollbar-thumb,
+    .rows::-webkit-scrollbar-thumb {
+        background: var(--control-hover);
+        border-radius: 999px;
+    }
+
+        .scroll::-webkit-scrollbar-thumb:hover,
+        .rows::-webkit-scrollbar-thumb:hover {
+            background: var(--control-border);
+        }
+
+    .scroll::-webkit-scrollbar-track,
+    .rows::-webkit-scrollbar-track {
+        background: transparent;
+    }
 
 /*
     The title bar is drawn by the page, there is no native caption.
@@ -237,7 +288,7 @@ button {
     max-width: 260px;
 }
 
-.cancel-row {
+.stop-row {
     margin-top: 10px;
 }
 
@@ -246,7 +297,7 @@ button {
     font-size: 12px;
 }
 
-.cancel {
+.stop {
     border-color: var(--danger);
     color: var(--danger);
 }
@@ -307,19 +358,27 @@ button {
 }
 
 /*
-    The two views of the same level, side by side: the treemap drawn by Direct2D in the native process,
-    and the rows drawn by the DOM. The map gets the larger share, it is the one that shows shape.
+    The two views of the same level, side by side: the treemap drawn by Direct2D in the native process, and the rows drawn by the DOM.
+    The map gets the larger share, it is the one that shows shape.
 */
 .view {
-    flex: 1;
+    /*
+        grows to fill the space the window gives it, so on a normal window it just fits and there is no scroll.
+        the floor is only a floor: on a genuinely short window the treemap would collapse to nothing, 
+        so below this the page scrolls to it instead. 
+        it is deliberately not a preferred height, a floor larger than the window can spare forces a scroll where the view would otherwise have fit.
+    */
+    flex: 1 1 auto;
+    min-height: 420px;
     display: flex;
     gap: 12px;
-    min-height: 0;
 }
 
 .treemap {
+    position: relative;
     flex: 3;
     min-width: 0;
+    min-height: 0;
     border-radius: 10px;
     border: 1px solid var(--surface-border);
     background: var(--surface);
@@ -327,19 +386,28 @@ button {
 }
 
     /*
-    The canvas fills its box and is sized in CSS pixels only.
-    Its width and height attributes are set by AOTrino's display runtime to the device pixel size it reports
-    to the host, so nothing here should give it a pixel size of its own, that would fight the renderer.
-*/
+        The canvas is taken out of flow and stretched to the pane. In flow, its intrinsic pixel height counts as the pane's content height, 
+        and the host sets that pixel height from the size it just rendered, so the map grew itself a little taller every frame and slid off the bottom. 
+        Out of flow the pane sizes the canvas and never the other way round.
+        width and height are explicit because a canvas is a replaced element, 
+        so with an auto size it falls back to its intrinsic pixel size and sits in the corner rather than filling the pane. 
+        its own width and height attributes stay the device pixel backing store the host renders at, which is not the layout size.
+    */
     .treemap canvas {
-        display: block;
+        position: absolute;
+        top: 0;
+        left: 0;
         width: 100%;
         height: 100%;
+        display: block;
     }
 
 .rows {
     flex: 2;
     min-width: 280px;
+    /* same reason as the treemap: without this the rows list grows to its content instead of scrolling inside a bounded box,
+        so overflow-y never engages and a long list pushes the whole view past the window. */
+    min-height: 0;
     overflow-y: auto;
     padding: 6px;
 }
@@ -470,3 +538,35 @@ button {
     font-family: "Segoe UI Emoji", "Segoe Fluent Icons", "Segoe MDL2 Assets";
     font-size: 14px;
 }
+
+/*
+    Blazor's own error banner, hidden until the runtime shows it. this rule is the standard template's,
+    which this project's page was missing, so the banner sat in the DOM permanently, 
+    its Reload link tab focusable, and pressing Tab a few times revealed it. 
+    the runtime sets display:block on an unhandled error.
+    those errors are also forwarded to the host and traced, see the injected runtime and WebViewWindow.OnPageError,
+    so the banner is the visible half and the trace is the durable half.
+*/
+#blazor-error-ui {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    background: #7a1f1f;
+    color: #fff;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+}
+
+    #blazor-error-ui .reload {
+        color: #fff;
+    }
+
+    #blazor-error-ui .dismiss {
+        cursor: pointer;
+        position: absolute;
+        right: 0.75rem;
+        top: 0.5rem;
+    }

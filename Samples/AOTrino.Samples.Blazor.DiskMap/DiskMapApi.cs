@@ -66,7 +66,7 @@ public partial class DiskMapApi(MainWindow window) : DispatchObject
         if (running && !string.IsNullOrEmpty(path))
             return "[]";
 
-        var node = string.IsNullOrEmpty(path) ? root : Find(root, path);
+        var node = string.IsNullOrEmpty(path) ? root : root.Find(path);
         if (node == null)
             return "[]";
 
@@ -108,7 +108,7 @@ public partial class DiskMapApi(MainWindow window) : DispatchObject
     {
         var root = Window.Scanner.Root;
         var running = Window.Scanner.GetProgress().IsRunning;
-        var node = root == null ? null : string.IsNullOrEmpty(path) ? root : running ? null : Find(root, path);
+        var node = root == null ? null : string.IsNullOrEmpty(path) ? root : running ? null : root.Find(path);
         var entry = node == null
             ? new NodeEntry { Name = string.Empty, FullPath = string.Empty }
             : new NodeEntry
@@ -174,19 +174,5 @@ public partial class DiskMapApi(MainWindow window) : DispatchObject
         Process.Start(new ProcessStartInfo { UseShellExecute = true, FileName = path });
     }
 
-    private static ScanNode? Find(ScanNode node, string path)
-    {
-        if (node.FullPath.EqualsIgnoreCase(path))
-            return node;
-
-        // only walk into the branch that could contain it, a full tree search would be O(n) per navigation.
-        foreach (var child in node.Children)
-        {
-            if (path.StartsWith(child.FullPath, StringComparison.OrdinalIgnoreCase))
-                return Find(child, path);
-        }
-
-        return null;
-    }
 #pragma warning restore CA1822 // Mark members as static
 }

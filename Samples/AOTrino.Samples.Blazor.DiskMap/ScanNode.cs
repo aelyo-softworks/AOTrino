@@ -24,8 +24,34 @@ public sealed class ScanNode(string name, string fullPath, ScanNode? parent)
     public int FileCount { get; set; }
     public int DirectoryCount { get; set; }
 
-    // adds a directory's own bytes to this node's running total,
-    // which the walk does for every ancestor of every directory it finishes.
-    // that is what lets the map show a folder deep in the tree filling up while the scan is still running, rather than staying empty until the final roll up.
+    // adds a directory's own bytes to this node's running total.
     public void AddToTotal(long bytes) => Interlocked.Add(ref _totalSize, bytes);
+
+    // the node at 'path' within this subtree, itself or a descendant, or null if it is not under here.
+    // only the branch whose path could contain it is walked, so a navigation is not a full tree search.
+    // the children are snapshotted because a scan on another thread may still be adding to them.
+    public ScanNode? Find(string path)
+    {
+        if (FullPath.EqualsIgnoreCase(path))
+            return this;
+
+        foreach (var child in Children.ToArray())
+        {
+            if (IsSelfOrDescendant(path, child.FullPath))
+                return child.Find(path);
+        }
+
+        return null;
+    }
+
+    // whether 'path' is 'ancestor' itself or something below it, matched on a directory separator so a folder
+    // is never mistaken for a sibling that merely starts with the same characters, "C:\Program Files" against
+    // "C:\Program Files (x86)".
+    private static bool IsSelfOrDescendant(string path, string ancestor)
+    {
+        if (path.Length < ancestor.Length || !path.StartsWith(ancestor, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return path.Length == ancestor.Length || ancestor.EndsWith('\\') || path[ancestor.Length] == '\\';
+    }
 }
