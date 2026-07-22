@@ -261,7 +261,7 @@ AddHostObject("system", info);
 ```
 
 `AOTrino.Samples.FileExplorer` does this behind its **System** button. Deliberately absent (but demonstrated
-in samples) is elevation state (the first thing an exploit wants to know), and the machine and user names, those are the app's to
+in **DiskMap** samples) is elevation state (the first thing an exploit wants to know), and the machine and user names, those are the app's to
 expose, from its own host object, if it wants them at all.
 
 ## The footgun, spelled out
