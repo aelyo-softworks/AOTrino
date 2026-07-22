@@ -2,7 +2,7 @@
 
 <img src="AOTrino256.png" width="128" align="right" alt="" />
 
-**Electron-like desktop apps on .NET Native AOT + WebView2.** One executable, no runtime to install, no Chromium
+**Windows only, Electron-like desktop apps on .NET Native AOT + WebView2.** One executable, no runtime to install, no Chromium
 to ship, Windows already has both. x86, x64 and ARM64.
 
 A window is a real HWND, the UI is a web page, and the two talk over a typed bridge. That's the whole idea. The
