@@ -1,0 +1,847 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AOTrino — Shell Commander</title>
+    <style>
+        /*
+            Retro orthodox file manager look. The palette follows the Windows app theme through
+            prefers-color-scheme, and the caption's theme button overrides it with data-theme on the root,
+            which is why the light and dark values appear both under the media query and under data-theme.
+        */
+        :root, :root[data-theme="light"] {
+            --bg: #efeadb;
+            --panel: #faf6ea;
+            --panel-head: #e4dcc6;
+            --border: #b39b6a;
+            --text: #2a2620;
+            --dim: #6b6250;
+            --folder: #8a5a00;
+            --sel-bg: #1a56c4;
+            --sel-text: #ffffff;
+            --bar: #e4dcc6;
+            --accent: #1a56c4;
+            --close: #c42b1c;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0a1b3d;
+                --panel: #0e2450;
+                --panel-head: #143063;
+                --border: #4f7bd0;
+                --text: #d6e4ff;
+                --dim: #8fa9d8;
+                --folder: #ffd23f;
+                --sel-bg: #2a6ff0;
+                --sel-text: #ffffff;
+                --bar: #071531;
+                --accent: #66d9ff;
+                --close: #e04a3a;
+            }
+        }
+
+        :root[data-theme="dark"] {
+            --bg: #0a1b3d;
+            --panel: #0e2450;
+            --panel-head: #143063;
+            --border: #4f7bd0;
+            --text: #d6e4ff;
+            --dim: #8fa9d8;
+            --folder: #ffd23f;
+            --sel-bg: #2a6ff0;
+            --sel-text: #ffffff;
+            --bar: #071531;
+            --accent: #66d9ff;
+            --close: #e04a3a;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            user-select: none;
+        }
+
+        /*
+            The window has no native title bar, so the page draws it. data-aotrino-drag hands the strip to Windows
+            for moving and double-click maximize, data-aotrino-nodrag keeps the buttons clickable.
+        */
+        .caption {
+            display: flex;
+            align-items: center;
+            height: 30px;
+            background: var(--bar);
+            border-bottom: 1px solid var(--border);
+        }
+
+            .caption .title {
+                padding: 0 10px;
+                color: var(--accent);
+                font-weight: bold;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .caption .capspace {
+                flex: 1;
+            }
+
+        .capbtn {
+            width: 40px;
+            height: 30px;
+            border: 0;
+            border-left: 1px solid var(--border);
+            border-radius: 0;
+            background: transparent;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+            .capbtn:hover {
+                background: var(--panel-head);
+            }
+
+            .capbtn.close:hover {
+                background: var(--close);
+                color: #fff;
+            }
+
+        /* the path bar, the current folder and the way back up */
+        .pathbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            background: var(--bar);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .path {
+            flex: 1;
+            min-width: 0;
+            font: inherit;
+            color: var(--accent);
+            background: var(--panel);
+            border: 1px solid var(--border);
+            padding: 3px 8px;
+            outline: none;
+        }
+
+            .path:focus {
+                border-color: var(--accent);
+                color: var(--text);
+            }
+
+        button {
+            font: inherit;
+            color: var(--text);
+            background: var(--panel);
+            border: 1px solid var(--border);
+            padding: 3px 10px;
+            cursor: pointer;
+        }
+
+            button:hover:not(:disabled) {
+                background: var(--panel-head);
+            }
+
+            button:disabled {
+                opacity: 0.4;
+                cursor: default;
+            }
+
+        /* two framed panels side by side, the commander's whole shape */
+        .panels {
+            flex: 1;
+            display: flex;
+            gap: 6px;
+            padding: 6px;
+            min-height: 0;
+        }
+
+        /* the draggable divider between the two panels, moved by the mouse to give either side more room. */
+        .splitter {
+            flex: 0 0 6px;
+            cursor: col-resize;
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+            .splitter:hover, .splitter.dragging {
+                background: var(--accent);
+            }
+
+        #navPanel {
+            flex: 0 0 46%;
+        }
+
+        .panel {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel);
+            border: 1px solid var(--border);
+        }
+
+            .panel > .head {
+                padding: 3px 8px;
+                background: var(--panel-head);
+                border-bottom: 1px solid var(--border);
+                color: var(--dim);
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+        .list {
+            flex: 1;
+            overflow: auto;
+            outline: none;
+        }
+
+        .colhead {
+            display: grid;
+            grid-template-columns: 1fr 6rem 9.5rem;
+            gap: 8px;
+            padding: 3px 8px;
+            color: var(--dim);
+            font-size: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+            .colhead span:not(:first-child) {
+                text-align: right;
+            }
+
+            .colhead span {
+                cursor: pointer;
+                user-select: none;
+            }
+
+                .colhead span:hover {
+                    color: var(--accent);
+                }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 6rem 9.5rem;
+            align-items: center;
+            gap: 8px;
+            padding: 2px 8px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+            .row .name-cell {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                overflow: hidden;
+            }
+
+            .row .glyph {
+                flex: 0 0 16px;
+                width: 16px;
+                height: 16px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 13px;
+                line-height: 1;
+            }
+
+                .row .glyph img {
+                    width: 16px;
+                    height: 16px;
+                    display: block;
+                }
+
+            .row.dir .name {
+                color: var(--folder);
+            }
+
+            .row .name {
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .row .size, .row .mod {
+                color: var(--dim);
+                font-size: 12px;
+                text-align: right;
+            }
+
+            .row:hover {
+                background: color-mix(in srgb, var(--sel-bg) 20%, transparent);
+            }
+
+            .row.sel {
+                background: var(--sel-bg);
+                color: var(--sel-text);
+            }
+
+                .row.sel .name, .row.sel .size, .row.sel .mod {
+                    color: var(--sel-text);
+                }
+
+        .preview {
+            flex: 1;
+            position: relative;
+            min-height: 0;
+            overflow: auto;
+            background: #fff;
+        }
+
+            .preview iframe {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                border: 0;
+                display: none;
+                background: #fff;
+            }
+
+            .preview img {
+                display: none;
+            }
+
+                .preview img.show {
+                    display: block;
+                }
+
+            /* fit scales the image down to the pane and centers it, actual shows it full size and the pane scrolls */
+            .preview.fit {
+                overflow: hidden;
+            }
+
+                .preview.fit img.show {
+                    position: absolute;
+                    inset: 0;
+                    margin: auto;
+                    max-width: 100%;
+                    max-height: 100%;
+                }
+
+            .preview .ph {
+                position: absolute;
+                inset: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 1.5rem;
+                text-align: center;
+                white-space: pre-line;
+                color: var(--dim);
+            }
+
+        .error {
+            margin: 0;
+            padding: 4px 8px;
+            background: #5a1f1f;
+            color: #ffd0cc;
+            border-bottom: 1px solid #7a2a2a;
+        }
+
+        /* the function-key bar along the bottom, the genre's signature */
+        .fnbar {
+            display: flex;
+            gap: 6px;
+            padding: 5px 8px;
+            background: var(--bar);
+            border-top: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+
+            .fnbar button {
+                padding: 3px 12px;
+            }
+
+            .fnbar .key {
+                color: var(--accent);
+                font-weight: bold;
+            }
+
+            .fnbar .spacer {
+                flex: 1;
+            }
+    </style>
+</head>
+<body>
+    <header class="caption" data-aotrino-drag>
+        <span class="title">▚ AOTrino Shell Commander</span>
+        <span class="capspace"></span>
+        <div data-aotrino-nodrag style="display:flex">
+            <button class="capbtn" id="theme" title="Light / dark">&#x263E;</button>
+            <button class="capbtn" id="min" title="Minimize">&#x2013;</button>
+            <button class="capbtn" id="max" title="Maximize">&#x25A2;</button>
+            <button class="capbtn close" id="closeWin" title="Close">&#x2715;</button>
+        </div>
+    </header>
+
+    <div class="pathbar">
+        <button id="up" title="Go to the parent folder (Backspace)">↑ Up</button>
+        <input class="path" id="path" spellcheck="false"
+               title="The current location. Type a path like d:\temp, or a shell parsing name, then press Enter." />
+    </div>
+    <p class="error" id="error" style="display:none"></p>
+
+    <div class="panels" id="panels">
+        <section class="panel" id="navPanel">
+            <div class="head" id="navhead">Navigation</div>
+            <div class="colhead">
+                <span data-col="name">Name</span>
+                <span data-col="size">Size</span>
+                <span data-col="mod">Modified</span>
+            </div>
+            <div class="list" id="list" tabindex="0"></div>
+        </section>
+        <div class="splitter" id="splitter" title="Drag to resize the panels"></div>
+        <section class="panel">
+            <div class="head">Preview</div>
+            <div class="preview" id="preview">
+                <img id="previewImg" alt="" />
+                <iframe id="previewFrame" title="Preview"></iframe>
+                <div class="ph" id="previewPh">Select a file to preview.</div>
+            </div>
+        </section>
+    </div>
+
+    <div class="fnbar">
+        <button id="desktop" title="Desktop, the root of the shell namespace (F1)"><span class="key">F1</span> Desktop</button>
+        <button id="thispc" title="This PC, the drives and devices (F2)"><span class="key">F2</span> This&nbsp;PC</button>
+        <button id="refresh" title="Reload this folder (F5)"><span class="key">F5</span> Refresh</button>
+        <button id="iconmode" title="Switch between file type icons and thumbnails (F6)"><span class="key">F6</span> <span id="iconmodelabel">Thumbnails</span></button>
+        <button id="fit" title="Fit the preview image to the pane, or show it at full size (F7)"><span class="key">F7</span> <span id="fitlabel">Fit</span></button>
+        <span class="spacer"></span>
+        <button id="quit" title="Close the window (F10)"><span class="key">F10</span> Quit</button>
+    </div>
+
+    <script>
+        const shell = () => chrome.webview.hostObjects.sync.shell;
+        const aot = () => window.__aotrino;
+        const listEl = document.getElementById("list");
+        const pathEl = document.getElementById("path");
+        const errEl = document.getElementById("error");
+        const upBtn = document.getElementById("up");
+        const previewEl = document.getElementById("preview");
+        const previewImg = document.getElementById("previewImg");
+        const previewFrame = document.getElementById("previewFrame");
+        const previewPh = document.getElementById("previewPh");
+        const MARKDOWN = /\.(md|markdown|mdown|mkdn?)$/i;
+        let fitPreview = true;      // fit the preview image to the pane by default
+        let previewEntry = null;    // what the preview is showing, so it can re-render when the theme changes
+
+        function fileUrl(p) { return encodeURI("file:///" + p.replace(/\\/g, "/")); }
+        function isCurrent(forId) { return current && selIndex >= 0 && (current.Entries[selIndex] || {}).Id === forId; }
+
+        // a link clicked in the rendered markdown: an external one (http) opens in the system browser rather than
+        // navigating the preview away, a relative one is left to resolve against the file's folder and follow in place.
+        previewFrame.addEventListener("load", () => {
+            let doc;
+            try { doc = previewFrame.contentDocument; } catch (x) { return; }   // a file:// document, not ours to reach into
+            if (!doc) return;
+            doc.addEventListener("click", (ev) => {
+                const a = ev.target && ev.target.closest && ev.target.closest("a[href]");
+                if (a && /^https?:/i.test(a.href)) {
+                    ev.preventDefault();
+                    chrome.webview.hostObjects.shell.OpenExternal(a.href);
+                }
+            });
+        });
+
+        function clearPreview(message) {
+            previewImg.classList.remove("show");
+            previewImg.removeAttribute("src");
+            previewFrame.style.display = "none";
+            previewFrame.removeAttribute("src");
+            previewFrame.removeAttribute("srcdoc");
+            previewPh.textContent = message;
+            previewPh.style.display = "flex";
+        }
+
+        // the host decides everything: an image the WebView shows, a document it renders in a frame (pdf, media,
+        // text), or an image only WIC can read, decoded to a png. we just show whatever Kind comes back.
+        // markdown is special, rendered to html by the host and shown in a themed frame.
+        function showPreview(e) {
+            previewEntry = e;
+            if (!e || e.IsFolder) { clearPreview("Select a file to preview."); return; }
+            if (MARKDOWN.test(e.Name)) { showMarkdown(e); return; }
+
+            clearPreview("Loading…");
+            const forId = e.Id;
+            chrome.webview.hostObjects.shell.GetPreview(e.Id).then((json) => {
+                if (!isCurrent(forId)) return;   // the selection moved on while this was resolving
+                const r = JSON.parse(json);
+                if (!r.Path) { clearPreview(r.Error || "No preview available."); return; }
+                if (r.Kind === "image") {
+                    previewFrame.style.display = "none";
+                    previewFrame.removeAttribute("src");
+                    previewPh.style.display = "none";
+                    previewImg.src = fileUrl(r.Path);
+                    previewImg.classList.add("show");
+                } else {
+                    previewImg.classList.remove("show");
+                    previewFrame.removeAttribute("srcdoc");
+                    previewFrame.src = fileUrl(r.Path);
+                    previewFrame.style.display = "block";
+                    previewPh.style.display = "none";
+                }
+            }).catch((x) => clearPreview(String(x)));
+        }
+
+        function showMarkdown(e) {
+            clearPreview("Loading…");
+            const forId = e.Id;
+            chrome.webview.hostObjects.shell.GetMarkdown(e.Id).then((json) => {
+                if (!isCurrent(forId)) return;
+                const r = JSON.parse(json);
+                if (!r.Html) { clearPreview("No preview available."); return; }
+                previewImg.classList.remove("show");
+                previewFrame.removeAttribute("src");
+                previewFrame.srcdoc = markdownDoc(r.Html, r.BaseHref);
+                previewFrame.style.display = "block";
+                previewPh.style.display = "none";
+            }).catch((x) => clearPreview(String(x)));
+        }
+
+        // wrap the rendered markdown in a small themed page. base makes its relative images and links resolve
+        // against the file's own folder, and the host already stripped any raw html, so this needs no sandbox.
+        function markdownDoc(bodyHtml, baseHref) {
+            const dark = effectiveDark();
+            const bg = dark ? "#0e2450" : "#faf6ea", fg = dark ? "#d6e4ff" : "#2a2620";
+            const code = dark ? "#071531" : "#efe9d6", line = dark ? "#4f7bd0" : "#b39b6a";
+            const base = baseHref ? `<base href="${baseHref}">` : "";
+            return `<!doctype html><html><head><meta charset="utf-8">${base}<style>` +
+                `body{font-family:"Segoe UI Variable","Segoe UI",system-ui,sans-serif;font-size:14px;line-height:1.6;color:${fg};background:${bg};margin:0;padding:16px 20px}` +
+                `pre,code{font-family:"Cascadia Mono",Consolas,monospace}` +
+                `code{background:${code};border-radius:4px;padding:1px 5px}` +
+                `pre{background:${code};border-radius:6px;padding:10px;overflow:auto}pre code{background:none;padding:0}` +
+                `a{color:#66a3ff}img{max-width:100%}` +
+                `table{border-collapse:collapse}td,th{border:1px solid ${line};padding:4px 8px}` +
+                `h1,h2{border-bottom:1px solid ${line};padding-bottom:.2em}` +
+                `blockquote{border-left:3px solid ${line};margin:0;padding-left:12px;opacity:.85}` +
+                `</style></head><body>${bodyHtml}</body></html>`;
+        }
+
+        function applyFit() {
+            previewEl.classList.toggle("fit", fitPreview);
+            document.getElementById("fitlabel").textContent = fitPreview ? "Fit" : "Actual";
+        }
+        function toggleFit() { fitPreview = !fitPreview; applyFit(); }
+        applyFit();
+        let current = null;   // the listing on screen
+        let selIndex = -1;    // the highlighted row
+        const iconCache = new Map();   // shell images by parsing name, so re-visiting a folder is instant
+        let iconMode = false;          // false: thumbnails allowed, true: file type icons only
+        let sortCol = "name";          // the column the list is ordered by, click a header to change it
+        let sortAsc = true;
+
+        // folders always come first, then the items, each ordered by the chosen column and direction.
+        // name and size fall back to name so the order is stable, and the numeric compare keeps file2 before file10.
+        function sortEntries(entries) {
+            const dir = sortAsc ? 1 : -1;
+            const byName = (a, b) => a.Name.localeCompare(b.Name, undefined, { sensitivity: "base", numeric: true });
+            entries.sort((a, b) => {
+                if (a.IsFolder !== b.IsFolder) return a.IsFolder ? -1 : 1;
+                let c;
+                if (sortCol === "size") c = (a.Size || 0) - (b.Size || 0);
+                else if (sortCol === "mod") c = (a.Modified || "").localeCompare(b.Modified || "");
+                else c = byName(a, b);
+                if (c === 0 && sortCol !== "name") c = byName(a, b);
+                return c * dir;
+            });
+        }
+
+        function updateSortHeaders() {
+            for (const span of document.querySelectorAll(".colhead span")) {
+                const label = span.dataset.label || (span.dataset.label = span.textContent);
+                span.textContent = label + (span.dataset.col === sortCol ? (sortAsc ? " ▲" : " ▼") : "");
+            }
+        }
+
+        // only the rows scrolled into view fetch their image, so a big folder does not fire hundreds of calls at once.
+        const iconObserver = new IntersectionObserver((ents) => {
+            for (const ent of ents) {
+                if (!ent.isIntersecting) continue;
+                iconObserver.unobserve(ent.target);
+                loadIcon(ent.target, ent.target.dataset.id, ent.target.dataset.stamp);
+            }
+        }, { root: listEl, rootMargin: "150px" });
+
+        function fmtSize(n) {
+            if (n < 0) return "";
+            const u = ["B", "KB", "MB", "GB", "TB"];
+            let i = 0, v = n;
+            while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+            return (i === 0 ? v + " " + u[i] : v.toFixed(1) + " " + u[i]);
+        }
+
+        function showError(msg) { errEl.style.display = msg ? "block" : "none"; errEl.textContent = msg || ""; }
+
+        // the real shell icon, fetched lazily and async so the list shows at once and the icons fill in behind it.
+        // the emoji stays as the fallback until the icon arrives, or for an item with no parsing name to ask about.
+        function loadIcon(el, id, stamp) {
+            if (!id) return;
+            // key by mode and stamp too, so thumbnails and icons for the same item both stay cached, and switching
+            // between them is instant instead of throwing one away, the host caches to disk on the same key.
+            const key = id + "|" + (iconMode ? 1 : 0) + "|" + (stamp || "");
+            if (iconCache.has(key)) { applyIcon(el, iconCache.get(key)); return; }
+            chrome.webview.hostObjects.shell.GetIcon(id, 16, iconMode, stamp || "").then((url) => {
+                iconCache.set(key, url || "");
+                applyIcon(el, url);
+            }).catch(() => { });
+        }
+
+        function applyIcon(el, url) {
+            if (!url) return;
+            const img = new Image(16, 16);
+            img.src = url;
+            el.textContent = "";
+            el.appendChild(img);
+        }
+
+        function render(listing) {
+            current = listing;
+            selIndex = -1;
+            showError(listing.Error);
+            upBtn.disabled = listing.ParentId === null;
+
+            const where = listing.Name || "Desktop";
+            pathEl.value = listing.Id || "";
+            pathEl.title = listing.Id
+                ? listing.Id
+                : "Desktop, the root of the shell namespace. Type a path like d:\\temp or a parsing name, then press Enter.";
+            document.getElementById("navhead").textContent = `${where} — ${listing.Entries.length} item${listing.Entries.length === 1 ? "" : "s"}`;
+            showPreview(null);
+
+            sortEntries(listing.Entries);   // apply the chosen column order, so it survives navigation
+            updateSortHeaders();
+
+            iconObserver.disconnect();   // drop the previous listing's rows before observing this one's
+            listEl.innerHTML = "";
+            listing.Entries.forEach((e, i) => {
+                const row = document.createElement("div");
+                row.className = "row" + (e.IsFolder ? " dir" : "");
+                const glyph = e.IsFolder ? "📁" : "📄";
+                row.innerHTML =
+                    `<div class="name-cell"><span class="glyph">${glyph}</span><span class="name"></span></div>` +
+                    `<div class="size"></div><div class="mod"></div>`;
+                row.querySelector(".name").textContent = e.Name;
+                row.querySelector(".size").textContent = (e.IsFolder || e.Size < 0) ? "" : fmtSize(e.Size);
+                row.querySelector(".mod").textContent = e.Modified || "";
+                row.title = e.Id ? `${e.Name}\n${e.Id}` : e.Name;
+                const glyphEl = row.querySelector(".glyph");
+                if (e.Id) { glyphEl.dataset.id = e.Id; glyphEl.dataset.stamp = e.Modified || ""; iconObserver.observe(glyphEl); }
+                row.addEventListener("click", () => selectRow(i));
+                row.addEventListener("dblclick", () => activate(i));
+                // right-click raises the item's real Windows context menu, the same verbs Explorer shows.
+                // preventDefault drops the WebView's own page menu, the row is selected first so the menu matches it.
+                row.addEventListener("contextmenu", (ev) => {
+                    ev.preventDefault();
+                    selectRow(i);
+                    if (e.Id) chrome.webview.hostObjects.shell.ShowContextMenu(e.Id);
+                });
+                listEl.appendChild(row);
+            });
+            listEl.scrollTop = 0;
+        }
+
+        function rowEls() { return listEl.querySelectorAll(".row"); }
+
+        function selectRow(i) {
+            const rows = rowEls();
+            if (selIndex >= 0 && rows[selIndex]) rows[selIndex].classList.remove("sel");
+            selIndex = i;
+            if (i < 0 || !rows[i]) return;
+            rows[i].classList.add("sel");
+            rows[i].scrollIntoView({ block: "nearest" });
+
+            showPreview(current.Entries[i]);
+        }
+
+        function moveSel(delta) {
+            const n = current ? current.Entries.length : 0;
+            if (n === 0) return;
+            let i = selIndex < 0 ? (delta > 0 ? 0 : n - 1) : selIndex + delta;
+            selectRow(Math.max(0, Math.min(n - 1, i)));
+        }
+
+        // Enter or double-click: descend into a folder. files will preview once that is wired up.
+        function activate(i) {
+            const e = current && current.Entries[i];
+            if (e && e.IsFolder) load(e.Id);
+        }
+
+        function load(id) {
+            try {
+                const listing = JSON.parse(shell().List(id ?? ""));
+                // could not open the target: stay where we are and say so, rather than replacing the view with a
+                // dead listing whose Up is disabled. this is what happens deep in a virtual place whose items report
+                // as folders but do not reopen by parsing name. the very first load has nowhere to stay, so it renders.
+                if (listing.Error && current) {
+                    showError(listing.Error);
+                    pathEl.value = current.Id;
+                    return;
+                }
+                render(listing);
+            } catch (e) {
+                showError(String(e));
+            }
+        }
+
+        function goUp() { if (current && current.ParentId !== null) load(current.ParentId); }
+
+        // driven from the keyboard, the way a commander is. handled on the document so it works whatever has focus,
+        // which is what "F1 or F2 don't always work" was: the keys were only labels, and list keys needed the list focused.
+        document.addEventListener("keydown", (ev) => {
+            // while the path box is focused its own keys win, only the function keys stay global.
+            const inInput = ev.target && ev.target.tagName === "INPUT";
+            switch (ev.key) {
+                case "F1": load(""); break;
+                case "F2": load(shell().GetThisPc()); break;
+                case "F5": if (current) load(current.Id); break;
+                case "F6": toggleIconMode(); break;
+                case "F7": toggleFit(); break;
+                case "F10": aot() && aot().closeWindow(); break;
+                case "ArrowDown": if (inInput) return; moveSel(1); break;
+                case "ArrowUp": if (inInput) return; moveSel(-1); break;
+                case "Home": if (inInput) return; selectRow(0); break;
+                case "End": if (inInput) return; moveSel(current ? current.Entries.length : 0); break;
+                case "Enter": if (inInput) return; if (selIndex >= 0) activate(selIndex); break;
+                case "Backspace": if (inInput) return; goUp(); break;
+                default: return;
+            }
+            ev.preventDefault();
+        });
+
+        upBtn.addEventListener("click", goUp);
+
+        // the path box is editable: type a path or a parsing name and press Enter to go there.
+        pathEl.addEventListener("keydown", (ev) => {
+            if (ev.key === "Enter") { load(pathEl.value.trim()); listEl.focus(); }
+            else if (ev.key === "Escape") { pathEl.value = current ? current.Id : ""; pathEl.blur(); }
+        });
+
+        document.getElementById("desktop").addEventListener("click", () => load(""));
+        document.getElementById("thispc").addEventListener("click", () => load(shell().GetThisPc()));
+        document.getElementById("refresh").addEventListener("click", () => { if (current) load(current.Id); });
+
+        // switch the list between real thumbnails and plain file type icons, and re-fetch what is on screen.
+        function toggleIconMode() {
+            iconMode = !iconMode;
+            document.getElementById("iconmodelabel").textContent = iconMode ? "Icons" : "Thumbnails";
+            // the cache is keyed by mode, so both icons and thumbnails stay warm, switching back is instant.
+            if (current) render(current);
+        }
+        document.getElementById("iconmode").addEventListener("click", toggleIconMode);
+        document.getElementById("fit").addEventListener("click", toggleFit);
+
+        // clicking a column header sorts by it, clicking the same one again reverses the order.
+        for (const span of document.querySelectorAll(".colhead span")) {
+            span.addEventListener("click", () => {
+                const col = span.dataset.col;
+                if (sortCol === col) { sortAsc = !sortAsc; } else { sortCol = col; sortAsc = true; }
+                if (current) render(current);
+            });
+        }
+
+        // the draggable divider between the two panels, its position kept across sessions in localStorage,
+        // which WebView2 persists in the app's user data folder. it is stored as a fraction so it survives a resize.
+        (function () {
+            const panels = document.getElementById("panels");
+            const splitter = document.getElementById("splitter");
+            const navPanel = document.getElementById("navPanel");
+            let dragging = false, fraction = 0;
+
+            const saved = parseFloat(localStorage.getItem("nav.split"));
+            if (saved > 0.1 && saved < 0.9) navPanel.style.flex = "0 0 " + (saved * panels.getBoundingClientRect().width) + "px";
+
+            splitter.addEventListener("mousedown", (e) => {
+                dragging = true;
+                splitter.classList.add("dragging");
+                document.body.style.cursor = "col-resize";
+                document.body.style.userSelect = "none";
+                e.preventDefault();
+            });
+            window.addEventListener("mousemove", (e) => {
+                if (!dragging) return;
+                const rect = panels.getBoundingClientRect();
+                const w = Math.max(160, Math.min(rect.width - 220, e.clientX - rect.left - 6));
+                navPanel.style.flex = "0 0 " + w + "px";
+                fraction = w / rect.width;
+            });
+            window.addEventListener("mouseup", () => {
+                if (!dragging) return;
+                dragging = false;
+                splitter.classList.remove("dragging");
+                document.body.style.cursor = "";
+                document.body.style.userSelect = "";
+                if (fraction > 0) localStorage.setItem("nav.split", fraction.toFixed(4));
+            });
+        })();
+        document.getElementById("quit").addEventListener("click", () => aot() && aot().closeWindow());
+
+        // window controls: the injected runtime turns these into real Windows commands, and it already
+        // maximizes on a double click of the caption strip (data-aotrino-drag).
+        document.getElementById("min").addEventListener("click", () => aot() && aot().minimizeWindow());
+        document.getElementById("max").addEventListener("click", () => aot() && aot().maximizeWindow());
+        document.getElementById("closeWin").addEventListener("click", () => aot() && aot().closeWindow());
+
+        // the maximize button shows restore once the window fills the work area, so it agrees with the window,
+        // whether it got there by the button, a double click, or a snap.
+        const maxBtn = document.getElementById("max");
+        function updateMaxGlyph() {
+            const maxed = window.outerWidth >= screen.availWidth - 2 && window.outerHeight >= screen.availHeight - 2;
+            maxBtn.innerHTML = maxed ? "&#x2750;" : "&#x25A2;";
+            maxBtn.title = maxed ? "Restore" : "Maximize";
+        }
+        window.addEventListener("resize", updateMaxGlyph);
+        updateMaxGlyph();
+
+        // theme: no attribute means follow Windows, the button pins light or dark and flips the glyph.
+        const root = document.documentElement;
+        const themeBtn = document.getElementById("theme");
+        function effectiveDark() {
+            return root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+        }
+        function paintThemeGlyph() { themeBtn.innerHTML = effectiveDark() ? "&#x2600;" : "&#x263E;"; }
+        // a markdown preview is coloured to the current theme, so it is re-rendered when the theme changes.
+        function refreshMarkdownTheme() { if (previewEntry && MARKDOWN.test(previewEntry.Name)) showMarkdown(previewEntry); }
+        themeBtn.addEventListener("click", () => { root.dataset.theme = effectiveDark() ? "light" : "dark"; paintThemeGlyph(); refreshMarkdownTheme(); });
+        matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { paintThemeGlyph(); refreshMarkdownTheme(); });
+        paintThemeGlyph();
+
+        // the caption shows the window's own title (AOTrino injects it), so the strip, the taskbar and Alt-Tab agree.
+        const winTitle = (window.__aotrino && window.__aotrino.window && window.__aotrino.window.title) || "Shell Commander";
+        document.querySelector(".caption .title").textContent = "▚ " + winTitle;
+        document.title = winTitle;
+
+        if (window.chrome && chrome.webview && chrome.webview.hostObjects) {
+            load("");   // start at the Desktop, the top of the shell namespace
+        } else {
+            showError("chrome.webview.hostObjects not available");
+        }
+    </script>
+</body>
+</html>

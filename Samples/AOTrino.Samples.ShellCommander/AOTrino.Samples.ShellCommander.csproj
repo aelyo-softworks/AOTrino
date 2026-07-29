@@ -1,0 +1,58 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<PublishAot>true</PublishAot>
+		<ApplicationManifest>app.manifest</ApplicationManifest>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<RootNamespace>AOTrino.Samples.ShellCommander</RootNamespace>
+
+		<!-- opt in to AOTrino's WebRoot embedding (see AOTrino.targets) -->
+		<AOTrinoEmbedWebRoot>true</AOTrinoEmbedWebRoot>
+
+		<Title>AOTrino Samples - Shell Commander</Title>
+		<AssemblyTitle>AOTrino Samples - Shell Commander</AssemblyTitle>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Using Include="AOTrino" />
+		<Using Include="AOTrino.Bridge" />
+		<Using Include="DirectN" />
+		<Using Include="Markdig" />
+		<Using Include="Microsoft.Win32" />
+		<Using Include="ShellN.Extensions" />
+		<Using Include="ShellN.Extensions.Utilities" />
+		<Using Include="System" />
+		<Using Include="System.Collections.Concurrent" />
+		<Using Include="System.Collections.Generic" />
+		<Using Include="System.Diagnostics" />
+		<Using Include="System.IO" />
+		<Using Include="System.Linq" />
+		<Using Include="System.Reflection" />
+		<Using Include="System.Runtime.InteropServices" />
+		<Using Include="System.Security.Cryptography" />
+		<Using Include="System.Text" />
+		<Using Include="System.Text.Json" />
+		<Using Include="System.Text.Json.Serialization" />
+		<Using Include="System.Threading" />
+		<Using Include="System.Threading.Tasks" />
+		<Using Include="WebView2" />
+		<Using Include="WicNet" />
+	</ItemGroup>
+
+	<!--
+	  the point of this sample: the Windows shell namespace as a public NuGet, not redeclared interop.
+	  ShellN.Extensions brings ShellN and the DirectNAot packages it needs. AOTrino's own DirectN is 1.6.5,
+	  the same version this depends on, so the two agree on one DirectN.
+	-->
+	<ItemGroup>
+		<PackageReference Include="Markdig" Version="1.3.2" />
+		<PackageReference Include="ShellN.Extensions" Version="1.0.0" />
+		<PackageReference Include="WicNetCore" Version="1.9.3" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\AOTrino\AOTrino.csproj" />
+	</ItemGroup>
+
+</Project>
