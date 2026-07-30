@@ -2,7 +2,7 @@
 
 <img src="AOTrino256.png" width="128" align="right" alt="" />
 
-**Electron-like desktop apps on .NET Native AOT + WebView2.** One executable, no runtime to install, no Chromium
+**Windows only, Electron-like desktop apps on .NET Native AOT + WebView2.** One executable, no runtime to install, no Chromium
 to ship, Windows already has both. x86, x64 and ARM64.
 
 A window is a real HWND, the UI is a web page, and the two talk over a typed bridge. That's the whole idea. The
@@ -175,9 +175,9 @@ copy, the path for pixels, which the bridge is the wrong tool for.
 
 ![Direct2D](docs/images/direct2d.png)
 
-### Composition
+### Windows Direct Composition
 
-*Plain HTML.* The two hosting models side by side in one process: the WebView as a composition visual (the
+*Plain HTML.* The two hosting models side by side in one process: the WebView as a Direct Composition visual (the
 default) and as a classic child HWND. Same page, different windows.
 
 ![Composition](docs/images/composition.png)
@@ -185,7 +185,7 @@ default) and as a classic child HWND. Same page, different windows.
 ### Translucid
 
 *Plain HTML.* A Windows 11 system backdrop, Mica, Acrylic, Tabbed, showing through a page that leaves its
-edges transparent. Only possible because the WebView is a composition layer and not an opaque child window.
+edges transparent. Only possible because the WebView is a Direct Composition layer and not an opaque child window.
 
 ![Translucid](docs/images/translucid.png)
 
