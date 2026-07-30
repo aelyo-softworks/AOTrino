@@ -4,6 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>AOTrino — Shell Commander</title>
+    <!-- xterm.js, embedded in the app's WebRoot and loaded locally, so the console has no external dependency. -->
+    <link rel="stylesheet" href="xterm.css" />
+    <!-- restore the pinned theme before the body renders, so a remembered light/dark choice does not flash. -->
+    <script>try { var t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) { }</script>
     <style>
         /*
             Retro orthodox file manager look. The palette follows the Windows app theme through
@@ -169,6 +173,13 @@
                 cursor: default;
             }
 
+        /* a compact icon only button (the Reveal in Explorer glyph in the path bar). */
+        .iconbtn {
+            padding: 3px 9px;
+            font-size: 15px;
+            line-height: 1;
+        }
+
         /* two framed panels side by side, the commander's whole shape */
         .panels {
             flex: 1;
@@ -219,6 +230,12 @@
             outline: none;
         }
 
+        /* a spacer as tall as every row would be, so the scrollbar spans the whole folder while only the visible rows exist. */
+        .list-sizer {
+            position: relative;
+            width: 100%;
+        }
+
         .colhead {
             display: grid;
             grid-template-columns: 1fr 6rem 9.5rem;
@@ -242,7 +259,12 @@
                     color: var(--accent);
                 }
 
+        /* rows are absolutely positioned inside the sizer at index * ROW_H, and a fixed height so that math holds. */
         .row {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 22px;
             display: grid;
             grid-template-columns: 1fr 6rem 9.5rem;
             align-items: center;
@@ -304,6 +326,72 @@
                     color: var(--sel-text);
                 }
 
+        /* gallery: an absolutely positioned cell, a centered thumbnail box over a clipped name. */
+        .cell {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 4px;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+            .cell .thumb {
+                flex: 0 0 auto;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 30px;
+                line-height: 1;
+            }
+
+                .cell .thumb img {
+                    max-width: 100%;
+                    max-height: 100%;
+                    display: block;
+                }
+
+            .cell .cell-name {
+                max-width: 100%;
+                text-align: center;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                font-size: 12px;
+            }
+
+            .cell.dir .cell-name {
+                color: var(--folder);
+            }
+
+            .cell:hover {
+                background: color-mix(in srgb, var(--sel-bg) 20%, transparent);
+            }
+
+            .cell.sel {
+                background: var(--sel-bg);
+            }
+
+                .cell.sel .cell-name {
+                    color: var(--sel-text);
+                }
+
+        /* the thumbnail size slider in the function bar, shown only in the gallery. */
+        .thumbctl {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            padding: 0 6px;
+        }
+
+            .thumbctl input[type="range"] {
+                width: 90px;
+                accent-color: var(--accent);
+                cursor: pointer;
+            }
+
         .preview {
             flex: 1;
             position: relative;
@@ -355,6 +443,93 @@
                 color: var(--dim);
             }
 
+            /* the details card, shown for folders, un-previewable files, or on demand (F4). */
+            .preview .details {
+                position: absolute;
+                inset: 0;
+                display: none;
+                flex-direction: column;
+                align-items: center;
+                overflow: auto;
+                padding: 20px 18px;
+                color: var(--text);
+                background: var(--panel);
+            }
+
+                .preview .details .d-icon {
+                    width: 96px;
+                    height: 96px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 64px;
+                    line-height: 1;
+                }
+
+                    .preview .details .d-icon img {
+                        max-width: 96px;
+                        max-height: 96px;
+                    }
+
+                .preview .details .d-name {
+                    margin-top: 10px;
+                    font-weight: bold;
+                    text-align: center;
+                    word-break: break-word;
+                }
+
+                .preview .details .d-type {
+                    color: var(--dim);
+                    font-size: 12px;
+                    margin-bottom: 12px;
+                }
+
+                .preview .details .d-table {
+                    width: 100%;
+                    max-width: 460px;
+                    border-collapse: collapse;
+                    font-size: 12px;
+                }
+
+                    .preview .details .d-table td {
+                        padding: 3px 6px;
+                        vertical-align: top;
+                        border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+                    }
+
+                    .preview .details .d-table .dcat td {
+                        color: var(--accent);
+                        font-weight: bold;
+                        padding-top: 10px;
+                        border-bottom: 1px solid var(--border);
+                    }
+
+                    .preview .details .d-table .dk {
+                        color: var(--dim);
+                        white-space: nowrap;
+                        width: 8.5rem;
+                    }
+
+                    .preview .details .d-table .dv {
+                        word-break: break-word;
+                        user-select: text;
+                    }
+
+                .preview .details .d-actions {
+                    margin-top: 14px;
+                }
+
+        /* the Details button reads pressed while that mode is on. */
+        .fnbar #details.active {
+            background: var(--sel-bg);
+            color: var(--sel-text);
+            border-color: var(--sel-bg);
+        }
+
+            .fnbar #details.active .key {
+                color: var(--sel-text);
+            }
+
         .error {
             margin: 0;
             padding: 4px 8px;
@@ -385,115 +560,344 @@
             .fnbar .spacer {
                 flex: 1;
             }
+
+        /* the draggable divider above the console, resizing its height. shown only while the console is open. */
+        .hsplitter {
+            display: none;
+            height: 6px;
+            cursor: row-resize;
+            background: var(--border);
+        }
+
+            .hsplitter.open {
+                display: block;
+            }
+
+            .hsplitter:hover, .hsplitter.dragging {
+                background: var(--accent);
+            }
+
+        /* auto-disappearing toasts, stacked above the function bar, announcing shell changes to the current folder. */
+        .toasts {
+            position: fixed;
+            right: 12px;
+            bottom: 44px;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            pointer-events: none;
+        }
+
+            .toasts .toast {
+                max-width: 40ch;
+                padding: 6px 12px;
+                background: var(--panel-head);
+                border: 1px solid var(--border);
+                border-radius: 4px;
+                color: var(--text);
+                font-size: 12px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
+                opacity: 0;
+                transform: translateY(6px);
+                transition: opacity .25s, transform .25s;
+            }
+
+                .toasts .toast.show {
+                    opacity: 1;
+                    transform: none;
+                }
+
+        /* the collapsible console drawer, hidden until opened with F8, xterm.js draws inside its body. */
+        .console {
+            display: none;
+            flex-direction: column;
+            height: 260px;
+            min-height: 0;
+            background: #000;
+            border-top: 1px solid var(--border);
+        }
+
+            .console.open {
+                display: flex;
+            }
+
+            .console .console-head {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 2px 8px;
+                background: var(--panel-head);
+                border-bottom: 1px solid var(--border);
+                color: var(--dim);
+                font-size: 12px;
+            }
+
+            .console .console-title {
+                color: var(--accent);
+                font-weight: bold;
+            }
+
+            .console .console-shell {
+                font: inherit;
+                font-size: 12px;
+                color: var(--text);
+                background: var(--panel);
+                border: 1px solid var(--border);
+                padding: 1px 4px;
+                cursor: pointer;
+            }
+
+            .console .console-sync {
+                display: flex;
+                align-items: center;
+                gap: 3px;
+                cursor: pointer;
+            }
+
+            .console .console-cwd {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .console .spacer {
+                flex: 1;
+            }
+
+            .console .console-x {
+                padding: 0 8px;
+                border: 0;
+                background: transparent;
+                color: var(--text);
+                cursor: pointer;
+            }
+
+                .console .console-x:hover {
+                    background: var(--close);
+                    color: #fff;
+                }
+
+            .console .console-body {
+                flex: 1;
+                min-height: 0;
+                overflow: hidden;
+                padding: 2px 4px;
+            }
     </style>
 </head>
 <body>
     <header class="caption" data-aotrino-drag>
-        <span class="title">▚ AOTrino Shell Commander</span>
+        <span class="title"></span>
         <span class="capspace"></span>
         <div data-aotrino-nodrag style="display:flex">
-            <button class="capbtn" id="theme" title="Light / dark">&#x263E;</button>
-            <button class="capbtn" id="min" title="Minimize">&#x2013;</button>
-            <button class="capbtn" id="max" title="Maximize">&#x25A2;</button>
-            <button class="capbtn close" id="closeWin" title="Close">&#x2715;</button>
+            <button class="capbtn" id="theme" data-t-title="Caption_Theme">&#x263E;</button>
+            <button class="capbtn" id="min" data-t-title="Caption_Minimize">&#x2013;</button>
+            <button class="capbtn" id="max" data-t-title="Caption_Maximize">&#x25A2;</button>
+            <button class="capbtn close" id="closeWin" data-t-title="Caption_Close">&#x2715;</button>
         </div>
     </header>
 
     <div class="pathbar">
-        <button id="up" title="Go to the parent folder (Backspace)">↑ Up</button>
-        <input class="path" id="path" spellcheck="false"
-               title="The current location. Type a path like d:\temp, or a shell parsing name, then press Enter." />
+        <button id="up" data-t="Up_Label" data-t-title="Up_Tip"></button>
+        <button id="reveal" class="iconbtn" data-t-title="Reveal_Tip">🪟</button>
+        <input class="path" id="path" spellcheck="false" data-t-title="Path_Tip" />
     </div>
     <p class="error" id="error" style="display:none"></p>
 
     <div class="panels" id="panels">
         <section class="panel" id="navPanel">
-            <div class="head" id="navhead">Navigation</div>
+            <div class="head" id="navhead" data-t="Head_Navigation"></div>
             <div class="colhead">
-                <span data-col="name">Name</span>
-                <span data-col="size">Size</span>
-                <span data-col="mod">Modified</span>
+                <span data-col="name" data-t="Col_Name"></span>
+                <span data-col="size" data-t="Col_Size"></span>
+                <span data-col="mod" data-t="Col_Modified"></span>
             </div>
-            <div class="list" id="list" tabindex="0"></div>
+            <div class="list" id="list" tabindex="0"><div class="list-sizer" id="listSizer"></div></div>
         </section>
-        <div class="splitter" id="splitter" title="Drag to resize the panels"></div>
+        <div class="splitter" id="splitter" data-t-title="Splitter_Panels_Tip"></div>
         <section class="panel">
-            <div class="head">Preview</div>
+            <div class="head" data-t="Head_Preview"></div>
             <div class="preview" id="preview">
                 <img id="previewImg" alt="" />
-                <iframe id="previewFrame" title="Preview"></iframe>
-                <div class="ph" id="previewPh">Select a file to preview.</div>
+                <iframe id="previewFrame" data-t-title="Head_Preview"></iframe>
+                <div class="details" id="previewDetails"></div>
+                <div class="ph" id="previewPh" data-t="Preview_SelectFile"></div>
             </div>
         </section>
     </div>
 
-    <div class="fnbar">
-        <button id="desktop" title="Desktop, the root of the shell namespace (F1)"><span class="key">F1</span> Desktop</button>
-        <button id="thispc" title="This PC, the drives and devices (F2)"><span class="key">F2</span> This&nbsp;PC</button>
-        <button id="refresh" title="Reload this folder (F5)"><span class="key">F5</span> Refresh</button>
-        <button id="iconmode" title="Switch between file type icons and thumbnails (F6)"><span class="key">F6</span> <span id="iconmodelabel">Thumbnails</span></button>
-        <button id="fit" title="Fit the preview image to the pane, or show it at full size (F7)"><span class="key">F7</span> <span id="fitlabel">Fit</span></button>
-        <span class="spacer"></span>
-        <button id="quit" title="Close the window (F10)"><span class="key">F10</span> Quit</button>
+    <div class="hsplitter" id="consoleSplitter" data-t-title="Splitter_Console_Tip"></div>
+    <div class="console" id="consolePane">
+        <div class="console-head">
+            <span class="console-title" data-t="Console_Title"></span>
+            <select class="console-shell" id="consoleShell" data-t-title="Console_Shell_Tip"></select>
+            <label class="console-sync" data-t-title="Console_Sync_Tip"><input type="checkbox" id="consoleSync" /> <span data-t="Console_Sync_Label"></span></label>
+            <span class="console-cwd" id="consoleCwd"></span>
+            <span class="spacer"></span>
+            <button class="console-x" id="consoleClose" data-t-title="Console_Close_Tip">&#x2715;</button>
+        </div>
+        <div class="console-body" id="consoleBody"></div>
     </div>
 
+    <div class="toasts" id="toasts"></div>
+
+    <div class="fnbar">
+        <button id="desktop" data-t-title="Fn_Desktop_Tip"><span class="key">F1</span> <span data-t="Fn_Desktop"></span></button>
+        <button id="thispc" data-t-title="Fn_ThisPc_Tip"><span class="key">F2</span> <span data-t="Fn_ThisPc"></span></button>
+        <button id="refresh" data-t-title="Fn_Refresh_Tip"><span class="key">F5</span> <span data-t="Fn_Refresh"></span></button>
+        <button id="details" data-t-title="Fn_Details_Tip"><span class="key">F4</span> <span data-t="Fn_Details"></span></button>
+        <button id="view" data-t-title="Fn_View_Tip"><span class="key">F3</span> <span id="viewlabel"></span></button>
+        <label id="thumbctl" class="thumbctl" data-t-title="Fn_ThumbSize_Tip"><span class="key">◱</span><input type="range" id="thumbSlider" min="64" max="256" step="32" /></label>
+        <button id="iconmode" data-t-title="Fn_IconMode_Tip"><span class="key">F6</span> <span id="iconmodelabel"></span></button>
+        <button id="fit" data-t-title="Fn_Fit_Tip"><span class="key">F7</span> <span id="fitlabel"></span></button>
+        <button id="console" data-t-title="Fn_Console_Tip"><span class="key">CTRL+O</span> <span data-t="Fn_Console"></span></button>
+        <span class="spacer"></span>
+        <button id="quit" data-t-title="Fn_Quit_Tip"><span class="key">F10</span> <span data-t="Fn_Quit"></span></button>
+    </div>
+
+    <!-- xterm.js and its fit addon, UMD builds that expose the Terminal and FitAddon globals the console uses. -->
+    <script src="xterm.js"></script>
+    <script src="addon-fit.js"></script>
     <script>
         const shell = () => chrome.webview.hostObjects.sync.shell;
         const aot = () => window.__aotrino;
         const listEl = document.getElementById("list");
+        const listSizer = document.getElementById("listSizer");
+        const thumbEl = document.getElementById("thumbSlider");
         const pathEl = document.getElementById("path");
         const errEl = document.getElementById("error");
         const upBtn = document.getElementById("up");
         const previewEl = document.getElementById("preview");
         const previewImg = document.getElementById("previewImg");
         const previewFrame = document.getElementById("previewFrame");
+        const previewDetails = document.getElementById("previewDetails");
         const previewPh = document.getElementById("previewPh");
         const MARKDOWN = /\.(md|markdown|mdown|mkdn?)$/i;
+
+        // localization: the whole catalog crosses the bridge once (see AOTrino.Localization), then t(key) is a local lookup, so no user text lives here.
+        // an unknown key renders as itself, which surfaces a missing string plainly.
+        let catalog = {};
+        function t(key) { const v = catalog[key]; return v == null ? key : v; }
+
+        // apply the catalog to the static markup: text for [data-t], the tooltip for [data-t-title].
+        // the JS driven labels (view, fit, icon mode, the folder header) are refreshed by loadCatalog after this.
+        function applyTranslations() {
+            for (const el of document.querySelectorAll("[data-t]")) el.textContent = t(el.getAttribute("data-t"));
+            for (const el of document.querySelectorAll("[data-t-title]")) el.title = t(el.getAttribute("data-t-title"));
+        }
+
+        async function loadCatalog() {
+            try { catalog = JSON.parse(await chrome.webview.hostObjects.localization.GetCatalog()); }
+            catch (e) { catalog = {}; }
+
+            applyTranslations();
+            applyFit();
+            applyView();
+            document.getElementById("iconmodelabel").textContent = iconMode ? t("Icon_Icons") : t("Icon_Thumbnails");
+            if (current) updateCount();
+        }
+
         let fitPreview = true;      // fit the preview image to the pane by default
         let previewEntry = null;    // what the preview is showing, so it can re-render when the theme changes
+        let detailsMode = localStorage.getItem("preview.details") === "1";   // F4: show the details card instead of the preview
 
-        function fileUrl(p) { return encodeURI("file:///" + p.replace(/\\/g, "/")); }
+        // encode each path segment so #, ?, %, spaces and unicode are all safe.
+        // encodeURI is not enough here: it leaves # and ? alone, so a path like "F:\images\paths#é #!" would break at the first # (the rest read as a fragment).
+        // the drive segment keeps its colon.
+        function fileUrl(p) {
+            return "file:///" + p.replace(/\\/g, "/").split("/")
+                .map((seg, i) => (i === 0 && /^[A-Za-z]:$/.test(seg)) ? seg : encodeURIComponent(seg))
+                .join("/");
+        }
+
         function isCurrent(forId) { return current && selIndex >= 0 && (current.Entries[selIndex] || {}).Id === forId; }
 
-        // a link clicked in the rendered markdown: an external one (http) opens in the system browser rather than
-        // navigating the preview away, a relative one is left to resolve against the file's folder and follow in place.
+        let previewIsMarkdown = false;   // the frame is showing rendered markdown, so its links and Back apply
+        let mdStack = [];                // the markdown items visited, so Back can return to the previous one
+        let mdSeq = 0;                   // guards a stale markdown render when the selection or the stack moved on
+        let mdVersion = 0;               // cache-busts the reloaded temp file so the frame actually refreshes
+
+        function fileUrlToPath(u) {
+            if (!/^file:/i.test(u)) return null;
+
+            return decodeURIComponent(u.replace(/^file:\/*/i, "")).replace(/\//g, "\\");
+        }
+
+        // clicks and Back inside the rendered markdown.
+        // it is a file:// document, same origin as this page, so we can reach into it:
+        // an external link opens in the system browser, a link to another markdown renders in place (with a Back stack),
+        // any other relative link opens in its default app, and Backspace / Alt + Left go back.
         previewFrame.addEventListener("load", () => {
             let doc;
-            try { doc = previewFrame.contentDocument; } catch (x) { return; }   // a file:// document, not ours to reach into
+            try { doc = previewFrame.contentDocument; } catch (x) { return; }   // a document we are not allowed into
             if (!doc) return;
+
             doc.addEventListener("click", (ev) => {
                 const a = ev.target && ev.target.closest && ev.target.closest("a[href]");
-                if (a && /^https?:/i.test(a.href)) {
+                if (!a) return;
+                if (/^https?:/i.test(a.href)) {
                     ev.preventDefault();
                     chrome.webview.hostObjects.shell.OpenExternal(a.href);
+                    return;
+                }
+
+                if (!previewIsMarkdown) return;
+
+                const path = fileUrlToPath(a.href);
+                if (!path) return;
+
+                ev.preventDefault();
+                if (MARKDOWN.test(path)) {
+                    mdStack.push({ id: path, name: path });
+                    renderMarkdownTop();
+                } else {
+                    chrome.webview.hostObjects.shell.OpenExternal(a.href);
+                }
+            });
+
+            doc.addEventListener("keydown", (ev) => {
+                if (previewIsMarkdown && (ev.key === "Backspace" || (ev.altKey && ev.key === "ArrowLeft"))) {
+                    ev.preventDefault();
+                    markdownBack();
                 }
             });
         });
 
         function clearPreview(message) {
+            previewIsMarkdown = false;
             previewImg.classList.remove("show");
             previewImg.removeAttribute("src");
             previewFrame.style.display = "none";
             previewFrame.removeAttribute("src");
             previewFrame.removeAttribute("srcdoc");
+            previewDetails.style.display = "none";
+            previewDetails.innerHTML = "";
             previewPh.textContent = message;
             previewPh.style.display = "flex";
         }
 
-        // the host decides everything: an image the WebView shows, a document it renders in a frame (pdf, media,
-        // text), or an image only WIC can read, decoded to a png. we just show whatever Kind comes back.
-        // markdown is special, rendered to html by the host and shown in a themed frame.
+        // the host decides everything: an image the WebView shows, a document it renders in a frame (pdf, media, text), or an image only WIC can read, decoded to a png.
+        // we just show whatever Kind comes back. markdown is special, rendered to html by the host and shown in a themed frame with a Back stack.
+        // a folder, an un-previewable file, or details mode (F4) shows the details card instead.
         function showPreview(e) {
             previewEntry = e;
-            if (!e || e.IsFolder) { clearPreview("Select a file to preview."); return; }
+            mdSeq++;   // a new preview supersedes any markdown render still resolving
+            if (!e) { clearPreview(t("Preview_SelectFile")); return; }
+            if (detailsMode || e.IsFolder) { showDetails(e); return; }
             if (MARKDOWN.test(e.Name)) { showMarkdown(e); return; }
 
-            clearPreview("Loading…");
+            clearPreview(t("Preview_Loading"));
             const forId = e.Id;
             chrome.webview.hostObjects.shell.GetPreview(e.Id).then((json) => {
                 if (!isCurrent(forId)) return;   // the selection moved on while this was resolving
+
                 const r = JSON.parse(json);
-                if (!r.Path) { clearPreview(r.Error || "No preview available."); return; }
+                if (!r.Path) { showDetails(e); return; }   // no preview for this type: fall back to the details card
+
                 if (r.Kind === "image") {
                     previewFrame.style.display = "none";
                     previewFrame.removeAttribute("src");
@@ -510,16 +914,102 @@
             }).catch((x) => clearPreview(String(x)));
         }
 
-        function showMarkdown(e) {
-            clearPreview("Loading…");
+        // the details card: the item's icon, name, shell type, the property store values Windows reports, and Open.
+        function showDetails(e) {
             const forId = e.Id;
-            chrome.webview.hostObjects.shell.GetMarkdown(e.Id).then((json) => {
+            clearPreview(t("Preview_Loading"));
+            chrome.webview.hostObjects.shell.GetDetails(e.Id).then((json) => {
                 if (!isCurrent(forId)) return;
+                const d = JSON.parse(json);
+                if (d.Error) { clearPreview(d.Error); return; }
+                renderDetailsCard(e, d);
+            }).catch((x) => clearPreview(String(x)));
+        }
+
+        // fill the details card's table with label/value rows (the curated set, or every property when expanded).
+        // rows carrying a Category (the all-properties view) get a category header row when the category changes.
+        function fillDetailsTable(rows) {
+            const tbody = previewDetails.querySelector(".d-table tbody");
+            tbody.innerHTML = "";
+            let lastCategory;
+            (rows || []).forEach((r) => {
+                if (r.Category && r.Category !== lastCategory) {
+                    lastCategory = r.Category;
+                    const head = document.createElement("tr");
+                    head.className = "dcat";
+                    head.innerHTML = `<td colspan="2"></td>`;
+                    head.querySelector("td").textContent = r.Category;
+                    tbody.appendChild(head);
+                }
+
+                const tr = document.createElement("tr");
+                tr.innerHTML = `<td class="dk"></td><td class="dv"></td>`;
+                tr.querySelector(".dk").textContent = r.Label;
+                tr.querySelector(".dv").textContent = r.Value;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderDetailsCard(e, d) {
+            previewDetails.innerHTML =
+                `<div class="d-icon"><span class="glyph">${e.IsFolder ? "📁" : "📄"}</span></div>` +
+                `<div class="d-name"></div>` +
+                `<div class="d-type"></div>` +
+                `<table class="d-table"><tbody></tbody></table>` +
+                `<div class="d-actions"><button class="d-open"></button></div>`;
+            previewDetails.querySelector(".d-name").textContent = d.Name || e.Name;
+            previewDetails.querySelector(".d-type").textContent = d.TypeName || "";
+            fillDetailsTable(d.Rows);
+            if (e.Id) loadIcon(previewDetails.querySelector(".d-icon .glyph"), e.Id, e.Modified || "", 96);
+
+            const openBtn = previewDetails.querySelector(".d-open");
+            openBtn.textContent = t("Details_Open");
+            openBtn.addEventListener("click", () => chrome.webview.hostObjects.shell.OpenItem(e.Id));
+
+            previewImg.classList.remove("show");
+            previewFrame.style.display = "none";
+            previewPh.style.display = "none";
+            previewDetails.style.display = "flex";
+        }
+
+        // F4: show the details card instead of the preview. re-shows the current selection so it takes effect at once.
+        function toggleDetails() {
+            detailsMode = !detailsMode;
+            localStorage.setItem("preview.details", detailsMode ? "1" : "0");
+            document.getElementById("details").classList.toggle("active", detailsMode);
+            if (current && selIndex >= 0) showPreview(current.Entries[selIndex]);
+        }
+
+        // a fresh markdown selection starts a new Back stack at that item.
+        function showMarkdown(e) {
+            mdStack = [{ id: e.Id, name: e.Name }];
+            renderMarkdownTop();
+        }
+
+        function markdownBack() {
+            if (mdStack.length > 1) { mdStack.pop(); renderMarkdownTop(); }
+        }
+
+        // render the top of the Back stack: the host renders the markdown to html and writes it to a temp file, and
+        // the frame loads that file:// document so images and relative links resolve, unlike an about:srcdoc frame.
+        function renderMarkdownTop() {
+            const top = mdStack[mdStack.length - 1];
+            const seq = ++mdSeq;
+            clearPreview(t("Preview_Loading"));
+            chrome.webview.hostObjects.shell.GetMarkdown(top.id).then(async (json) => {
+                if (seq !== mdSeq) return;
+
                 const r = JSON.parse(json);
-                if (!r.Html) { clearPreview("No preview available."); return; }
+                if (!r.Html) { clearPreview(t("Preview_None")); return; }
+
+                const path = await chrome.webview.hostObjects.shell.WriteMarkdownHtml(markdownDoc(r.Html, r.BaseHref));
+                if (seq !== mdSeq) return;
+                if (!path) { clearPreview(t("Preview_None")); return; }
+
                 previewImg.classList.remove("show");
-                previewFrame.removeAttribute("src");
-                previewFrame.srcdoc = markdownDoc(r.Html, r.BaseHref);
+                previewFrame.removeAttribute("srcdoc");
+                previewIsMarkdown = true;
+                previewFrame.src = fileUrl(path) + "?v=" + (++mdVersion);
                 previewFrame.style.display = "block";
                 previewPh.style.display = "none";
             }).catch((x) => clearPreview(String(x)));
@@ -546,14 +1036,28 @@
 
         function applyFit() {
             previewEl.classList.toggle("fit", fitPreview);
-            document.getElementById("fitlabel").textContent = fitPreview ? "Fit" : "Actual";
+            document.getElementById("fitlabel").textContent = fitPreview ? t("Fit_Fit") : t("Fit_Actual");
         }
+
         function toggleFit() { fitPreview = !fitPreview; applyFit(); }
         applyFit();
+
         let current = null;   // the listing on screen
-        let selIndex = -1;    // the highlighted row
+        let selIndex = -1;    // the highlighted row's index in current.Entries
+        let selId = null;     // the highlighted item's stable id, the real selection: the index is derived from it,
+        // so re-sorting a folder as it streams keeps the highlight on the same item instead of the same row.
+
+        // recompute the selected row's index from its id, after the entries were reordered (a stream page, a sort).
+        function resyncSelection() {
+            selIndex = selId ? current.Entries.findIndex(e => e.Id === selId) : -1;
+        }
+
         const iconCache = new Map();   // shell images by parsing name, so re-visiting a folder is instant
         let iconMode = false;          // false: thumbnails allowed, true: file type icons only
+        // the left pane is either the detail list or a thumbnail gallery, and the gallery's thumbnail size is a
+        // slider. both are remembered across sessions, WebView2 keeps localStorage in the app's user data folder.
+        let viewMode = localStorage.getItem("view.mode") === "gallery" ? "gallery" : "list";
+        let thumbSize = Math.min(256, Math.max(64, parseInt(localStorage.getItem("view.thumb"), 10) || 128));
         let sortCol = "name";          // the column the list is ordered by, click a header to change it
         let sortAsc = true;
 
@@ -580,17 +1084,15 @@
             }
         }
 
-        // only the rows scrolled into view fetch their image, so a big folder does not fire hundreds of calls at once.
-        const iconObserver = new IntersectionObserver((ents) => {
-            for (const ent of ents) {
-                if (!ent.isIntersecting) continue;
-                iconObserver.unobserve(ent.target);
-                loadIcon(ent.target, ent.target.dataset.id, ent.target.dataset.stamp);
-            }
-        }, { root: listEl, rootMargin: "150px" });
+        // the list is virtualized: only the rows in view (plus a small buffer) exist in the DOM, so a folder of any
+        // size renders and scrolls in constant time. ROW_H must match the row's fixed CSS height for the math to hold.
+        const ROW_H = 22;
+        const WINDOW_BUFFER = 8;
+        let winFirst = -1, winLast = -1;   // the range currently in the DOM, so an unchanged window skips rebuilding
 
         function fmtSize(n) {
             if (n < 0) return "";
+
             const u = ["B", "KB", "MB", "GB", "TB"];
             let i = 0, v = n;
             while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
@@ -599,15 +1101,18 @@
 
         function showError(msg) { errEl.style.display = msg ? "block" : "none"; errEl.textContent = msg || ""; }
 
-        // the real shell icon, fetched lazily and async so the list shows at once and the icons fill in behind it.
-        // the emoji stays as the fallback until the icon arrives, or for an item with no parsing name to ask about.
-        function loadIcon(el, id, stamp) {
+        // the real shell icon or thumbnail, fetched lazily and async so the view shows at once and images fill in.
+        // the emoji stays the fallback until it arrives, or for an item with no parsing name to ask about. size is
+        // the pixels asked of the shell, 16 for the list, the slider value for the gallery, and is part of the cache
+        // key, so list icons and gallery thumbnails of one item coexist and each size is fetched (and disk cached) once.
+        function loadIcon(el, id, stamp, size) {
             if (!id) return;
-            // key by mode and stamp too, so thumbnails and icons for the same item both stay cached, and switching
-            // between them is instant instead of throwing one away, the host caches to disk on the same key.
-            const key = id + "|" + (iconMode ? 1 : 0) + "|" + (stamp || "");
+
+            size = size || 16;
+            const key = id + "|" + (iconMode ? 1 : 0) + "|" + (stamp || "") + "|" + size;
             if (iconCache.has(key)) { applyIcon(el, iconCache.get(key)); return; }
-            chrome.webview.hostObjects.shell.GetIcon(id, 16, iconMode, stamp || "").then((url) => {
+
+            chrome.webview.hostObjects.shell.GetIcon(id, size, iconMode, stamp || "").then((url) => {
                 iconCache.set(key, url || "");
                 applyIcon(el, url);
             }).catch(() => { });
@@ -615,75 +1120,182 @@
 
         function applyIcon(el, url) {
             if (!url) return;
-            const img = new Image(16, 16);
+
+            const img = document.createElement("img");   // sized by CSS: 16px in the list, fit to the box in the gallery
             img.src = url;
-            el.textContent = "";
-            el.appendChild(img);
+            el.replaceChildren(img);
+        }
+
+        // the folder header, kept fresh as rows stream in so the count climbs while a big folder loads.
+        function updateCount() {
+            const where = current ? (current.Name || t("Nav_Desktop")) : "";
+            const n = current ? current.Entries.length : 0;
+            const fmt = t(n === 1 ? "Nav_Header_One" : "Nav_Header_Many");
+            document.getElementById("navhead").textContent = fmt.replace("{0}", where).replace("{1}", n);
+        }
+
+        // the grid geometry for the current view: one full width column of ROW_H rows in the list, or as many
+        // thumbnail columns as fit in the gallery. every cell position and the sizer height derive from this.
+        function metrics() {
+            if (viewMode === "gallery") {
+                const w = listEl.clientWidth || 1;
+                const cols = Math.max(1, Math.floor(w / (thumbSize + 28)));
+                return { cols, cellW: Math.floor(w / cols), cellH: thumbSize + 34 };
+            }
+            return { cols: 1, cellW: listEl.clientWidth || 1, cellH: ROW_H };
+        }
+
+        // size the spacer to the whole folder, so the scrollbar is right even though only the visible cells exist.
+        function setSizer() {
+            const total = current ? current.Entries.length : 0;
+            const m = metrics();
+            listSizer.style.height = (Math.ceil(total / m.cols) * m.cellH) + "px";
         }
 
         function render(listing) {
             current = listing;
             selIndex = -1;
+            selId = null;
+            followSelection = false;
             showError(listing.Error);
             upBtn.disabled = listing.ParentId === null;
 
-            const where = listing.Name || "Desktop";
             pathEl.value = listing.Id || "";
-            pathEl.title = listing.Id
-                ? listing.Id
-                : "Desktop, the root of the shell namespace. Type a path like d:\\temp or a parsing name, then press Enter.";
-            document.getElementById("navhead").textContent = `${where} — ${listing.Entries.length} item${listing.Entries.length === 1 ? "" : "s"}`;
+            pathEl.title = listing.Id ? listing.Id : t("Path_TipDesktop");
+            updateCount();
             showPreview(null);
 
             sortEntries(listing.Entries);   // apply the chosen column order, so it survives navigation
             updateSortHeaders();
 
-            iconObserver.disconnect();   // drop the previous listing's rows before observing this one's
-            listEl.innerHTML = "";
-            listing.Entries.forEach((e, i) => {
-                const row = document.createElement("div");
-                row.className = "row" + (e.IsFolder ? " dir" : "");
-                const glyph = e.IsFolder ? "📁" : "📄";
-                row.innerHTML =
-                    `<div class="name-cell"><span class="glyph">${glyph}</span><span class="name"></span></div>` +
-                    `<div class="size"></div><div class="mod"></div>`;
-                row.querySelector(".name").textContent = e.Name;
-                row.querySelector(".size").textContent = (e.IsFolder || e.Size < 0) ? "" : fmtSize(e.Size);
-                row.querySelector(".mod").textContent = e.Modified || "";
-                row.title = e.Id ? `${e.Name}\n${e.Id}` : e.Name;
-                const glyphEl = row.querySelector(".glyph");
-                if (e.Id) { glyphEl.dataset.id = e.Id; glyphEl.dataset.stamp = e.Modified || ""; iconObserver.observe(glyphEl); }
-                row.addEventListener("click", () => selectRow(i));
-                row.addEventListener("dblclick", () => activate(i));
-                // right-click raises the item's real Windows context menu, the same verbs Explorer shows.
-                // preventDefault drops the WebView's own page menu, the row is selected first so the menu matches it.
-                row.addEventListener("contextmenu", (ev) => {
-                    ev.preventDefault();
-                    selectRow(i);
-                    if (e.Id) chrome.webview.hostObjects.shell.ShowContextMenu(e.Id);
-                });
-                listEl.appendChild(row);
-            });
             listEl.scrollTop = 0;
+            winFirst = winLast = -1;
+            setSizer();
+            renderWindow(true);
         }
 
-        function rowEls() { return listEl.querySelectorAll(".row"); }
+        // rebuild only the cells that fall in the viewport, plus a small buffer of rows. called on scroll and on data
+        // changes. force rebuilds even when the range looks unchanged, for when the cells themselves changed.
+        function renderWindow(force) {
+            const total = current ? current.Entries.length : 0;
+            const m = metrics();
+            const viewport = listEl.clientHeight || 1;
+            const firstRow = Math.max(0, Math.floor(listEl.scrollTop / m.cellH) - WINDOW_BUFFER);
+            const lastRow = Math.ceil((listEl.scrollTop + viewport) / m.cellH) + WINDOW_BUFFER;
+            const first = Math.max(0, firstRow * m.cols);
+            const last = Math.min(total, lastRow * m.cols);
+            if (!force && first === winFirst && last === winLast) return;
+
+            winFirst = first; winLast = last;
+            const frag = document.createDocumentFragment();
+            for (let i = first; i < last; i++) frag.appendChild(makeCell(current.Entries[i], i, m));
+            listSizer.replaceChildren(frag);
+        }
+
+        function makeCell(e, i, m) {
+            return viewMode === "gallery" ? makeGalleryCell(e, i, m) : makeListRow(e, i);
+        }
+
+        // the shared behaviour of a row or cell: click selects, double click opens, right click raises the shell menu.
+        function wireCell(el, e, i) {
+            el.addEventListener("click", () => selectRow(i));
+            el.addEventListener("dblclick", () => activate(i));
+            // preventDefault drops the WebView's own page menu, the item is selected first so the menu matches it.
+            el.addEventListener("contextmenu", (ev) => {
+                ev.preventDefault();
+                selectRow(i);
+                if (e.Id) chrome.webview.hostObjects.shell.ShowContextMenu(e.Id);
+            });
+        }
+
+        // one absolutely positioned list row. only visible rows are built, so the icon is fetched right here rather
+        // than through an observer, and the caches keep a re-render from redoing the work.
+        function makeListRow(e, i) {
+            const row = document.createElement("div");
+            row.className = "row" + (e.IsFolder ? " dir" : "") + (i === selIndex ? " sel" : "");
+            row.style.top = (i * ROW_H) + "px";
+            const glyph = e.IsFolder ? "📁" : "📄";
+            row.innerHTML =
+                `<div class="name-cell"><span class="glyph">${glyph}</span><span class="name"></span></div>` +
+                `<div class="size"></div><div class="mod"></div>`;
+            row.querySelector(".name").textContent = e.Name;
+            row.querySelector(".size").textContent = (e.IsFolder || e.Size < 0) ? "" : fmtSize(e.Size);
+            row.querySelector(".mod").textContent = e.Modified || "";
+            row.title = e.Id ? `${e.Name}\n${e.Id}` : e.Name;
+            if (e.Id) loadIcon(row.querySelector(".glyph"), e.Id, e.Modified || "", 16);
+            wireCell(row, e, i);
+            return row;
+        }
+
+        // one absolutely positioned gallery cell: a thumbnail at the slider's size, the name beneath it.
+        function makeGalleryCell(e, i, m) {
+            const cell = document.createElement("div");
+            cell.className = "cell" + (e.IsFolder ? " dir" : "") + (i === selIndex ? " sel" : "");
+            cell.style.left = ((i % m.cols) * m.cellW) + "px";
+            cell.style.top = (Math.floor(i / m.cols) * m.cellH) + "px";
+            cell.style.width = m.cellW + "px";
+            cell.style.height = m.cellH + "px";
+            const glyph = e.IsFolder ? "📁" : "📄";
+            cell.innerHTML =
+                `<div class="thumb" style="width:${thumbSize}px;height:${thumbSize}px">${glyph}</div>` +
+                `<div class="cell-name"></div>`;
+            cell.querySelector(".cell-name").textContent = e.Name;
+            cell.title = e.Id ? `${e.Name}\n${e.Id}` : e.Name;
+            if (e.Id) loadIcon(cell.querySelector(".thumb"), e.Id, e.Modified || "", thumbSize);
+            wireCell(cell, e, i);
+            return cell;
+        }
+
+        // rebuild the visible window as the list scrolls, throttled to one rebuild per frame. a scroll the user drove
+        // (not one we made to follow the selection) means they took over, so we stop auto following the selection.
+        let winRaf = 0;
+        let followSelection = false;   // keep the selected row in view as the folder re-sorts while streaming
+        let programmaticScrolls = 0;   // scroll events we caused, so they are not read as the user scrolling
+        listEl.addEventListener("scroll", () => {
+            if (programmaticScrolls > 0) programmaticScrolls--;
+            else followSelection = false;
+            if (winRaf) return;
+
+            winRaf = requestAnimationFrame(() => { winRaf = 0; renderWindow(false); });
+        });
+
+        // scroll the list ourselves, counting the resulting event so the handler above does not read it as the user.
+        function scrollTo(v) {
+            v = Math.max(0, Math.min(v, listEl.scrollHeight - listEl.clientHeight));
+            if (Math.round(v) === Math.round(listEl.scrollTop)) return;   // no change means no scroll event to expect
+
+            programmaticScrolls++;
+            listEl.scrollTop = v;
+        }
+
+        // nudge the scroll so the cell at index i is in view, block:nearest style, in whichever grid the view uses.
+        function ensureVisible(i) {
+            const m = metrics();
+            const top = Math.floor(i / m.cols) * m.cellH;
+            const bottom = top + m.cellH;
+            if (top < listEl.scrollTop) scrollTo(top);
+            else if (bottom > listEl.scrollTop + listEl.clientHeight) scrollTo(bottom - listEl.clientHeight);
+        }
 
         function selectRow(i) {
-            const rows = rowEls();
-            if (selIndex >= 0 && rows[selIndex]) rows[selIndex].classList.remove("sel");
-            selIndex = i;
-            if (i < 0 || !rows[i]) return;
-            rows[i].classList.add("sel");
-            rows[i].scrollIntoView({ block: "nearest" });
+            if (!current) return;
 
+            const n = current.Entries.length;
+            if (i < 0 || i >= n) return;
+
+            selIndex = i;
+            selId = current.Entries[i].Id;
+            followSelection = true;   // a fresh pick: keep it in view as the folder keeps streaming
+            ensureVisible(i);
+            renderWindow(true);   // reflect the new selection, and any scroll ensureVisible caused
             showPreview(current.Entries[i]);
         }
 
         function moveSel(delta) {
             const n = current ? current.Entries.length : 0;
             if (n === 0) return;
-            let i = selIndex < 0 ? (delta > 0 ? 0 : n - 1) : selIndex + delta;
+
+            const i = selIndex < 0 ? (delta > 0 ? 0 : n - 1) : selIndex + delta;
             selectRow(Math.max(0, Math.min(n - 1, i)));
         }
 
@@ -693,39 +1305,205 @@
             if (e && e.IsFolder) load(e.Id);
         }
 
-        function load(id) {
+        // listing streams: the host binds the folder and returns its header at once, then the rows drain page by page.
+        // a sequence guards a fast second navigation (and a quit), only the newest load renders, reports, or keeps going.
+        let loadSeq = 0;
+        function abortLoad() { loadSeq++; }
+
+        // set by scheduleSelfRefresh before it reloads the current folder, so this load restores the selection and
+        // scroll after the rows stream back. captured at once so an ordinary navigation never inherits it.
+        let pendingRestore = null;
+
+        async function load(id) {
+            const seq = ++loadSeq;
+            const restore = pendingRestore;
+            pendingRestore = null;
             try {
-                const listing = JSON.parse(shell().List(id ?? ""));
+                const start = JSON.parse(await chrome.webview.hostObjects.shell.ListBegin(id ?? ""));
+                if (seq !== loadSeq) return;
+
                 // could not open the target: stay where we are and say so, rather than replacing the view with a
                 // dead listing whose Up is disabled. this is what happens deep in a virtual place whose items report
                 // as folders but do not reopen by parsing name. the very first load has nowhere to stay, so it renders.
-                if (listing.Error && current) {
-                    showError(listing.Error);
+                if (start.Error && current) {
+                    showError(start.Error);
                     pathEl.value = current.Id;
                     return;
                 }
-                render(listing);
+
+                const listing = { Name: start.Name, Id: start.Self, ParentId: start.ParentId, Error: start.Error || null, Entries: [] };
+                render(listing);   // header and columns at once, the rows fill in below
+                syncConsolePath(listing.Id);   // if the console is following along, cd it to the new folder
+                chrome.webview.hostObjects.shell.Watch(listing.Id);   // follow shell changes to this folder
+                if (start.Error || !start.Token) return;
+
+                // drain page by page. the list is virtualized, so growing the data and re-sorting after each page is
+                // cheap and the window rebuild only ever touches the rows in view, so it stays sorted with no reshuffle.
+                let done = false;
+                while (!done) {
+                    const chunk = JSON.parse(await chrome.webview.hostObjects.shell.ListDrain(start.Token));
+                    if (seq !== loadSeq) return;   // navigated away or quitting, stop draining (the host cancels the old enumeration)
+
+                    if (chunk.Entries && chunk.Entries.length) {
+                        for (const e of chunk.Entries) listing.Entries.push(e);
+                        sortEntries(listing.Entries);
+                        resyncSelection();   // the sort moved rows, so follow the selected item to its new index
+                        updateCount();
+                        setSizer();           // grow the spacer first, so the scroll math below sees the new height
+                        if (followSelection && selIndex >= 0) ensureVisible(selIndex);
+                        renderWindow(true);
+                    }
+                    if (chunk.Error) showError(chunk.Error);
+                    done = chunk.Done;
+                    if (!done) await new Promise(r => requestAnimationFrame(r));
+                }
+
+                // a self-refresh reload: put the selection, its preview and the scroll back where they were, so a
+                // coarse-event environment does not lose the selected item's preview or jump the view to the top.
+                if (restore && seq === loadSeq) {
+                    const i = restore.selId ? listing.Entries.findIndex(e => e.Id === restore.selId) : -1;
+                    if (i >= 0) {
+                        selId = restore.selId;
+                        selIndex = i;
+                        showPreview(current.Entries[i]);   // render cleared it on reload, re-show the kept selection
+                    }
+                    listEl.scrollTop = restore.scrollTop;
+                    renderWindow(true);
+                }
             } catch (e) {
-                showError(String(e));
+                if (seq === loadSeq) showError(String(e));
             }
         }
 
         function goUp() { if (current && current.ParentId !== null) load(current.ParentId); }
 
+        // a small auto-disappearing toast, top of the stack, gone after a few seconds.
+        const toasts = document.getElementById("toasts");
+        function showToast(message) {
+            const el = document.createElement("div");
+            el.className = "toast";
+            el.textContent = message;
+            toasts.appendChild(el);
+            requestAnimationFrame(() => el.classList.add("show"));
+            setTimeout(() => { el.classList.remove("show"); setTimeout(() => el.remove(), 300); }, 3500);
+        }
+
+        // the host reports a shell change to the watched folder (from ShellN's ChangeNotifier). the notifier only ever
+        // watches the folder on screen, so every change belongs to it: toast it, then apply it granularly (add/remove/
+        // update the one row) rather than reloading. a change before the first listing has no rows to touch, so skip it.
+        window.__shellChange = function (c) {
+            if (!c) return;
+            if (c.Message) showToast(c.Message);
+            if (!current) return;
+            switch (c.Action) {
+                case "add": if (c.Entry) shellAddEntry(c.Entry); break;
+                case "remove": shellRemoveEntry(c.OldId); break;
+                case "update": if (c.Entry) shellUpdateEntry(c.Entry); break;
+                case "rename": shellRemoveEntry(c.OldId); if (c.Entry) shellAddEntry(c.Entry); break;
+                case "refresh": scheduleSelfRefresh(); break;
+            }
+        };
+
+        function indexOfEntry(id) { return current ? current.Entries.findIndex(e => e.Id === id) : -1; }
+
+        // relay out just enough after a one-row change: keep it sorted, keep the selection on its item,
+        // resize the virtual sizer, and rebuild the visible window. no full reload, no flicker.
+        function afterListMutation() {
+            sortEntries(current.Entries);
+            resyncSelection();
+            updateCount();
+            setSizer();
+            renderWindow(true);
+        }
+
+        // a change can name the watched FOLDER ITSELF (its mtime bumps when a child changes). some environments deliver
+        // only this coarse "the folder changed" event instead of a granular per-child add/remove/rename (a network
+        // share, or a shell handler that does not report item-level notifications). the folder is not a child of its
+        // own listing, so it must never become a row: re-enumerate the folder instead, which is the only way to reflect
+        // a change we were not told the details of. a null id is an unresolved pidl, left to the granular no-ops below.
+        function isSelfFolder(id) { return !!current && id === current.Id; }
+
+        // reload the current folder, debounced so a burst of coarse events collapses to one re-enumeration. selection
+        // and scroll are restored after the rows stream back in, so a coarse-event environment still feels granular.
+        let selfRefreshTimer = 0;
+        function scheduleSelfRefresh() {
+            if (selfRefreshTimer) return;
+            selfRefreshTimer = setTimeout(() => {
+                selfRefreshTimer = 0;
+                if (!current) return;
+                pendingRestore = { selId, scrollTop: listEl.scrollTop };
+                load(current.Id);
+            }, 200);
+        }
+
+        // find a change-notification entry among the rows already listed. a virtual item (a device under This PC, a file
+        // inside a .zip) is announced by a notification under a DIFFERENT namespace root than it was enumerated in, so its
+        // notification Id does not match the enumerated one though the display name is identical. names are unique within a
+        // folder, so match by Id first, then by name, otherwise the same item is added a second time.
+        function findEntryIndex(entry) {
+            if (!current || !entry) return -1;
+            let i = current.Entries.findIndex(e => e.Id === entry.Id);
+            if (i < 0 && entry.Name) i = current.Entries.findIndex(e => e.Name === entry.Name);
+            return i;
+        }
+
+        function shellAddEntry(entry) {
+            if (!entry) return;
+            if (isSelfFolder(entry.Id)) { scheduleSelfRefresh(); return; }
+
+            if (findEntryIndex(entry) >= 0) return;   // already listed (possibly under a different virtual-namespace id), no duplicate
+
+            current.Entries.push(entry);
+            afterListMutation();
+        }
+
+        function shellRemoveEntry(id) {
+            if (isSelfFolder(id)) { scheduleSelfRefresh(); return; }
+
+            const i = indexOfEntry(id);
+            if (i < 0) return;
+
+            current.Entries.splice(i, 1);
+            if (selId === id) { selId = null; showPreview(null); }
+            afterListMutation();
+        }
+
+        function shellUpdateEntry(entry) {
+            if (!entry) return;
+            if (isSelfFolder(entry.Id)) { scheduleSelfRefresh(); return; }
+
+            const i = findEntryIndex(entry);
+            if (i < 0) { shellAddEntry(entry); return; }
+
+            // keep the enumerated row: a notification entry is low-fidelity (its Size and Modified come back empty). the
+            // item changed on disk, so if it is the selected one, re-read its preview, which reflects the new content.
+            if (selId === current.Entries[i].Id) showPreview(current.Entries[i]);
+        }
+
         // driven from the keyboard, the way a commander is. handled on the document so it works whatever has focus,
         // which is what "F1 or F2 don't always work" was: the keys were only labels, and list keys needed the list focused.
         document.addEventListener("keydown", (ev) => {
+            // keys typed in the console belong to the shell, xterm handles them (and Ctrl+O to toggle), so stay out.
+            if (consoleOpen && consolePane.contains(ev.target)) return;
+
+            if (ev.ctrlKey && (ev.key === "o" || ev.key === "O")) { ev.preventDefault(); toggleConsole(); return; }
+
             // while the path box is focused its own keys win, only the function keys stay global.
             const inInput = ev.target && ev.target.tagName === "INPUT";
             switch (ev.key) {
                 case "F1": load(""); break;
                 case "F2": load(shell().GetThisPc()); break;
+                case "F3": toggleView(); break;
+                case "F4": toggleDetails(); break;
                 case "F5": if (current) load(current.Id); break;
                 case "F6": toggleIconMode(); break;
                 case "F7": toggleFit(); break;
-                case "F10": aot() && aot().closeWindow(); break;
-                case "ArrowDown": if (inInput) return; moveSel(1); break;
-                case "ArrowUp": if (inInput) return; moveSel(-1); break;
+                case "F10": abortLoad(); aot() && aot().closeWindow(); break;
+                // in the gallery Up and Down move by a whole row of thumbnails, Left and Right by one. the list is one column.
+                case "ArrowDown": if (inInput) return; moveSel(viewMode === "gallery" ? metrics().cols : 1); break;
+                case "ArrowUp": if (inInput) return; moveSel(viewMode === "gallery" ? -metrics().cols : -1); break;
+                case "ArrowRight": if (inInput || viewMode !== "gallery") return; moveSel(1); break;
+                case "ArrowLeft": if (inInput || viewMode !== "gallery") return; moveSel(-1); break;
                 case "Home": if (inInput) return; selectRow(0); break;
                 case "End": if (inInput) return; moveSel(current ? current.Entries.length : 0); break;
                 case "Enter": if (inInput) return; if (selIndex >= 0) activate(selIndex); break;
@@ -736,6 +1514,7 @@
         });
 
         upBtn.addEventListener("click", goUp);
+        document.getElementById("reveal").addEventListener("click", () => chrome.webview.hostObjects.shell.RevealInExplorer(current ? current.Id : ""));
 
         // the path box is editable: type a path or a parsing name and press Enter to go there.
         pathEl.addEventListener("keydown", (ev) => {
@@ -747,15 +1526,56 @@
         document.getElementById("thispc").addEventListener("click", () => load(shell().GetThisPc()));
         document.getElementById("refresh").addEventListener("click", () => { if (current) load(current.Id); });
 
-        // switch the list between real thumbnails and plain file type icons, and re-fetch what is on screen.
+        // re-layout the current listing out after a view change (mode, thumbnail size, icon mode), keeping the selection and the preview,
+        // unlike render which starts a listing fresh. only the visible cells are rebuilt.
+        function relayout() {
+            if (!current) return;
+
+            winFirst = winLast = -1;
+            setSizer();
+            if (selIndex >= 0) ensureVisible(selIndex);
+
+            renderWindow(true);
+        }
+
+        // reflect the current view in the chrome: the toggle's label (it names what a click switches to), the column header (list only), and the thumbnail slider (gallery only).
+        function applyView() {
+            document.getElementById("viewlabel").textContent = viewMode === "gallery" ? t("View_List") : t("View_Gallery");
+            document.querySelector(".colhead").style.display = viewMode === "gallery" ? "none" : "";
+            document.getElementById("thumbctl").style.display = viewMode === "gallery" ? "flex" : "none";
+            thumbEl.value = thumbSize;
+        }
+
+        function toggleView() {
+            viewMode = viewMode === "gallery" ? "list" : "gallery";
+            localStorage.setItem("view.mode", viewMode);
+            applyView();
+            if (selIndex < 0) listEl.scrollTop = 0;   // nothing to keep in view, so start at the top of the new layout
+
+            relayout();
+        }
+
+        document.getElementById("view").addEventListener("click", toggleView);
+
+        // the thumbnail size slider, gallery only. discrete steps keep the number of distinct sizes fetched small.
+        thumbEl.addEventListener("input", () => {
+            thumbSize = parseInt(thumbEl.value, 10);
+            localStorage.setItem("view.thumb", thumbSize);
+            if (viewMode === "gallery") relayout();
+        });
+
+        // switch between real thumbnails and plain file type icons, keeping the selection.
+        // the caches are keyed by mode, so both stay warm and switching back is instant.
         function toggleIconMode() {
             iconMode = !iconMode;
-            document.getElementById("iconmodelabel").textContent = iconMode ? "Icons" : "Thumbnails";
-            // the cache is keyed by mode, so both icons and thumbnails stay warm, switching back is instant.
-            if (current) render(current);
+            document.getElementById("iconmodelabel").textContent = iconMode ? t("Icon_Icons") : t("Icon_Thumbnails");
+            relayout();
         }
+
         document.getElementById("iconmode").addEventListener("click", toggleIconMode);
         document.getElementById("fit").addEventListener("click", toggleFit);
+        document.getElementById("details").addEventListener("click", toggleDetails);
+        document.getElementById("details").classList.toggle("active", detailsMode);
 
         // clicking a column header sorts by it, clicking the same one again reverses the order.
         for (const span of document.querySelectorAll(".colhead span")) {
@@ -786,6 +1606,7 @@
             });
             window.addEventListener("mousemove", (e) => {
                 if (!dragging) return;
+
                 const rect = panels.getBoundingClientRect();
                 const w = Math.max(160, Math.min(rect.width - 220, e.clientX - rect.left - 6));
                 navPanel.style.flex = "0 0 " + w + "px";
@@ -793,6 +1614,7 @@
             });
             window.addEventListener("mouseup", () => {
                 if (!dragging) return;
+
                 dragging = false;
                 splitter.classList.remove("dragging");
                 document.body.style.cursor = "";
@@ -800,45 +1622,233 @@
                 if (fraction > 0) localStorage.setItem("nav.split", fraction.toFixed(4));
             });
         })();
-        document.getElementById("quit").addEventListener("click", () => aot() && aot().closeWindow());
+        document.getElementById("quit").addEventListener("click", () => { abortLoad(); if (aot()) aot().closeWindow(); });
 
-        // window controls: the injected runtime turns these into real Windows commands, and it already
-        // maximizes on a double click of the caption strip (data-aotrino-drag).
+        // window controls: the injected runtime turns these into real Windows commands, and it already maximizes on a double click of the caption strip (data-aotrino-drag).
         document.getElementById("min").addEventListener("click", () => aot() && aot().minimizeWindow());
         document.getElementById("max").addEventListener("click", () => aot() && aot().maximizeWindow());
-        document.getElementById("closeWin").addEventListener("click", () => aot() && aot().closeWindow());
+        document.getElementById("closeWin").addEventListener("click", () => { abortLoad(); if (aot()) aot().closeWindow(); });
 
-        // the maximize button shows restore once the window fills the work area, so it agrees with the window,
-        // whether it got there by the button, a double click, or a snap.
+        // the maximize button shows restore once the window fills the work area, so it agrees with the window, whether it got there by the button, a double click, or a snap.
         const maxBtn = document.getElementById("max");
+
         function updateMaxGlyph() {
             const maxed = window.outerWidth >= screen.availWidth - 2 && window.outerHeight >= screen.availHeight - 2;
             maxBtn.innerHTML = maxed ? "&#x2750;" : "&#x25A2;";
-            maxBtn.title = maxed ? "Restore" : "Maximize";
+            maxBtn.title = maxed ? t("Caption_Restore") : t("Caption_Maximize");
         }
-        window.addEventListener("resize", updateMaxGlyph);
+
+        // a taller window shows more rows, so the virtual window is rebuilt to fill it, and the console is refitted.
+        window.addEventListener("resize", () => {
+            updateMaxGlyph();
+            if (current) renderWindow(true);
+            if (consoleOpen && term) {
+                const dims = fitTerminal();
+                if (dims && dims.cols) chrome.webview.hostObjects.term.Resize(dims.cols, dims.rows);
+            }
+        });
         updateMaxGlyph();
 
         // theme: no attribute means follow Windows, the button pins light or dark and flips the glyph.
         const root = document.documentElement;
         const themeBtn = document.getElementById("theme");
+
         function effectiveDark() {
             return root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
         }
+
         function paintThemeGlyph() { themeBtn.innerHTML = effectiveDark() ? "&#x2600;" : "&#x263E;"; }
-        // a markdown preview is coloured to the current theme, so it is re-rendered when the theme changes.
-        function refreshMarkdownTheme() { if (previewEntry && MARKDOWN.test(previewEntry.Name)) showMarkdown(previewEntry); }
-        themeBtn.addEventListener("click", () => { root.dataset.theme = effectiveDark() ? "light" : "dark"; paintThemeGlyph(); refreshMarkdownTheme(); });
+        // a markdown preview is coloured to the current theme, so it is re-rendered (at its current Back position) when the theme changes.
+
+        function refreshMarkdownTheme() { if (previewIsMarkdown && mdStack.length) renderMarkdownTop(); }
+
+        themeBtn.addEventListener("click", () => { root.dataset.theme = effectiveDark() ? "light" : "dark"; localStorage.setItem("theme", root.dataset.theme); paintThemeGlyph(); refreshMarkdownTheme(); });
         matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { paintThemeGlyph(); refreshMarkdownTheme(); });
         paintThemeGlyph();
 
         // the caption shows the window's own title (AOTrino injects it), so the strip, the taskbar and Alt-Tab agree.
-        const winTitle = (window.__aotrino && window.__aotrino.window && window.__aotrino.window.title) || "Shell Commander";
-        document.querySelector(".caption .title").textContent = "▚ " + winTitle;
+        const winTitle = (window.__aotrino && window.__aotrino.window && window.__aotrino.window.title);
+        document.querySelector(".caption .title").textContent = "🪟" + winTitle;
         document.title = winTitle;
 
+        // the console: a ConPTY shell in the browsed folder, drawn by xterm.js.
+        // output arrives base64 from the host through window.__termWrite (the window runs it on the page), input and resize go back through the term object.
+        const consolePane = document.getElementById("consolePane");
+        const consoleSplitter = document.getElementById("consoleSplitter");
+        const consoleShell = document.getElementById("consoleShell");
+        const consoleSync = document.getElementById("consoleSync");
+        let term = null, fitAddon = null, consoleOpen = false, termStarted = false, shellsLoaded = false;
+        let shellKey = localStorage.getItem("console.shell") || "";
+
+        const savedConsoleHeight = parseInt(localStorage.getItem("console.height"), 10);
+        if (savedConsoleHeight > 80) consolePane.style.height = savedConsoleHeight + "px";
+
+        window.__termWrite = function (b64) {
+            if (!term) return;
+
+            const bin = atob(b64);
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            term.write(bytes);
+        };
+
+        window.__termExited = function () {
+            if (term) term.write("\r\n\x1b[90m" + t("Console_Exited") + "\x1b[0m\r\n");
+            termStarted = false;
+        };
+
+        function initTerminal() {
+            term = new Terminal({
+                cursorBlink: true,
+                cursorStyle: "bar",
+                fontSize: 13,
+                fontFamily: '"Cascadia Mono", "Consolas", "Courier New", monospace',
+                theme: { background: "#000000", foreground: "#d6d6d6" }
+            });
+            fitAddon = new FitAddon.FitAddon();
+            term.loadAddon(fitAddon);
+            term.open(document.getElementById("consoleBody"));
+            term.onData(d => chrome.webview.hostObjects.term.Write(d));
+            // Ctrl+O toggles the drawer even while the terminal has focus, and is not passed on to the shell.
+            term.attachCustomKeyEventHandler((ev) => {
+                if (ev.type === "keydown" && ev.ctrlKey && (ev.key === "o" || ev.key === "O")) { toggleConsole(); return false; }
+                return true;
+            });
+        }
+
+        // the installed shells fill the picker once, the remembered one (or the first available) is selected.
+        async function loadShells() {
+            if (shellsLoaded) return;
+
+            shellsLoaded = true;
+            let shells = [];
+            try { shells = JSON.parse(await chrome.webview.hostObjects.term.GetShells()); } catch (e) { shells = []; }
+            consoleShell.innerHTML = "";
+            for (const s of shells) {
+                const opt = document.createElement("option");
+                opt.value = s.Key;
+                opt.textContent = s.Name;
+                consoleShell.appendChild(opt);
+            }
+            if (shells.length && !shells.some(s => s.Key === shellKey)) shellKey = shells[0].Key;
+            consoleShell.value = shellKey;
+        }
+
+        consoleShell.addEventListener("change", () => {
+            shellKey = consoleShell.value;
+            localStorage.setItem("console.shell", shellKey);
+            restartTerminal();
+        });
+
+        // one-way path sync: with this on, navigating a folder sends the shell a cd so the console follows along.
+        consoleSync.checked = localStorage.getItem("console.sync") === "1";
+        consoleSync.addEventListener("change", () => {
+            localStorage.setItem("console.sync", consoleSync.checked ? "1" : "0");
+            if (consoleSync.checked && termStarted && current) chrome.webview.hostObjects.term.ChangeDirectory(current.Id);
+        });
+
+        // called after each navigation, so the console follows when sync is on.
+        function syncConsolePath(id) {
+            if (consoleSync.checked && termStarted && id) chrome.webview.hostObjects.term.ChangeDirectory(id);
+        }
+
+        function fitTerminal() {
+            if (!term || !consoleOpen) return null;
+            fitAddon.fit();
+            return fitAddon.proposeDimensions();
+        }
+
+        async function startTerminal() {
+            const dims = fitTerminal() || { cols: 80, rows: 24 };
+            const cwd = await chrome.webview.hostObjects.term.Start(current ? current.Id : "", dims.cols, dims.rows, shellKey);
+            document.getElementById("consoleCwd").textContent = cwd || "";
+            termStarted = true;
+            term.focus();
+        }
+
+        // switch shells: clear the screen and start the chosen one afresh (Start stops the previous session first).
+        function restartTerminal() {
+            if (!term || !consoleOpen) return;
+
+            term.reset();
+            startTerminal();
+        }
+
+        async function openConsole() {
+            if (consoleOpen) { if (term) term.focus(); return; }
+
+            consoleOpen = true;
+            consolePane.classList.add("open");
+            consoleSplitter.classList.add("open");
+            if (!term) initTerminal();
+            await loadShells();
+            if (current) renderWindow(true);   // the list viewport shrank, refill its virtual window
+            // let the drawer lay out before measuring it, then fit and, the first time, start the shell.
+            requestAnimationFrame(() => {
+                if (!termStarted) {
+                    startTerminal();
+                } else {
+                    const dims = fitTerminal();
+                    if (dims && dims.cols) chrome.webview.hostObjects.term.Resize(dims.cols, dims.rows);
+                }
+                term.focus();
+            });
+        }
+
+        function closeConsole() {
+            if (!consoleOpen) return;
+
+            consoleOpen = false;
+            consolePane.classList.remove("open");
+            consoleSplitter.classList.remove("open");
+            if (current) renderWindow(true);
+            listEl.focus();
+        }
+
+        function toggleConsole() { consoleOpen ? closeConsole() : openConsole(); }
+
+        document.getElementById("console").addEventListener("click", openConsole);
+        document.getElementById("consoleClose").addEventListener("click", closeConsole);
+
+        // drag the divider above the console to resize it, its height kept across sessions.
+        (function () {
+            let dragging = false;
+            consoleSplitter.addEventListener("mousedown", (e) => {
+                dragging = true;
+                consoleSplitter.classList.add("dragging");
+                document.body.style.cursor = "row-resize";
+                document.body.style.userSelect = "none";
+                e.preventDefault();
+            });
+            window.addEventListener("mousemove", (e) => {
+                if (!dragging) return;
+
+                const fnbarTop = document.querySelector(".fnbar").getBoundingClientRect().top;
+                const h = Math.max(80, Math.min(window.innerHeight * 0.8, fnbarTop - e.clientY));
+                consolePane.style.height = h + "px";
+                if (term && consoleOpen) fitAddon.fit();   // resize xterm's own grid live, tell the shell on release
+                if (current) renderWindow(true);
+            });
+            window.addEventListener("mouseup", () => {
+                if (!dragging) return;
+
+                dragging = false;
+                consoleSplitter.classList.remove("dragging");
+                document.body.style.cursor = "";
+                document.body.style.userSelect = "";
+                localStorage.setItem("console.height", parseInt(consolePane.style.height, 10));
+                if (term && consoleOpen) {
+                    const dims = fitTerminal();
+                    if (dims && dims.cols) chrome.webview.hostObjects.term.Resize(dims.cols, dims.rows);
+                }
+            });
+        })();
+
+        applyView();   // reflect the remembered view (list or gallery) and thumbnail size before the first listing
+
         if (window.chrome && chrome.webview && chrome.webview.hostObjects) {
-            load("");   // start at the Desktop, the top of the shell namespace
+            // load the string catalog first so the chrome shows translated, then start at the Desktop.
+            loadCatalog().finally(() => load(""));   // start at the Desktop, the top of the shell namespace
         } else {
             showError("chrome.webview.hostObjects not available");
         }

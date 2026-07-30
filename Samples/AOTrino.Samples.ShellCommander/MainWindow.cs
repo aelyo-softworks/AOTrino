@@ -3,12 +3,11 @@ using DirectN.Extensions.Utilities;
 namespace AOTrino.Samples.ShellCommander;
 
 // a retro file manager that browses the Windows shell namespace, not just the file system.
-// the left panel navigates through IShellItem (This PC, drives, libraries, archives opened as folders,
-// virtual places), the right panel is a preview. this window stays NavigationMode.Local, so browsing goes
-// through the shell host object rather than by navigating the WebView.
+// the left panel navigates through IShellItem (This PC, drives, libraries, archives opened as folders, virtual places), the right panel is a preview.
+// this window stays NavigationMode.Local, so browsing goes through the shell host object rather than by navigating the WebView.
 //
-// the difference from the FileExplorer sample is the whole point: that one walks string paths, this one walks
-// the shell namespace as objects, using the ShellN.Extensions NuGet package rather than redeclaring interop.
+// the difference from the FileExplorer sample is the whole point:
+// that one walks string paths, this one walks the shell namespace as objects, using the ShellN.Extensions NuGet package rather than redeclaring interop.
 [System.Runtime.InteropServices.Marshalling.GeneratedComClass]
 public partial class MainWindow : AOTrinoWindow
 {
@@ -16,16 +15,140 @@ public partial class MainWindow : AOTrinoWindow
     private const uint WM_SHOW_CONTEXT_MENU = MessageDecoder.WM_APP + 1;
 #pragma warning restore IDE1006 // Naming Styles
 
+    // ShellN's shell change notifier for the folder currently on screen, so the page follows adds, deletes and edits.
+    // it owns its own STA thread and message-only window, we just feed it the folder and forward what it reports.
+    private ChangeNotifier? _notifier;
     private string? _pendingContextMenuId;
+    private TerminalApi? _terminal;
 
     public MainWindow()
         : base(Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()!.Title)
     {
     }
 
-    // expose the shell backend to JS as chrome.webview.hostObjects.shell, and let it ask this window for the
-    // native right-click menu, which only the window can raise since it owns the HWND the menu attaches to.
-    protected override void RegisterHostObjects() => AddHostObject("shell", new ShellApi(RequestContextMenu));
+    // expose the shell backend as chrome.webview.hostObjects.shell (and its right-click menu, which only the window can
+    // raise since it owns the HWND), and the console backend as chrome.webview.hostObjects.term.
+    protected override void RegisterHostObjects()
+    {
+        AddHostObject("shell", new ShellApi(RequestContextMenu, WatchFolder));
+
+        _terminal = new TerminalApi(RunScriptOnUiThread);
+        AddHostObject("term", _terminal);
+
+        AddHostObject("localization", new LocalizationApi());
+    }
+
+    // watch a folder for shell changes with ShellN's ChangeNotifier, stopping the previous one. called on the UI thread
+    // from the bridge. the notifier runs on its own STA thread and raises Notified there, which OnShellChange forwards.
+    private void WatchFolder(string id)
+    {
+        _notifier?.Notified -= OnShellChange;
+        Interlocked.Exchange(ref _notifier, null)?.Dispose();
+        try
+        {
+            using var item = ShellItem.FromParsingName(id, throwOnError: false);
+            if (item == null)
+                return;
+
+            using var watchPidl = item.GetIdList(throwOnError: false);
+            if (watchPidl is null)
+                return;
+
+            const ShellN.SHCNE_ID events = ShellN.SHCNE_ID.SHCNE_CREATE | ShellN.SHCNE_ID.SHCNE_DELETE |
+                ShellN.SHCNE_ID.SHCNE_MKDIR | ShellN.SHCNE_ID.SHCNE_RMDIR | ShellN.SHCNE_ID.SHCNE_RENAMEITEM |
+                ShellN.SHCNE_ID.SHCNE_RENAMEFOLDER | ShellN.SHCNE_ID.SHCNE_UPDATEITEM | ShellN.SHCNE_ID.SHCNE_UPDATEDIR;
+
+            _notifier = new ChangeNotifier();
+            _notifier.Notified += OnShellChange;
+            _ = _notifier.Run(watchPidl, recursive: false, events: events);
+        }
+        catch (Exception ex)
+        {
+            Application.TraceWarning($"Failed to watch folder '{id}': {ex.Message}");
+            // continue;
+        }
+    }
+
+    // raised on the notifier's STA thread. the pidls are only valid during this call, so the payload is built here,
+    // then the (plain string) script is marshaled to the UI thread to run on the page.
+    private void OnShellChange(object? sender, ChangeNotifyEventArgs e)
+    {
+        var json = BuildChangeJson(e.Event, e.IdList1, e.IdList2);
+        if (json != null)
+        {
+            RunScriptOnUiThread($"window.__shellChange({json})");
+        }
+    }
+
+    private static string? BuildChangeJson(ShellN.SHCNE_ID? evt, ItemIdList? first, ItemIdList? second)
+    {
+        string action;
+        ShellEntry? entry = null;
+        string? oldId = null;
+        string message;
+        var fallbackName = Program._strings.GetString("Change_Item");
+
+        switch (evt)
+        {
+            case ShellN.SHCNE_ID.SHCNE_CREATE:
+            case ShellN.SHCNE_ID.SHCNE_MKDIR:
+                action = "add";
+                entry = EntryFrom(first);
+                message = string.Format(Program._strings.GetString("Change_Added"), entry?.Name ?? first?.DisplayName ?? fallbackName);
+                break;
+
+            case ShellN.SHCNE_ID.SHCNE_DELETE:
+            case ShellN.SHCNE_ID.SHCNE_RMDIR:
+                action = "remove";
+                oldId = first?.FullParsingName;
+                message = string.Format(Program._strings.GetString("Change_Deleted"), first?.DisplayName ?? fallbackName);
+                break;
+
+            case ShellN.SHCNE_ID.SHCNE_RENAMEITEM:
+            case ShellN.SHCNE_ID.SHCNE_RENAMEFOLDER:
+                action = "rename";
+                oldId = first?.FullParsingName;
+                entry = EntryFrom(second);
+                message = string.Format(Program._strings.GetString("Change_Renamed"), entry?.Name ?? second?.DisplayName ?? fallbackName);
+                break;
+
+            case ShellN.SHCNE_ID.SHCNE_UPDATEITEM:
+                action = "update";
+                entry = EntryFrom(first);
+                message = string.Format(Program._strings.GetString("Change_Modified"), entry?.Name ?? first?.DisplayName ?? fallbackName);
+                break;
+
+            case ShellN.SHCNE_ID.SHCNE_UPDATEDIR:
+                action = "refresh";
+                message = Program._strings.GetString("Change_FolderChanged");
+                break;
+
+            default:
+                return null;
+        }
+
+        var change = new ShellChange(action, entry, oldId, message);
+        // System.Text.Json escapes quotes, HTML and non-ASCII by default, so the object literal is safe to embed.
+        return JsonSerializer.Serialize(change, ShellCommanderJsonContext.Default.ShellChange);
+    }
+
+    // a ShellEntry read from a change notification's pidl, same shape the listing uses.
+    private static ShellEntry? EntryFrom(ItemIdList? idList)
+    {
+        using var item = idList?.GetItem(throwOnError: false);
+        if (item == null)
+            return null;
+
+        return new ShellEntry(
+            item.SIGDN_NORMALDISPLAY ?? string.Empty,
+            item.SIGDN_DESKTOPABSOLUTEPARSING ?? string.Empty,
+            item.IsFolder,
+            item.IsFolder ? -1 : (item.Size ?? -1),
+            item.DateModified?.ToString("yyyy-MM-dd HH:mm") ?? string.Empty);
+    }
+
+    // the console output pump raises this on a pool thread, so the script is posted to the UI thread to run on the page.
+    private void RunScriptOnUiThread(string script) => RunTaskOnUIThread(() => ExecuteScript(script, throwOnError: false));
 
     // the preview frame loads local files over file://, the item's own path when it is on disk, or a temp copy
     // when it is not. allow a file:// page to reach other local files, which an in app preview needs.
@@ -43,6 +166,13 @@ public partial class MainWindow : AOTrinoWindow
     {
         _pendingContextMenuId = id;
         DirectN.Functions.PostMessageW(Handle, WM_SHOW_CONTEXT_MENU, default, default);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        Interlocked.Exchange(ref _terminal, null).SafeDispose();
+        Interlocked.Exchange(ref _notifier, null).SafeDispose();
+        base.Dispose(disposing);
     }
 
     protected override LRESULT? WindowProc(HWND hwnd, uint msg, WPARAM wParam, LPARAM lParam)
@@ -81,7 +211,7 @@ public partial class MainWindow : AOTrinoWindow
         item.ShowContextMenu(site, flags: ShellN.CMF.CMF_EXPLORE | ShellN.CMF.CMF_EXTENDEDVERBS | ShellN.CMF.CMF_CANRENAME);
     }
 
-    // the site the shell context menu is given
+    // the COM site the shell context menu is given
     [System.Runtime.InteropServices.Marshalling.GeneratedComClass]
     private sealed partial class Site(MainWindow window) : DirectN.IServiceProvider, IObjectWithSite, IOleWindow, IDisposable
     {

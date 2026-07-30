@@ -151,7 +151,7 @@ Note: for AOT, ensure you have all the required prerequisites, documented at htt
 
 ## Samples
 
-Fourteen of them, in [Samples](Samples), each one is a single idea. The level each is written at is noted: most
+Fifteen of them, in [Samples](Samples), each one is a single idea. The level each is written at is noted: most
 need **no npm at all**.
 
 ### Hello World
@@ -212,6 +212,18 @@ direction, and dropping copies into the folder on screen with real paths rather 
 `SystemInfo` is demonstrated.
 
 ![File Explorer](docs/images/file-explorer.png)
+
+### Shell Commander
+
+*Plain HTML.* A file manager over the whole **Windows shell namespace**, not the file system: the same code browses
+This PC, an **iPhone or Android over MTP** (Media Transfer Protocol, no drive letter), and a **`.zip` or `.7z` opened
+as a folder**, because the backend is
+`IShellItem` and not a path. Real shell **thumbnails**, previews that pair **WebView2 with WIC** for the widest reach
+(a `.heic` the browser can't read is decoded by an installed codec), a **real ConPTY console**, the real right-click
+shell menu, and live change notifications with toasts. The listing streams and virtualizes, so a folder of any size
+opens at once. The shell-namespace counterpart to File Explorer above.
+
+![Shell Commander](docs/images/shell-commander.png)
 
 ### React · Hello World
 

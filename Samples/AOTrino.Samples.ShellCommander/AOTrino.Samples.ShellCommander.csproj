@@ -10,6 +10,12 @@
 		<!-- opt in to AOTrino's WebRoot embedding (see AOTrino.targets) -->
 		<AOTrinoEmbedWebRoot>true</AOTrinoEmbedWebRoot>
 
+		<!--
+			The language the strings are written in, the one that lives in the main assembly rather than in a
+			satellite. Declaring it stops the runtime looking for an en satellite that will never exist.
+		-->
+		<NeutralLanguage>en</NeutralLanguage>
+
 		<Title>AOTrino Samples - Shell Commander</Title>
 		<AssemblyTitle>AOTrino Samples - Shell Commander</AssemblyTitle>
 	</PropertyGroup>
@@ -20,15 +26,18 @@
 		<Using Include="DirectN" />
 		<Using Include="Markdig" />
 		<Using Include="Microsoft.Win32" />
+		<Using Include="Microsoft.Win32.SafeHandles" />
 		<Using Include="ShellN.Extensions" />
 		<Using Include="ShellN.Extensions.Utilities" />
 		<Using Include="System" />
 		<Using Include="System.Collections.Concurrent" />
 		<Using Include="System.Collections.Generic" />
+		<Using Include="System.ComponentModel" />
 		<Using Include="System.Diagnostics" />
 		<Using Include="System.IO" />
 		<Using Include="System.Linq" />
 		<Using Include="System.Reflection" />
+		<Using Include="System.Resources" />
 		<Using Include="System.Runtime.InteropServices" />
 		<Using Include="System.Security.Cryptography" />
 		<Using Include="System.Text" />
