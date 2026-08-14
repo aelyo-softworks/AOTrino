@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Tab, TabList, makeStyles, tokens } from "@fluentui/react-components";
 import type { SelectTabData } from "@fluentui/react-components";
 import {
+    Box24Regular,
     Bug24Regular,
     Grid24Regular,
     Home24Regular,
@@ -18,6 +19,7 @@ import { WindowPage } from "./pages/WindowPage";
 import { BridgePage } from "./pages/BridgePage";
 import { ThemingPage } from "./pages/ThemingPage";
 import { SystemPage } from "./pages/SystemPage";
+import { PackagesPage } from "./pages/PackagesPage";
 import { SecurityPage } from "./pages/SecurityPage";
 
 const pages = [
@@ -27,6 +29,7 @@ const pages = [
     { value: "bridge", label: "Bridge", icon: <Bug24Regular />, render: () => <BridgePage /> },
     { value: "theming", label: "Theming", icon: <PaintBrush24Regular />, render: () => <ThemingPage /> },
     { value: "system", label: "System", icon: <Info24Regular />, render: () => <SystemPage /> },
+    { value: "packages", label: "Packages", icon: <Box24Regular />, render: () => <PackagesPage /> },
     { value: "security", label: "Security", icon: <ShieldKeyhole24Regular />, render: () => <SecurityPage /> },
 ];
 

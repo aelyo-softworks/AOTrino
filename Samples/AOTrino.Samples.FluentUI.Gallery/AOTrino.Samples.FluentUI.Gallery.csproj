@@ -35,5 +35,16 @@
 		<ProjectReference Include="..\..\AOTrino\AOTrino.csproj" />
 	</ItemGroup>
 
+	<!--
+	  the declared package versions, baked in as assembly metadata so the Packages page can show what the project
+	  asked for next to what actually loaded. DirectNAotVersion / WebView2AotVersion come from Directory.Build.targets.
+	-->
+	<ItemGroup>
+		<AssemblyMetadata Include="AOTrino" Value="$(Version)" />
+		<AssemblyMetadata Include="DirectNAot" Value="$(DirectNAotVersion)" />
+		<AssemblyMetadata Include="DirectNAot.Extensions" Value="$(DirectNAotVersion)" />
+		<AssemblyMetadata Include="WebView2Aot" Value="$(WebView2AotVersion)" />
+	</ItemGroup>
+
 
 </Project>

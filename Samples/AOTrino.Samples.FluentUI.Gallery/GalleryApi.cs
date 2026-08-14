@@ -135,7 +135,95 @@ public partial class GalleryApi(WebViewWindow window) : DispatchObject
         return $"freed {(before - GC.GetTotalMemory(true)) / (1024.0 * 1024):N1} MB";
     }
 
+    // --- the Packages page: what the app runs on, and whether newer versions exist ---.
+
+    // the .NET / NuGet packages the app runs on. Current is the version of the assembly actually loaded, Declared is
+    // what the project asked for (baked into this assembly's metadata by the .csproj, see AssemblyMetadata), RegistryId
+    // is the id the "Check for updates" button looks up on nuget.org. the npm half of the table is baked into the page by Vite.
+    public string GetPackages()
+    {
+        var packages = new List<PackageInfo>
+        {
+            new("dotnet", ".NET", RuntimeInformation.FrameworkDescription, null, null),
+            NugetPackage("AOTrino", "AOTrino"),
+            NugetPackage("DirectN", "DirectNAot"),
+            NugetPackage("DirectN.Extensions", "DirectNAot.Extensions"),
+            NugetPackage("WebView2", "WebView2Aot"),
+        };
+        return JsonSerializer.Serialize(packages.ToArray(), GalleryJsonContext.Default.PackageInfoArray);
+    }
+
+    // the latest published version of a package, from its registry, for the "Check for updates" button. the host makes
+    // the call, not the page, so the Local navigation lock and CORS never enter into it. returns an empty string on any
+    // failure (offline included), which the page reads as "couldn't check" rather than an error.
+    public async Task<string> GetLatestVersionAsync(string ecosystem, string id)
+    {
+        try
+        {
+            using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(8) };
+            http.DefaultRequestHeaders.Add("User-Agent", "AOTrino.Samples.FluentUI.Gallery");
+
+            if (string.Equals(ecosystem, "npm", StringComparison.OrdinalIgnoreCase))
+            {
+                var manifest = await http.GetStringAsync($"https://registry.npmjs.org/{id}/latest");
+                return JsonSerializer.Deserialize(manifest, GalleryJsonContext.Default.NpmLatest)?.Version ?? string.Empty;
+            }
+
+            var index = await http.GetStringAsync($"https://api.nuget.org/v3-flatcontainer/{id.ToLowerInvariant()}/index.json");
+            var versions = JsonSerializer.Deserialize(index, GalleryJsonContext.Default.NugetIndex)?.Versions ?? [];
+
+            // the flat container index is oldest first, so the newest stable is the last one with no prerelease "-" suffix.
+            for (var i = versions.Length - 1; i >= 0; i--)
+            {
+                if (!versions[i].Contains('-'))
+                    return versions[i];
+            }
+
+            return versions.Length > 0 ? versions[^1] : string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
 #pragma warning restore CA1822
+
+    // one NuGet package: the loaded assembly's version as Current, and the version the .csproj declared as metadata.
+    // the registry id is both the display name and what nuget.org is queried by.
+    private static PackageInfo NugetPackage(string assemblyName, string registryId) =>
+        new("nuget", registryId, LoadedAssemblyVersion(assemblyName) ?? "not loaded", DeclaredVersion(registryId), registryId);
+
+    // the informational version of a loaded assembly, by simple name, with the "+<commit>" build metadata trimmed off.
+    private static string? LoadedAssemblyVersion(string simpleName)
+    {
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            if (!string.Equals(assembly.GetName().Name, simpleName, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var informational = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            if (string.IsNullOrEmpty(informational))
+                return assembly.GetName().Version?.ToString();
+
+            var plus = informational.IndexOf('+');
+            return plus < 0 ? informational : informational[..plus];
+        }
+
+        return null;
+    }
+
+    // a version the .csproj baked in as assembly metadata, keyed by the package's registry id.
+    private static string? DeclaredVersion(string key)
+    {
+        foreach (var metadata in Assembly.GetExecutingAssembly().GetCustomAttributes<AssemblyMetadataAttribute>())
+        {
+            if (string.Equals(metadata.Key, key, StringComparison.OrdinalIgnoreCase))
+                return metadata.Value;
+        }
+
+        return null;
+    }
 
     // --- .NET -> JS: pushes window.galleryTick(n) each second, then 0.
     // the bridge invokes this on the UI thread and the awaits resume there (window sync context), so ExecuteScript is safe ---.

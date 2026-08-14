@@ -29,8 +29,8 @@
   },
   "devDependencies": {
     "@aotrino/client": "*",
-    "@types/react": "^19.2.14",
-    "react": "^19.2.5",
-    "typescript": "~6.0.3"
+    "@types/react": "^19.2.18",
+    "react": "^19.2.8",
+    "typescript": "~7.0.2"
   }
 }

@@ -29,7 +29,26 @@ export interface GalleryApi {
     collectGarbage(): string;
     setBackdrop(type: "mica" | "acrylic" | "tabbed" | "none"): boolean;
     quit(): void;
+
+    // the Packages page: the .NET/NuGet side as JSON (see PackageInfo), and a registry lookup for the latest version
+    getPackages(): string;
+    getLatestVersionAsync(ecosystem: string, id: string): Promise<string>;
 }
+
+// PackageInfo.cs on the .NET side, and the shape Vite bakes into __NPM_PACKAGES__ for the npm side.
+// System.Text.Json's source generator keeps PascalCase, so the npm half matches it deliberately.
+export interface Package {
+    Ecosystem: string;   // "dotnet" | "nuget" | "npm"
+    Name: string;
+    Current: string;
+    Declared: string | null;
+    RegistryId: string | null;
+}
+
+// the frontend packages, baked into the bundle at build time by the npmPackages() plugin in vite.config.ts.
+// the runtime has no package.json, so this is the only way the page knows what it was built against.
+declare const __NPM_PACKAGES__: Package[];
+export const npmPackages: Package[] = typeof __NPM_PACKAGES__ !== "undefined" ? __NPM_PACKAGES__ : [];
 
 // AOTrino ships SystemInfo; this window chose to register it (MainWindow.RegisterHostObjects)
 export interface SystemApi {

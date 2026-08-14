@@ -147,13 +147,21 @@ Really. Nothing here expires weekly. The WebView2 Runtime updates itself, the re
 
 ### Every month, the npm tree
 
+`npm outdated` only sees workspaces, so it misses the templates, and `npm update` stays inside the ranges
+already in `package.json` without ever moving the floors. `npm-check-updates` with `--deep` walks every
+`package.json` in the repo instead, libraries, samples and templates alike:
+
 ```bash
-npm outdated                    # at the repo root: covers the libraries and every sample
-npm update                      # patch + minor, within the ranges already in package.json
+npx npm-check-updates --deep                     # see it all: libraries, samples, templates, floor vs latest
+npx npm-check-updates -u --deep --target minor   # bump the floors, patch + minor only (majors are the six-month pass)
+npm install                                      # sync the lockfile, postinstall rebuilds the @aotrino libs with tsc, the first signal
+npm run typecheck && npm run build               # tsc -b --noEmit, then vite, across every workspace
 ```
 
 Then run **the checklist** below. Patch and minor bumps of React/Vite/TypeScript/Fluent are usually silent,
-but the checklist is cheap and the failure mode isn't (see *the traps*).
+but the checklist is cheap and the failure mode isn't (see *the traps*). A newer Vite sometimes turns a config
+idiom into a deprecation warning (recently `__dirname`, now `import.meta.dirname`), fix those as they surface
+rather than letting them wait for a major.
 
 ### Every six months, the real pass
 
@@ -166,8 +174,9 @@ but the checklist is cheap and the failure mode isn't (see *the traps*).
    when new ones ship, and rebuild an AOT sample. If you keep an `External\` folder, remember it wins over
    those versions while it's there, and nothing tells you it's six months behind, which is the one that
    silently rots. Delete it to build against what everyone else builds against.
-4. **The templates' npm deps.** They're a copy of the samples' and don't move with them. `npm outdated` at the
-   root does *not* see them, the templates aren't workspaces (a template is content, not a project).
+4. **The templates' npm deps.** They're a copy of the samples' and don't move with them, and they aren't
+   workspaces (a template is content, not a project), so `npm outdated` at the root never sees them. The monthly
+   `npm-check-updates --deep` does, so their minors keep pace, take their majors here alongside the samples'.
 5. **Re-read** `docs/BRIDGE.md` on nested arrays: if WebView2Feedback #3183 ever closes, the flat-array
    advice can change.
 
