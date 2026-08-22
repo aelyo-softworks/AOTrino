@@ -34,7 +34,7 @@
     "@aotrino/client": "*",
     "@aotrino/react": "*",
     "@fluentui/react-components": "^9.74.6",
-    "@fluentui/react-icons": "^2.0.337",
+    "@fluentui/react-icons": "^2.0.338",
     "@types/react": "^19.2.18",
     "react": "^19.2.8",
     "typescript": "~7.0.2"
