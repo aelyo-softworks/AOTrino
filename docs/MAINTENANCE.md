@@ -34,12 +34,6 @@ PublishSamples.proj          what publish.bat actually runs
 .github/workflows/           build.yml on every push; release.yml on a v* tag, it runs publish.bat, so the
                              released binaries come out of the same script as a local drop
 docs/                        SECURITY, BRIDGE, FRONTEND, THEMING, and this file
-External/                    OPTIONAL, git-ignored, absent from a normal clone. If present, DirectN and
-                             WebView2 are referenced from these DLLs instead of from their NuGet packages -
-                             which is how a change to one of those libs gets tried here before it's published.
-                             Without it, the published packages are used and everything builds; that's the
-                             normal case. Detected in Directory.Build.targets; -p:UseLocalExternal=true|false
-                             overrides the detection either way
 ```
 
 The dependency direction is one-way and worth keeping that way:
@@ -61,7 +55,8 @@ scripts, which is why the list is explicit and why the libraries have **no `prep
 | **The version**, assemblies, `AOTrino`, `AOTrino.Templates` | `Directory.Build.props` (`Version`) | one number for the whole product, see below |
 | .NET TFM | `Directory.Build.props` (`TargetFramework`) | one place, every project |
 | Windows SDK projection (`WindowsSdkPackageVersion`) | **nothing, by design**, except `Samples\AOTrino.Samples.CaptureScreen` | the TFM picks it, see *the traps* before you pin it anywhere else |
-| DirectN, DirectN.Extensions, WebView2 | `Directory.Build.targets` (`DirectNAotVersion`, `WebView2AotVersion`) | NuGet packages by default, `External\*.dll` instead when that folder exists |
+| DirectN, DirectN.Extensions, WebView2 | `Directory.Build.targets` (`DirectNAotVersion`, `WebView2AotVersion`) | NuGet packages, for every C# project. Override with `-p:DirectNAotVersion=...` |
+| WicNetCore, ShellN.Extensions | `Samples\AOTrino.Samples.ShellCommander` only | NuGet packages, the one sample that browses the shell namespace |
 | `WebView2Loader.dll` (x86/x64/arm64) | `AOTrino\runtimes\...` in the core lib | committed binaries |
 | WebView2 **Runtime** | nothing by default, evergreen on the user's machine | `AOTrinoApplication` refuses to start without it and shows a download link. An app can pin it (Fixed Version) via `BrowserExecutableFolder`, see [SECURITY.md](SECURITY.md) for the tradeoff |
 | React, Vite, TypeScript, `@types/*` | each `package.json`: `npm/*`, every `Samples/*/WebRoot`, each template | duplicated by design, samples are meant to be copy-pasteable |
@@ -93,9 +88,9 @@ reads the real version out of the tarball, and nothing has to be edited.
 ### The .NET dependencies
 
 `DirectNAot`, `DirectNAot.Extensions` and `WebView2Aot` are `PackageReference`s, added to every C# project by
-`Directory.Build.targets`, a fresh clone restores them from nuget.org and builds, with nothing else to install.
-A local `External\` folder overrides them when it exists, which is a convenience for whoever is changing those
-libraries, not a requirement for anyone else.
+`Directory.Build.targets`, and `WicNetCore` and `ShellN.Extensions` are `PackageReference`s in the ShellCommander
+sample. A fresh clone restores them all from nuget.org and builds, with nothing else to install and nothing to run
+first.
 
 ## Shipping a release
 
@@ -170,10 +165,8 @@ rather than letting them wait for a major.
    it, which is a consumer-visible break, see *shipping a release*.
 2. **Majors.** `npm outdated` shows them in the "Latest" column. Take them one package at a time, React,
    Vite, TypeScript and Fluent all have opinions and you want to know which one broke you.
-3. **The interop libraries.** Bump `DirectNAotVersion` / `WebView2AotVersion` in `Directory.Build.targets`
-   when new ones ship, and rebuild an AOT sample. If you keep an `External\` folder, remember it wins over
-   those versions while it's there, and nothing tells you it's six months behind, which is the one that
-   silently rots. Delete it to build against what everyone else builds against.
+3. **The interop libraries.** Bump `DirectNAotVersion` / `WebView2AotVersion` in `Directory.Build.targets`, and
+   `WicNetCore` / `ShellN.Extensions` in the ShellCommander sample, when new ones ship, and rebuild an AOT sample.
 4. **The templates' npm deps.** They're a copy of the samples' and don't move with them, and they aren't
    workspaces (a template is content, not a project), so `npm outdated` at the root never sees them. The monthly
    `npm-check-updates --deep` does, so their minors keep pace, take their majors here alongside the samples'.

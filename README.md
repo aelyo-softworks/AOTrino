@@ -294,12 +294,11 @@ publish.bat -upx              rem every sample, AOT, x86 + x64 + ARM64, compress
 That should be all of it: the interop assemblies come from the published
 [DirectNAot](https://www.nuget.org/packages/DirectNAot),
 [DirectNAot.Extensions](https://www.nuget.org/packages/DirectNAot.Extensions) and
-[WebView2Aot](https://www.nuget.org/packages/WebView2Aot) packages, and the build takes care of npm.
-
-If you happen to be working on those libraries at the same time, drop their local builds into an `External\`
-folder at the root: when it's there, the projects reference those DLLs instead of the packages, so a change in
-DirectN can be tried here without a round trip through nuget.org. It's detected rather than configured,
-`-p:UseLocalExternal=false` overrides it either way. See [docs/MAINTENANCE.md](docs/MAINTENANCE.md).
+[WebView2Aot](https://www.nuget.org/packages/WebView2Aot) packages, the samples that use it also take
+[WicNetCore](https://www.nuget.org/packages/WicNetCore) and
+[ShellN.Extensions](https://www.nuget.org/packages/ShellN.Extensions) the same way, and the build takes care of npm.
+Nothing else to install, nothing to run first. Override a version with `-p:DirectNAotVersion=...` or
+`-p:WebView2AotVersion=...`. See [docs/MAINTENANCE.md](docs/MAINTENANCE.md).
 
 ## License
 

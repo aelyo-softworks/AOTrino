@@ -1,10 +1,9 @@
 # Builds AOTrino the way a stranger would: a clean Windows machine, a clone, and nothing else.
 #
-# That's the whole point of it. Everything on my own machine is already installed and already there - the
-# interop DLLs in External\, node_modules, the C++ tools - so a green build here proves nothing about the two
-# claims the README makes to everyone else: that you can clone this and build it, and that the .NET SDK alone
-# is enough to do so. A runner has no External\ folder, so it takes DirectN and WebView2 from their published
-# packages, which is the path every other person is on.
+# That's the whole point of it. Everything on my own machine is already installed and already there - node_modules,
+# the C++ tools - so a green build here proves nothing about the two claims the README makes to everyone else: that
+# you can clone this and build it, and that the .NET SDK alone is enough to do so. The runner restores every interop
+# assembly, DirectN, WebView2, WicNet, ShellN, from its published NuGet package, which is the path every other person is on.
 name: build
 
 on:
@@ -42,7 +41,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: dotnet build (no External\, no npm install, no instructions)
+      - name: dotnet build (NuGet only, no npm install, no instructions)
         run: dotnet build AOTrino.slnx -c Release
 
   publish:
