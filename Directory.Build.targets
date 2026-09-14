@@ -18,7 +18,7 @@
 	  and stop with "NU1012: Platform version is not present ... net6.0-none". The .csproj condition keeps them out of it.
 	-->
 	<PropertyGroup Condition="'$(AOTrinoReferencesDirectN)' != 'false' and '$(MSBuildProjectExtension)' == '.csproj'">
-		<DirectNAotVersion Condition="'$(DirectNAotVersion)' == ''">1.6.6</DirectNAotVersion>
+		<DirectNAotVersion Condition="'$(DirectNAotVersion)' == ''">1.6.7</DirectNAotVersion>
 		<WebView2AotVersion Condition="'$(WebView2AotVersion)' == ''">1.5.2</WebView2AotVersion>
 	</PropertyGroup>
 
