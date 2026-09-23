@@ -31,7 +31,8 @@ Samples/
   AOTrino.Samples.FluentUI.* Fluent UI samples (Fluent implies React, so no React. prefix)
 publish.bat                  every sample x x86/x64/arm64 into publish\, optionally UPX'd, zipped, released
 PublishSamples.proj          what publish.bat actually runs
-.github/workflows/           build.yml on every push; release.yml on a v* tag, it runs publish.bat, so the
+release.bat                  starts release.yml on GitHub, which builds and publishes the release
+.github/workflows/           build.yml and release.yml, both started by hand only. release.yml runs publish.bat, so the
                              released binaries come out of the same script as a local drop
 docs/                        SECURITY, BRIDGE, FRONTEND, THEMING, and this file
 ```
@@ -94,40 +95,32 @@ first.
 
 ## Shipping a release
 
-1. **Bump** `<Version>` in `Directory.Build.props`.
-2. **Pack both**, and check the version came out where it belongs:
-
-```bash
-dotnet pack AOTrino/AOTrino.csproj -c Release
-dotnet pack Templates/AOTrino.Templates.csproj -c Release
-```
-
-3. **Generate and build one app per template**, against the packages you just made and not against nuget.org,
+1. **Bump** `<Version>` in `Directory.Build.props`, then commit and push it.
+2. **Run `release.bat build`**. It starts `release.yml` on GitHub without publishing anything: every sample
+   built for x86/x64/arm64 on three runners at once, and `AOTrino` and `AOTrino.Templates` packed from the same commit.
+   The zips and the two `.nupkg` files stay as artifacts of the run.
+3. **Generate and build one app per template**, against those two packages and not against nuget.org,
    this is the only test that proves the tokens got substituted and the tarballs got carried. See the checklist.
-4. **Push both packages to nuget.org, together.** `AOTrino` and `AOTrino.Templates` are one product with one
-   version: a template that generates an app referencing an `AOTrino` that isn't published yet is a broken
-   template, and a published version is immutable, the fix is another version, not a re-upload.
-5. **Tag** `v<version>` and push the tag, that is the whole trigger. `release.yml` fires on any `v*` tag, builds
-   every sample for x86/x64/arm64 on three runners at once, and attaches one zip per architecture to a GitHub
-   release. Nothing else to press.
+4. **Run `release.bat`**. The same build again, then, in this order:
+   * it checks that `v<Version>` is not released yet, that no tag of that name sits on another commit,
+     and that neither package already has that version on nuget.org, before anything is published.
+   * it pushes `AOTrino`, then `AOTrino.Templates`, to nuget.org.
+   * it creates the tag `v<Version>` on the commit it built, and the GitHub release with one zip per architecture.
 
 ```bash
-git release            # tags v<Version-from-Directory.Build.props>, pushes it, fires the workflow
-# equivalently, by hand:
-git tag -a v1.0.1 -m "Release v1.0.1" && git push origin v1.0.1
+release.bat build      # builds and packs only, the zips and the packages stay as artifacts of the run
+release.bat            # builds, packs, pushes both packages and publishes the release v<Version-from-Directory.Build.props>
 ```
 
-`git release` is a one-line git alias that reads `<Version>` straight from `Directory.Build.props`, so the tag
-can't drift from the packages, set it up once (it's global, and refuses if the file's missing, the version is
-unreadable, or the tag already exists):
-
-```bash
-git config --global alias.release '!f() { root=$(git rev-parse --show-toplevel) || return 1; props="$root/Directory.Build.props"; [ -f "$props" ] || { echo "release: run this from the AOTrino repo" >&2; return 1; }; ver=$(sed -n "s:.*<Version>\(.*\)</Version>.*:\1:p" "$props" | head -1); [ -n "$ver" ] || { echo "release: could not read <Version>" >&2; return 1; }; tag="v$ver"; git rev-parse -q --verify "refs/tags/$tag" >/dev/null 2>&1 && { echo "release: tag $tag already exists (bump <Version> first)" >&2; return 1; }; git tag -a "$tag" -m "Release $tag" && git push origin "$tag"; }; f'
-```
-
-Run it **after** the version bump is committed: the tag points at `HEAD`, so `HEAD` needs to be the commit that
-carries the new `<Version>` (and the packages built from it). The `tag already exists` guard is the safety net,
+`AOTrino` and `AOTrino.Templates` are one product with one version: a template that generates an app referencing
+an `AOTrino` that isn't published yet is a broken template, and a published version is immutable,
+the fix is another version, not a re-upload. That is why the run refuses rather than replaces,
 a published tag, like a published package, is not a thing you casually move.
+
+The push needs a nuget.org API key allowed to push `AOTrino` and `AOTrino.Templates`, stored once as the `NUGET_API_KEY`
+repository secret, under Settings, Secrets and variables, Actions, or with `gh secret set NUGET_API_KEY`.
+Nothing runs on a push or a tag, so nothing starts before you ask.
+`build.yml`, the clean-machine build, is started by hand as well, from the Actions tab or with `gh workflow run build.yml`.
 
 Why the two packages ship together, in the general case: the DLL in `AOTrino` and the `PackageReference` in the
 templates are two halves of the same artifact. Anything that changes what a generated app must reference, the

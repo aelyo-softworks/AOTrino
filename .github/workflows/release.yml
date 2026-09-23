@@ -9,20 +9,29 @@
 # Each leg still runs publish.bat - the same script as by hand - so the released binaries come out of the same
 # path a local drop does. The leg produces a zip; the final `release` job collects the three and publishes them.
 #
-# Push a tag to trigger it:
-#     git tag v1.0.1 && git push origin v1.0.1
+# Nothing here runs on its own. Start it with release.bat, from the Actions tab, or with the GitHub CLI:
 #
-# or run it from the Actions tab against a tag you've already pushed.
+#     gh workflow run release.yml -f release=true      builds and publishes the release.
+#     gh workflow run release.yml                      builds and leaves the zips as artifacts.
+#
+# The tag is v<Version> from Directory.Build.props, created by the release itself, so bumping that decides the number.
+# The AOTrino and AOTrino.Templates packages are packed from the same commit and pushed to nuget.org with that version,
+# which needs the NUGET_API_KEY repository secret. Without release=true they stay as artifacts, ready to test the templates with.
+# A version that has already been released or pushed stops the run before anything is published.
 name: release
 
 on:
-  push:
-    tags: [ 'v*' ]
   workflow_dispatch:
     inputs:
-      tag:
-        description: 'Tag to release (must already exist, e.g. v1.0.1)'
-        required: true
+      ref:
+        description: 'Branch, tag or commit to build. Leave empty for the default branch.'
+        required: false
+        default: ''
+      release:
+        description: 'Publish a GitHub release, tagged from the Version in Directory.Build.props'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   # gh release create writes to the repo. The default token is read-only.
@@ -51,8 +60,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          # the tag, not the branch: workflow_dispatch would otherwise build main and label it a release
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ inputs.ref }}
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -97,30 +105,142 @@ jobs:
           path: publish/AOTrino-samples-${{ matrix.rid }}.zip
           if-no-files-found: error
 
+  packages:
+    name: pack the NuGet packages
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      # the templates package carries the npm libraries as tarballs, which its pack builds with npm.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: dotnet pack
+        shell: pwsh
+        run: |
+          dotnet pack AOTrino/AOTrino.csproj -c Release -o nupkg
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet pack Templates/AOTrino.Templates.csproj -c Release -o nupkg
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-ChildItem nupkg
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: nupkg
+          path: nupkg/*.nupkg
+          if-no-files-found: error
+
   release:
     name: publish the release
-    needs: build
+    needs: [ build, packages ]
+    if: inputs.release
     # just gh + an upload; a Linux runner starts faster and there's nothing Windows-specific left to do
     runs-on: ubuntu-latest
 
     steps:
+      # only for Directory.Build.props, which is where the version comes from.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: read the version
+        id: version
+        run: |
+          version=$(grep -oPm1 '(?<=<Version>)[^<]+' Directory.Build.props)
+          if [ -z "$version" ]; then echo "no <Version> found in Directory.Build.props"; exit 1; fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+          # the commit that was actually checked out, which is not the one that started the run when a ref was given.
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "releasing $version from $(git rev-parse --short HEAD)"
+
       - name: collect the zips
         uses: actions/download-artifact@v7
         with:
           path: dist
+          pattern: zip-*
           # flatten the three zip-win-* artifacts into dist\ instead of a folder each
           merge-multiple: true
+
+      - name: collect the packages
+        uses: actions/download-artifact@v7
+        with:
+          name: nupkg
+          path: nupkg
+
+      # every check runs before anything is published, so a refusal leaves nothing half released.
+      - name: check nothing is published yet
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+          SHA: ${{ steps.version.outputs.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          ls -la dist nupkg
+
+          if [ -z "$NUGET_API_KEY" ]; then
+            echo "the NUGET_API_KEY repository secret is not set, see docs/MAINTENANCE.md."
+            exit 1
+          fi
+
+          # refusing rather than replacing, so a forgotten version bump cannot overwrite what is already published.
+          if gh release view "$TAG" --repo "$REPO" > /dev/null 2>&1; then
+            echo "$TAG is already released. Bump <Version> in Directory.Build.props and run this again."
+            exit 1
+          fi
+
+          # a tag that already exists is reused as it is, whatever --target says,
+          # so releasing would attach zips built here to a commit somewhere else entirely.
+          existing=$(git ls-remote origin "refs/tags/$TAG^{}" | cut -f1)
+          if [ -z "$existing" ]; then existing=$(git ls-remote origin "refs/tags/$TAG" | cut -f1); fi
+          if [ -n "$existing" ] && [ "$existing" != "$SHA" ]; then
+            echo "$TAG already exists and points at $existing, not at the commit built here, $SHA."
+            echo "Delete the tag, git push origin :refs/tags/$TAG, then run this again."
+            exit 1
+          fi
+
+          # a version pushed to nuget.org can never be replaced, only followed by another one.
+          for id in AOTrino AOTrino.Templates; do
+            if [ ! -f "nupkg/$id.$VERSION.nupkg" ]; then echo "nupkg/$id.$VERSION.nupkg was not packed"; exit 1; fi
+            lower=$(echo "$id" | tr '[:upper:]' '[:lower:]')
+            if curl -sf "https://api.nuget.org/v3-flatcontainer/$lower/index.json" | grep -q "\"$VERSION\""; then
+              echo "$id $VERSION is already on nuget.org. Bump <Version> in Directory.Build.props and run this again."
+              exit 1
+            fi
+          done
+
+      # AOTrino first, since an app generated by the templates references it.
+      - name: push the packages
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          for id in AOTrino AOTrino.Templates; do
+            dotnet nuget push "nupkg/$id.$VERSION.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
+          done
 
       - name: create the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ inputs.tag || github.ref_name }}
+          TAG: ${{ steps.version.outputs.tag }}
+          SHA: ${{ steps.version.outputs.sha }}
           REPO: ${{ github.repository }}
         run: |
-          ls -la dist
-          # --generate-notes writes "what changed since the last tag", server-side, so no checkout is needed
-          gh release create "$TAG" dist/*.zip --generate-notes --repo "$REPO"
+          # --generate-notes writes what changed since the last tag, on the server.
+          gh release create "$TAG" dist/*.zip --repo "$REPO" --target "$SHA" --title "$TAG" --generate-notes
 
       - name: what shipped
         run: |
-          for z in dist/*.zip; do printf '%-40s %6.1f MB\n' "$(basename "$z")" "$(echo "scale=1; $(stat -c%s "$z")/1048576" | bc)"; done
+          for f in dist/*.zip nupkg/*.nupkg; do printf '%-40s %6.1f MB\n' "$(basename "$f")" "$(echo "scale=1; $(stat -c%s "$f")/1048576" | bc)"; done

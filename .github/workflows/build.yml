@@ -4,23 +4,11 @@
 # the C++ tools - so a green build here proves nothing about the two claims the README makes to everyone else: that
 # you can clone this and build it, and that the .NET SDK alone is enough to do so. The runner restores every interop
 # assembly, DirectN, WebView2, WicNet, ShellN, from its published NuGet package, which is the path every other person is on.
+#
+# Nothing here runs on its own. Start it from the Actions tab, or with "gh workflow run build.yml".
 name: build
 
 on:
-  push:
-    branches: [ main ]
-    # a docs/assets-only commit doesn't change what this proves - skip it. a skip needs EVERY changed file to
-    # match, so a commit that touches real code alongside a README still builds. `[skip ci]` in a commit
-    # message skips any single run by hand. (paths filters don't apply to workflow_dispatch - that always runs.)
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '**/*.png'
-      - '**/*.jpg'
-      - '**/*.svg'
-      - 'LICENSE'
-      - '.gitignore'
-  pull_request:
   workflow_dispatch:
 
 jobs:
