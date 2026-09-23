@@ -31,7 +31,8 @@ Samples/
   AOTrino.Samples.FluentUI.* Fluent UI samples (Fluent implies React, so no React. prefix)
 publish.bat                  every sample x x86/x64/arm64 into publish\, optionally UPX'd, zipped, released
 PublishSamples.proj          what publish.bat actually runs
-release.bat                  starts release.yml on GitHub, which builds and publishes the release
+build.bat                    starts release.yml on GitHub, which builds and packs without publishing anything
+release.bat                  starts release.yml on GitHub, which builds, pushes the packages and publishes the release
 .github/workflows/           build.yml and release.yml, both started by hand only. release.yml runs publish.bat, so the
                              released binaries come out of the same script as a local drop
 docs/                        SECURITY, BRIDGE, FRONTEND, THEMING, and this file
@@ -96,19 +97,19 @@ first.
 ## Shipping a release
 
 1. **Bump** `<Version>` in `Directory.Build.props`, then commit and push it.
-2. **Run `release.bat build`**. It starts `release.yml` on GitHub without publishing anything: every sample
+2. **Run `build.bat`**. It starts `release.yml` on GitHub without publishing anything: every sample
    built for x86/x64/arm64 on three runners at once, and `AOTrino` and `AOTrino.Templates` packed from the same commit.
    The zips and the two `.nupkg` files stay as artifacts of the run.
 3. **Generate and build one app per template**, against those two packages and not against nuget.org,
    this is the only test that proves the tokens got substituted and the tarballs got carried. See the checklist.
-4. **Run `release.bat`**. The same build again, then, in this order:
+4. **Run `release.bat`**, and confirm the version it shows. The same build again, then, in this order:
    * it checks that `v<Version>` is not released yet, that no tag of that name sits on another commit,
      and that neither package already has that version on nuget.org, before anything is published.
    * it pushes `AOTrino`, then `AOTrino.Templates`, to nuget.org.
    * it creates the tag `v<Version>` on the commit it built, and the GitHub release with one zip per architecture.
 
 ```bash
-release.bat build      # builds and packs only, the zips and the packages stay as artifacts of the run
+build.bat              # builds and packs only, the zips and the packages stay as artifacts of the run
 release.bat            # builds, packs, pushes both packages and publishes the release v<Version-from-Directory.Build.props>
 ```
 
