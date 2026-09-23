@@ -49,11 +49,6 @@
 		<Using Include="WicNet" />
 	</ItemGroup>
 
-	<!--
-	  the point of this sample: the Windows shell namespace as a public NuGet, not redeclared interop.
-	  ShellN.Extensions brings ShellN and the DirectNAot packages it needs. AOTrino's own DirectN is 1.6.5,
-	  the same version this depends on, so the two agree on one DirectN.
-	-->
 	<ItemGroup>
 		<PackageReference Include="Markdig" Version="1.4.0" />
 		<PackageReference Include="ShellN.Extensions" Version="1.1.0" />
