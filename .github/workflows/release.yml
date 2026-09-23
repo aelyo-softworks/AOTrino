@@ -77,7 +77,7 @@ jobs:
       # re-downloaded on every cold run. The legs race to populate it on a first run; whoever saves first wins
       # and the others log "already exists", which is not a failure.
       - name: cache NuGet
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Build.props', 'Directory.Build.targets') }}
@@ -165,7 +165,7 @@ jobs:
           echo "releasing $version from $(git rev-parse --short HEAD)"
 
       - name: collect the zips
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           path: dist
           pattern: zip-*
@@ -173,7 +173,7 @@ jobs:
           merge-multiple: true
 
       - name: collect the packages
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: nupkg
           path: nupkg
