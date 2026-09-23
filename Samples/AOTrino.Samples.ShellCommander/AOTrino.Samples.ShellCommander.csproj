@@ -55,9 +55,9 @@
 	  the same version this depends on, so the two agree on one DirectN.
 	-->
 	<ItemGroup>
-		<PackageReference Include="Markdig" Version="1.3.2" />
-		<PackageReference Include="ShellN.Extensions" Version="1.0.8" />
-		<PackageReference Include="WicNetCore" Version="1.9.5" />
+		<PackageReference Include="Markdig" Version="1.4.0" />
+		<PackageReference Include="ShellN.Extensions" Version="1.1.0" />
+		<PackageReference Include="WicNetCore" Version="1.9.8" />
 	</ItemGroup>
 
 	<ItemGroup>

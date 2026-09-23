@@ -13,7 +13,7 @@
     "@aotrino/client": "file:../packages/aotrino-client.tgz",
     "@aotrino/react": "file:../packages/aotrino-react.tgz",
     "@aotrino/fluent": "file:../packages/aotrino-fluent.tgz",
-    "@fluentui/react-components": "^9.74.7",
+    "@fluentui/react-components": "^9.74.9",
     "@fluentui/react-icons": "^2.0.341",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"

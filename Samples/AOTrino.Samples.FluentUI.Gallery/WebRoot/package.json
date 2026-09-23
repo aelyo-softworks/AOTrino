@@ -16,13 +16,13 @@
     "@aotrino/client": "*",
     "@aotrino/fluent": "*",
     "@aotrino/react": "*",
-    "@fluentui/react-components": "^9.74.7",
+    "@fluentui/react-components": "^9.74.9",
     "@fluentui/react-icons": "^2.0.341",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
-    "@types/node": "^26.5.1",
+    "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
