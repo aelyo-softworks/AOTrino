@@ -7,7 +7,7 @@ rem A version that is already released or already on nuget.org stops the run bef
 rem GitHub builds what is pushed, not what is on this machine, so commit and push first.
 rem
 rem Needs the GitHub CLI, https://cli.github.com, signed in with "gh auth login",
-rem and the NUGET_API_KEY repository secret for the push to nuget.org, see docs\MAINTENANCE.md.
+rem and a nuget.org Trusted Publishing policy for the push, see docs\MAINTENANCE.md.
 rem The workflow also has to exist on the default branch, which is where GitHub looks for it.
 rem
 rem   release.bat           builds every sample for every architecture, pushes the packages and publishes the release.

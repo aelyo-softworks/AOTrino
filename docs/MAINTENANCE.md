@@ -118,8 +118,15 @@ an `AOTrino` that isn't published yet is a broken template, and a published vers
 the fix is another version, not a re-upload. That is why the run refuses rather than replaces,
 a published tag, like a published package, is not a thing you casually move.
 
-The push needs a nuget.org API key allowed to push `AOTrino` and `AOTrino.Templates`, stored once as the `NUGET_API_KEY`
-repository secret, under Settings, Secrets and variables, Actions, or with `gh secret set NUGET_API_KEY`.
+The push uses nuget.org Trusted Publishing, so no API key is stored anywhere. The run trades its GitHub token for a
+key that lasts an hour, which only works while the `smourier` account on nuget.org, the owner of both packages, has
+this policy, under its user name, Trusted Publishing:
+
+* Repository Owner: `aelyo-softworks`
+* Repository: `AOTrino`
+* Workflow File: `release.yml`
+* Environment: empty
+
 Nothing runs on a push or a tag, so nothing starts before you ask.
 `build.yml`, the clean-machine build, is started by hand as well, from the Actions tab or with `gh workflow run build.yml`.
 
