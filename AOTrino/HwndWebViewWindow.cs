@@ -42,7 +42,9 @@ public partial class HwndWebViewWindow(
         if (disposing)
         {
             DetachController(); // before disposing the controller: teardown focus/size messages must not hit it.
-            _controller?.Dispose();
+            var controller = Interlocked.Exchange(ref _controller, null);
+            controller?.Object.Close();
+            controller?.Dispose();
         }
         base.Dispose(disposing);
     }

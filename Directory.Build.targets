@@ -19,7 +19,7 @@
 	-->
 	<PropertyGroup Condition="'$(AOTrinoReferencesDirectN)' != 'false' and '$(MSBuildProjectExtension)' == '.csproj'">
 		<DirectNAotVersion Condition="'$(DirectNAotVersion)' == ''">1.7.0</DirectNAotVersion>
-		<WebView2AotVersion Condition="'$(WebView2AotVersion)' == ''">1.6.0</WebView2AotVersion>
+		<WebView2AotVersion Condition="'$(WebView2AotVersion)' == ''">1.6.1</WebView2AotVersion>
 	</PropertyGroup>
 
 	<ItemGroup Condition="'$(AOTrinoReferencesDirectN)' != 'false' and '$(MSBuildProjectExtension)' == '.csproj'">
