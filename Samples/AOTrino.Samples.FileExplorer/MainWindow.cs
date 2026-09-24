@@ -69,7 +69,7 @@ public partial class MainWindow : AOTrinoWindow
     protected override CoreWebView2EnvironmentOptions? GetEnvironmentOptions()
     {
         var options = new CoreWebView2EnvironmentOptions();
-        options.put_AdditionalBrowserArguments(PWSTR.From("--allow-file-access-from-files"));
+        options.AdditionalBrowserArguments = "--allow-file-access-from-files";
         return options;
     }
 }

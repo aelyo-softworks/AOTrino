@@ -7,9 +7,9 @@ namespace AOTrino;
 [System.Runtime.InteropServices.Marshalling.GeneratedComClass]
 public partial class CompositionWebViewWindow : WebViewWindow, IDropTarget
 {
-    private ComObject<ICoreWebView2CompositionController>? _controller;
+    private IComObject<ICoreWebView2CompositionController>? _controller;
     private IComObject<ICoreWebView2CompositionController3>? _controller3;
-    private WebView2.EventRegistrationToken _cursorChangedToken;
+    private CoreWebView2CompositionControllerEvents? _controllerEvents;
     private bool _isDropTarget;
 
     public CompositionWebViewWindow(
@@ -43,7 +43,7 @@ public partial class CompositionWebViewWindow : WebViewWindow, IDropTarget
     public CompositionGraphicsDevice? GraphicsDevice { get; private set; } // not null after device resources are created.
     public IComObject<ID2D1Device>? D2D1Device { get; private set; } // not null when UseDirect2D, after device resources are created.
 
-    protected ComObject<ICoreWebView2CompositionController>? Controller => _controller;
+    protected IComObject<ICoreWebView2CompositionController>? Controller => _controller;
     protected bool DoUseDirect2D { get; }
     protected virtual bool TopMostDesktopWindowTarget => true;
     protected virtual bool UseDirect2D => true;
@@ -55,42 +55,41 @@ public partial class CompositionWebViewWindow : WebViewWindow, IDropTarget
     // must be a visual in this window's composition tree.
     protected virtual Visual WebViewVisualTarget => RootVisual;
 
-    protected override void CreateController(ICoreWebView2Environment12 environment, Action onControllerReady)
+    protected override void CreateController(ICoreWebView2Environment12 environment, Action onControllerReady) => _ = CreateControllerAsync(environment, onControllerReady);
+
+    private async Task CreateControllerAsync(ICoreWebView2Environment12 environment, Action onControllerReady)
     {
-        environment.CreateCoreWebView2CompositionController(Handle, new CoreWebView2CreateCoreWebView2CompositionControllerCompletedHandler((result, controller) =>
+        try
         {
-            try
+            _controller = await environment.CreateCoreWebView2CompositionControllerAsync(Handle) ?? throw new InvalidOperationException("The WebView2 composition controller could not be created.");
+            _controller3 = ComExtensions.As<ICoreWebView2CompositionController3>(_controller);
+            _controllerEvents = new CoreWebView2CompositionControllerEvents(_controller);
+            _controllerEvents.CursorChanged += (sender, args) =>
             {
-                _controller = new ComObject<ICoreWebView2CompositionController>(controller);
-                _controller3 = ComExtensions.As<ICoreWebView2CompositionController3>(_controller);
-                _controller.Object.add_CursorChanged(new CoreWebView2CursorChangedEventHandler((sender, args) =>
+                if (CanChangeCursor && sender is ICoreWebView2CompositionController controller)
                 {
-                    var cursor = new HCURSOR();
-                    if (sender.get_Cursor(ref cursor).IsSuccess && CanChangeCursor)
-                    {
-                        Cursor = cursor;
-                    }
-                }), ref _cursorChangedToken).ThrowOnError();
+                    Cursor = controller.Cursor;
+                }
+            };
 
-                var cb = WebViewVisualTarget.As<IUnknown>();
-                _controller.Object.put_RootVisualTarget(cb).ThrowOnError();
+            _controller.RootVisualTarget = WebViewVisualTarget;
 
-                var ctrl = (ICoreWebView2Controller)controller;
-                ctrl.put_Bounds(ClientRect).ThrowOnError();
-                ctrl.get_CoreWebView2(out var webView2).ThrowOnError();
-                SetWebViewController(ctrl, webView2);
-                onControllerReady();
-            }
-            catch (Exception ex)
-            {
-                Application.AddError(ex, true);
-            }
-        })).ThrowOnError();
+            // the WebView is owned by the base class from here on, so this wrapper is not disposed.
+            var ctrl = (ICoreWebView2Controller)_controller.Object;
+            ctrl.Bounds = ClientRect;
+            var webView2 = ctrl.CoreWebView2 ?? throw new InvalidOperationException("The WebView2 controller has no WebView.");
+            SetWebViewController(ctrl, webView2.Object);
+            onControllerReady();
+        }
+        catch (Exception ex)
+        {
+            Application.AddError(ex, true);
+        }
     }
 
     // a composition-hosted WebView gets no OS input, inject it via the composition controller.
     protected override void ForwardMouseInput(COREWEBVIEW2_MOUSE_EVENT_KIND kind, COREWEBVIEW2_MOUSE_EVENT_VIRTUAL_KEYS keys, uint data, POINT point)
-        => _controller?.Object.SendMouseInput(kind, keys, data, point).ThrowOnError();
+        => _controller?.SendMouseInput(kind, keys, data, point);
 
     protected override bool TryForwardPointerInput(uint msg, WPARAM wParam, LPARAM lParam)
     {
@@ -227,12 +226,7 @@ public partial class CompositionWebViewWindow : WebViewWindow, IDropTarget
         {
             DetachController(); // before disposing the controller: teardown focus/size messages must not hit it.
 
-            if (_cursorChangedToken.value != 0)
-            {
-                _controller?.Object.remove_CursorChanged(_cursorChangedToken);
-                _cursorChangedToken.value = 0;
-            }
-
+            Interlocked.Exchange(ref _controllerEvents, null)?.Dispose();
             _controller3?.Dispose();
             _controller?.Dispose();
             CompositorController?.Dispose();

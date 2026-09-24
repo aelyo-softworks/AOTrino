@@ -38,17 +38,17 @@ public partial class MainWindow : AOTrinoWindow
         switch (e.Key)
         {
             case VIRTUAL_KEY.VK_LEFT when e.WithMenu:
-                WebView?.Object.GoBack();
+                WebView?.GoBack();
                 e.Handled = true;
                 break;
 
             case VIRTUAL_KEY.VK_RIGHT when e.WithMenu:
-                WebView?.Object.GoForward();
+                WebView?.GoForward();
                 e.Handled = true;
                 break;
 
             case VIRTUAL_KEY.VK_F5:
-                WebView?.Object.Reload();
+                WebView?.Reload();
                 e.Handled = true;
                 break;
         }

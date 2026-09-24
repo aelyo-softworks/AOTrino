@@ -35,6 +35,7 @@
 		<Using Alias="DirectNConstants" Include="DirectN.Constants" />
 		<Using Alias="DirectNFunctions" Include="DirectN.Functions" />
 		<Using Include="WebView2" />
+		<Using Include="WebView2.Utilities" />
 	</ItemGroup>
 
 	<ItemGroup>

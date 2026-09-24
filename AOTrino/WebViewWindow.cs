@@ -19,13 +19,11 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     private bool _mouseTracking;
     private bool _hostObjectHelperInstalled;
     private bool _sharedRuntimeReady;
-    private WebView2.EventRegistrationToken _webMessageReceivedToken;
     private ulong _lastPointerDownTime;
     private int _lastPointerDownPositionX = int.MinValue;
     private int _lastPointerDownPositionY = int.MinValue;
-    private WebView2.EventRegistrationToken _navigationStarting;
-    private WebView2.EventRegistrationToken _navigationCompleted;
-    private WebView2.EventRegistrationToken _acceleratorKeyPressed;
+    private CoreWebView2Events? _webViewEvents;
+    private CoreWebView2ControllerEvents? _controllerEvents;
     private bool _navigationErrorShown;
     private FileDropTarget? _dropTarget;
     // keep them alive for the window's lifetime.
@@ -88,7 +86,9 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
             browserFolder = null;
         }
 
-        WebView2.Functions.CreateCoreWebView2EnvironmentWithOptions(string.IsNullOrWhiteSpace(browserFolder) ? PWSTR.Null : PWSTR.From(browserFolder), PWSTR.From(AOTrinoApplication.Current?.Paths.WebView2UserDataPath), options!,
+        using var browserFolderStr = new Pwstr(string.IsNullOrWhiteSpace(browserFolder) ? null : browserFolder);
+        using var userDataFolderStr = new Pwstr(AOTrinoApplication.Current?.Paths.WebView2UserDataPath);
+        WebView2.Functions.CreateCoreWebView2EnvironmentWithOptions(browserFolderStr, userDataFolderStr, options!,
             new CoreWebView2CreateCoreWebView2EnvironmentCompletedHandler((result, envObj) =>
             {
                 try
@@ -238,7 +238,11 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
 
     // stop routing bounds/focus to the controller. a subclass MUST call this before disposing its controller,
     // because disposing it raises teardown focus/size messages that would otherwise hit a disposed COM object.
-    protected void DetachController() => _baseController = null;
+    protected void DetachController()
+    {
+        Interlocked.Exchange(ref _controllerEvents, null)?.Dispose();
+        _baseController = null;
+    }
 
     private void WireNavigationEvents()
     {
@@ -246,40 +250,25 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         if (webView == null)
             return;
 
-        webView.Object.add_NavigationStarting(new CoreWebView2NavigationStartingEventHandler((sender, args) =>
+        _webViewEvents = new CoreWebView2Events(webView);
+        _webViewEvents.NavigationStarting += (sender, args) =>
         {
-            var id = 0UL;
-            args.get_NavigationId(ref id).ThrowOnError();
-            args.get_Uri(out var uri).ThrowOnError();
-            using var pwstr = new Pwstr(uri.Value);
-
-            var isUserInitiated = BOOL.FALSE;
-            args.get_IsUserInitiated(ref isUserInitiated).ThrowOnError();
-
-            var isRedirected = BOOL.FALSE;
-            args.get_IsRedirected(ref isRedirected).ThrowOnError();
-
-            var e = new NavigationEventArgs(id, uri.ToString()!, isUserInitiated, isRedirected);
+            var id = args.NavigationId;
+            var e = new NavigationEventArgs(id, args.Uri ?? string.Empty, args.IsUserInitiated, args.IsRedirected);
             _navigationEvents[id] = e;
 
             OnNavigationStarting(this, e);
             if (e.Cancel)
             {
-                args.put_Cancel(true).ThrowOnError();
+                args.Cancel = true;
             }
-        }), ref _navigationStarting).ThrowOnError();
+        };
 
-        webView.Object.add_NavigationCompleted(new CoreWebView2NavigationCompletedEventHandler((sender, args) =>
+        _webViewEvents.NavigationCompleted += (sender, args) =>
         {
-            var id = 0UL;
-            args.get_NavigationId(ref id).ThrowOnError();
-
-            var status = COREWEBVIEW2_WEB_ERROR_STATUS.COREWEBVIEW2_WEB_ERROR_STATUS_UNKNOWN;
-            args.get_WebErrorStatus(ref status).ThrowOnError();
-
-            var success = BOOL.FALSE;
-            args.get_IsSuccess(ref success).ThrowOnError();
-
+            var id = args.NavigationId;
+            var status = args.WebErrorStatus;
+            var success = args.IsSuccess;
             if (_navigationEvents.TryGetValue(id, out var e))
             {
                 e.Type = NavigationEventType.NavigationCompleted;
@@ -298,7 +287,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
                     ReplaceNavigationErrorPage(e);
                 }
             }
-        }), ref _navigationCompleted).ThrowOnError();
+        };
     }
 
     // keys pressed while the WebView has focus.
@@ -310,22 +299,20 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         if (controller == null)
             return;
 
-        controller.add_AcceleratorKeyPressed(new CoreWebView2AcceleratorKeyPressedEventHandler((sender, args) =>
+        _controllerEvents = new CoreWebView2ControllerEvents(controller);
+        _controllerEvents.AcceleratorKeyPressed += (sender, args) =>
         {
-            var kind = COREWEBVIEW2_KEY_EVENT_KIND.COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN;
-            args.get_KeyEventKind(ref kind).ThrowOnError();
+            var kind = args.KeyEventKind;
             if (kind != COREWEBVIEW2_KEY_EVENT_KIND.COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN &&
                 kind != COREWEBVIEW2_KEY_EVENT_KIND.COREWEBVIEW2_KEY_EVENT_KIND_SYSTEM_KEY_DOWN)
                 return;
 
-            var vk = 0u;
-            args.get_VirtualKey(ref vk).ThrowOnError();
-            if (TryHandleShortcut((VIRTUAL_KEY)vk))
+            if (TryHandleShortcut((VIRTUAL_KEY)args.VirtualKey))
             {
                 // handled here, so the WebView does not also act on it.
-                args.put_Handled(true).ThrowOnError();
+                args.Handled = true;
             }
-        }), ref _acceleratorKeyPressed).ThrowOnError();
+        };
     }
 
     // everything else on ICoreWebView2Settings, zoom, pinch zoom, swipe navigation, autofill, script dialogs.
@@ -342,18 +329,18 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
 
         try
         {
-            webView.Object.get_Settings(out var settings).ThrowOnError();
+            using var settings = webView.Settings ?? throw new InvalidOperationException("The WebView2 settings are not available.");
 
-            settings.put_AreDefaultContextMenusEnabled(AreDefaultContextMenusEnabled).ThrowOnError();
-            settings.put_IsStatusBarEnabled(IsStatusBarEnabled).ThrowOnError();
-            settings.put_AreDevToolsEnabled(AreDevToolsEnabled).ThrowOnError();
-            settings.put_IsBuiltInErrorPageEnabled(IsBuiltInErrorPageEnabled).ThrowOnError();
+            settings.AreDefaultContextMenusEnabled = AreDefaultContextMenusEnabled;
+            settings.IsStatusBarEnabled = IsStatusBarEnabled;
+            settings.AreDevToolsEnabled = AreDevToolsEnabled;
+            settings.IsBuiltInErrorPageEnabled = IsBuiltInErrorPageEnabled;
 
             // the accelerator keys arrived in the third revision of this interface,
             // which is far older than the ICoreWebView2_17 this window already requires
-            ((ICoreWebView2Settings3)settings).put_AreBrowserAcceleratorKeysEnabled(AreBrowserAcceleratorKeysEnabled).ThrowOnError();
+            settings.AreBrowserAcceleratorKeysEnabled = AreBrowserAcceleratorKeysEnabled;
 
-            ConfigureSettings(settings);
+            ConfigureSettings(settings.Object);
         }
         catch (Exception ex)
         {
@@ -418,14 +405,14 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     {
         ArgumentNullException.ThrowIfNull(url);
         var webView = _webView ?? throw new InvalidOperationException();
-        webView.Object.Navigate(PWSTR.From(url)).ThrowOnError();
+        webView.Navigate(url);
     }
 
     public virtual void NavigateToString(string html)
     {
         ArgumentNullException.ThrowIfNull(html);
         var webView = _webView ?? throw new InvalidOperationException();
-        webView.Object.NavigateToString(PWSTR.From(html)).ThrowOnError();
+        webView.NavigateToString(html);
     }
 
     // whether a uri is the app's own content rather than somewhere on the web,
@@ -536,14 +523,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
 
         EnsureHostObjectHelper(webView);
         _hostObjects.Add(hostObject);
-
-        // wrap the host object's IUnknown in a VARIANT and register it under 'name'.
-        ComObject.WithComInstance(hostObject, unk =>
-        {
-            using var variant = new Variant(unk, VARENUM.VT_UNKNOWN);
-            var detached = variant.Detached;
-            webView.Object.AddHostObjectToScript(PWSTR.From(name), ref detached).ThrowOnError();
-        }, true);
+        webView.AddHostObjectToScript(name, hostObject);
     }
 
     // full .NET Task / Task<T> support for host objects, via undocumented private WebView2 interfaces (best effort).
@@ -553,10 +533,10 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
             return;
 
         _hostObjectHelperInstalled = true;
-        if (webView.Object is ICoreWebView2PrivatePartial partial)
+        if (webView.As<ICoreWebView2PrivatePartial>() is { } partial)
         {
             _hostObjectHelper = new WebViewHostObjectHelper();
-            partial.AddHostObjectHelper(_hostObjectHelper).ThrowOnError();
+            partial.AddHostObjectHelper(_hostObjectHelper);
             DispatchObject.ContinueOnAsync = true;
             DispatchObject.OneStepInvoke = true;
         }
@@ -576,8 +556,20 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     {
         ArgumentNullException.ThrowIfNull(script);
         var webView = _webView ?? throw new InvalidOperationException("The WebView2 controller is not ready yet.");
-        webView.Object.AddScriptToExecuteOnDocumentCreated(PWSTR.From(script), new CoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler((error, id) => { })).ThrowOnError();
+        _ = AddScriptToExecuteOnDocumentCreatedAsync(webView, script);
         ExecuteScript(script, throwOnError: false);
+    }
+
+    private static async Task AddScriptToExecuteOnDocumentCreatedAsync(IComObject<ICoreWebView2> webView, string script)
+    {
+        try
+        {
+            await webView.AddScriptToExecuteOnDocumentCreatedAsync(script);
+        }
+        catch (Exception ex)
+        {
+            AOTrinoApplication.Current?.TraceWarning($"A startup script could not be added: {ex.Message}");
+        }
     }
 
     // AddStartupScript from an embedded text resource (a .js file). keeps scripts out of C# string literals:
@@ -706,7 +698,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         if (_sharedRuntimeReady)
             return;
 
-        var webView = _webView ?? throw new InvalidOperationException("The WebView2 controller is not ready yet.");
+        var events = _webViewEvents ?? throw new InvalidOperationException("The WebView2 controller is not ready yet.");
         _sharedRuntimeReady = true;
 
         // the generic __aotrino runtime, on every future document and the current one.
@@ -714,18 +706,14 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         AddStartupScript($"window.__aotrino.system = {GetSystemJson()};");
         AddStartupScript($"window.__aotrino.window = {GetWindowJson()};");
 
-        webView.Object.add_WebMessageReceived(new CoreWebView2WebMessageReceivedEventHandler((sender, args) =>
+        events.WebMessageReceived += (sender, args) =>
         {
-            if (args.get_WebMessageAsJson(out var json).IsError)
-                return;
-
-            using var pwstr = new Pwstr(json.Value);
-            var text = json.ToString();
+            var text = args.WebMessageAsJson;
             if (!string.IsNullOrEmpty(text))
             {
                 OnWebMessageJsonReceived(this, new ValueEventArgs<string>(text));
             }
-        }), ref _webMessageReceivedToken).ThrowOnError();
+        };
     }
 
     public virtual Task<T?> ExecuteScript<T>(string script, JsonTypeInfo<T> typeInfo, bool throwOnError = true)
@@ -733,21 +721,22 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         ArgumentNullException.ThrowIfNull(script);
         ArgumentNullException.ThrowIfNull(typeInfo);
         var webView = _webView ?? throw new InvalidOperationException();
-        return webView.Object.ExecuteScript(script, typeInfo, throwOnError: throwOnError);
+        return webView.ExecuteScript(script, typeInfo, throwOnError: throwOnError);
     }
 
     public virtual Task<string?> ExecuteScriptAsJson(string script, bool throwOnError = true)
     {
         ArgumentNullException.ThrowIfNull(script);
         var webView = _webView ?? throw new InvalidOperationException();
-        return webView.Object.ExecuteScriptAsJon(script, throwOnError: throwOnError);
+        return webView.ExecuteScriptAsJson(script, throwOnError);
     }
 
     public virtual HRESULT ExecuteScript(string script, bool throwOnError = true)
     {
         ArgumentNullException.ThrowIfNull(script);
         var webView = _webView ?? throw new InvalidOperationException();
-        return webView.Object.ExecuteScript(PWSTR.From(script), new CoreWebView2ExecuteScriptCompletedHandler((error, result) =>
+        using var scriptStr = new Pwstr(script);
+        return webView.Object.ExecuteScript(scriptStr, new CoreWebView2ExecuteScriptCompletedHandler((error, result) =>
         {
             if (error.IsError)
             {
@@ -827,7 +816,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
         if (webView == null)
             return false;
 
-        webView.Object.OpenDevToolsWindow();
+        webView.OpenDevToolsWindow();
         return true;
     }
 
@@ -882,13 +871,11 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
 
     protected virtual void ClearBrowsingDataAll()
     {
-        var wv = _webView.As<ICoreWebView2_13>();
-        if (wv == null)
+        using var profile = _webView?.Profile;
+        if (profile == null)
             return;
 
-        wv.Object.get_Profile(out var objProfile);
-        using var profile = new ComObject<ICoreWebView2Profile2>(objProfile);
-        profile?.Object.ClearBrowsingDataAll(new CoreWebView2ClearBrowsingDataCompletedHandler(h => { }));
+        _ = profile.ClearBrowsingDataAllAsync();
     }
 
     private void OnMouseMove(MouseEventArgs e)
@@ -1338,7 +1325,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
 
     protected override bool OnResized(WindowResizedType type, SIZE size)
     {
-        _baseController?.put_Bounds(ClientRect).ThrowOnError();
+        _baseController?.Bounds = ClientRect;
         return base.OnResized(type, size);
     }
 
@@ -1346,17 +1333,7 @@ public abstract partial class WebViewWindow : D3D11SwapChainWindow
     {
         if (disposing)
         {
-            if (_navigationCompleted.value != 0)
-            {
-                WebView?.Object.remove_NavigationCompleted(_navigationCompleted);
-                _navigationCompleted.value = 0;
-            }
-
-            if (_navigationStarting.value != 0)
-            {
-                WebView?.Object.remove_NavigationStarting(_navigationStarting);
-                _navigationStarting.value = 0;
-            }
+            Interlocked.Exchange(ref _webViewEvents, null)?.Dispose();
 
             if (_dropTarget != null)
             {

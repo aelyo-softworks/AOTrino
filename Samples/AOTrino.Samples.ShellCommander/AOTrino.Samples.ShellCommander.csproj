@@ -46,6 +46,7 @@
 		<Using Include="System.Threading" />
 		<Using Include="System.Threading.Tasks" />
 		<Using Include="WebView2" />
+		<Using Include="WebView2.Utilities" />
 		<Using Include="WicNet" />
 	</ItemGroup>
 

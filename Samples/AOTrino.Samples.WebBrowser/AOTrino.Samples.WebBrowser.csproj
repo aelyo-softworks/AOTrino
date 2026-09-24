@@ -20,6 +20,7 @@
 		<Using Include="System.Reflection" />
 		<Using Include="System.Runtime.InteropServices" />
 		<Using Include="DirectN" />
+		<Using Include="WebView2.Utilities" />
 	</ItemGroup>
 
 	<ItemGroup>

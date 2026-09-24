@@ -19,7 +19,7 @@ public class SharedBuffer : IDisposable
     private readonly WebViewWindow _window;
     private readonly string _name;
     private readonly SharedBufferAccess _access;
-    private ComObject<ICoreWebView2SharedBuffer>? _buffer;
+    private IComObject<ICoreWebView2SharedBuffer>? _buffer;
     private int _capacity; // allocated bytes (grows in _growthChunk steps).
     private int _size; // last requested bytes (the actually-needed size).
 
@@ -50,8 +50,7 @@ public class SharedBuffer : IDisposable
             if (_buffer == null || _buffer.IsDisposed)
                 return 0;
 
-            _buffer.Object.get_Buffer(out var pointer).ThrowOnError();
-            return pointer;
+            return _buffer.Buffer;
         }
     }
 
@@ -85,8 +84,7 @@ public class SharedBuffer : IDisposable
     {
         var environment = _window.SharedEnvironment ?? throw new InvalidOperationException("The WebView2 environment is not ready.");
         Interlocked.Exchange(ref _buffer, null)?.Dispose();
-        environment.Object.CreateSharedBuffer((ulong)capacity, out var buffer).ThrowOnError();
-        _buffer = new ComObject<ICoreWebView2SharedBuffer>(buffer);
+        _buffer = environment.CreateSharedBuffer((ulong)capacity) ?? throw new InvalidOperationException("The WebView2 shared buffer could not be created.");
         _capacity = capacity;
     }
 
@@ -106,7 +104,7 @@ public class SharedBuffer : IDisposable
         var json = string.IsNullOrEmpty(metadataJson)
             ? $"{{\"name\":\"{_name}\"}}"
             : $"{{\"name\":\"{_name}\",{metadataJson}}}";
-        webView.Object.PostSharedBufferToScript(_buffer.Object, access, PWSTR.From(json)).ThrowOnError();
+        webView.PostSharedBufferToScript(_buffer, access, json);
     }
 
     protected virtual void Dispose(bool disposing)

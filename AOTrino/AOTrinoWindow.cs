@@ -140,8 +140,7 @@ public partial class AOTrinoWindow(
         if (dist == null)
             return;
 
-        WebView?.Object.SetVirtualHostNameToFolderMapping(PWSTR.From(host), PWSTR.From(dist),
-            COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND.COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_DENY_CORS).ThrowOnError();
+        WebView?.SetVirtualHostNameToFolderMapping(host, dist, COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND.COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_DENY_CORS);
     }
 
     protected virtual async Task NavigateToStartAsync()

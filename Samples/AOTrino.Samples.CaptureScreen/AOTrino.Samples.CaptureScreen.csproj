@@ -44,6 +44,7 @@
 		<Using Include="Windows.UI" />
 		<Using Include="Windows.UI.Composition" />
 		<Using Include="WinRT" />
+		<Using Include="WebView2.Utilities" />
 
 		<Using Alias="DirectNFunctions" Include="DirectN.Functions" />
 	</ItemGroup>

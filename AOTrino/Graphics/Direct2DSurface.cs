@@ -177,7 +177,14 @@ public sealed class Direct2DSurface : IDisposable
         if (webView == null)
             return;
 
-        webView.Object.PostWebMessageAsJson(PWSTR.From($"{{\"__aotrino\":\"surface-dims\",\"name\":\"{_name}\",\"width\":{width},\"height\":{height}}}"));
+        try
+        {
+            webView.PostWebMessageAsJson($"{{\"__aotrino\":\"surface-dims\",\"name\":\"{_name}\",\"width\":{width},\"height\":{height}}}");
+        }
+        catch (Exception ex)
+        {
+            AOTrinoApplication.Current?.TraceWarning($"The surface dimensions could not be posted to the page: {ex.Message}");
+        }
     }
 
     private unsafe void CopyToBuffer(int width, int height)

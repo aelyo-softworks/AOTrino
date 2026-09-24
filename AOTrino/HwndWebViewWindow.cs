@@ -12,25 +12,26 @@ public partial class HwndWebViewWindow(
     WINDOW_EX_STYLE extendedStyle = 0,
     RECT? rect = null) : WebViewWindow(title, style: style, extendedStyle: extendedStyle, rect: rect)
 {
-    private ComObject<ICoreWebView2Controller>? _controller;
+    private IComObject<ICoreWebView2Controller>? _controller;
 
-    protected override void CreateController(ICoreWebView2Environment12 environment, Action onControllerReady)
+    protected override void CreateController(ICoreWebView2Environment12 environment, Action onControllerReady) => _ = CreateControllerAsync(environment, onControllerReady);
+
+    private async Task CreateControllerAsync(ICoreWebView2Environment12 environment, Action onControllerReady)
     {
-        environment.CreateCoreWebView2Controller(Handle, new CoreWebView2CreateCoreWebView2ControllerCompletedHandler((result, controller) =>
+        try
         {
-            try
-            {
-                _controller = new ComObject<ICoreWebView2Controller>(controller);
-                controller.put_Bounds(ClientRect).ThrowOnError();
-                controller.get_CoreWebView2(out var webView2).ThrowOnError();
-                SetWebViewController(controller, webView2);
-                onControllerReady();
-            }
-            catch (Exception ex)
-            {
-                Application.AddError(ex, true);
-            }
-        })).ThrowOnError();
+            _controller = await environment.CreateCoreWebView2ControllerAsync(Handle) ?? throw new InvalidOperationException("The WebView2 controller could not be created.");
+            _controller.Bounds = ClientRect;
+
+            // the WebView is owned by the base class from here on, so this wrapper is not disposed.
+            var webView2 = _controller.CoreWebView2 ?? throw new InvalidOperationException("The WebView2 controller has no WebView.");
+            SetWebViewController(_controller.Object, webView2.Object);
+            onControllerReady();
+        }
+        catch (Exception ex)
+        {
+            Application.AddError(ex, true);
+        }
     }
 
     // no D3D/D2D device is needed: the child WebView renders itself.

@@ -172,7 +172,7 @@ public partial class CaptureWindow : AOTrinoWindow
         _splitX = Math.Clamp((int)(w * _splitFraction), 200, Math.Max(200, w - 240));
 
         // left pane = the WebView.
-        BaseController?.put_Bounds(new RECT { left = 0, top = 0, right = _splitX, bottom = h });
+        BaseController?.Bounds = new RECT { left = 0, top = 0, right = _splitX, bottom = h };
         _pageVisual.Size = new Vector2(_splitX, h);
         _pageVisual.Offset = new Vector3(0, 0, 0);
 
