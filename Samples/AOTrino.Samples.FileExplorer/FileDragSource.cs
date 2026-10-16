@@ -36,7 +36,8 @@ internal static partial class FileDragSource
             foreach (var path in paths)
             {
                 // the shell's own parse, so anything it can name works here, not only a path on a disk.
-                if (SHParseDisplayName(PWSTR.From(path), 0, out var pidl, 0, 0).IsError || pidl == 0)
+                using var name = new Pwstr(path);
+                if (SHParseDisplayName(name, 0, out var pidl, 0, 0).IsError || pidl == 0)
                     continue;
 
                 pidls.Add(pidl);

@@ -341,7 +341,8 @@ public partial class ShellApi(Action<string> showContextMenu, Action<string> wat
         if (string.IsNullOrEmpty(ext))
             return ShellN.PERCEIVED.PERCEIVED_TYPE_UNKNOWN;
 
-        ShellN.Functions.AssocGetPerceivedType(PWSTR.From(ext), out var perceived, out _, 0);
+        using var extension = new Pwstr(ext);
+        ShellN.Functions.AssocGetPerceivedType(extension, out var perceived, out _, 0);
         return perceived;
     }
 

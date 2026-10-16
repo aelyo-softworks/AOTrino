@@ -113,7 +113,8 @@ public partial class AOTrinoApplication : CompositionApplication
         if (module.Value == 0)
             return false;
 
-        return DirectNFunctions.GetProcAddress(module, PSTR.From("TaskDialogIndirect")) != 0;
+        using var procName = new Pstr("TaskDialogIndirect");
+        return DirectNFunctions.GetProcAddress(module, procName) != 0;
     }
 
     private static bool ShowFatalErrorWithoutTaskDialog(HWND hwnd)

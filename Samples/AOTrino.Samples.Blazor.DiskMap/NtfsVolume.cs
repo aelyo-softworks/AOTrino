@@ -117,8 +117,9 @@ internal static class NtfsVolume
         data = default;
         var device = @"\\.\" + root.TrimEnd(Path.DirectorySeparatorChar);
 
+        using var devicePath = new Pwstr(device);
         var handle = DirectNFunctions.CreateFileW(
-            PWSTR.From(device),
+            devicePath,
             (uint)GENERIC_ACCESS_RIGHTS.GENERIC_READ,
             FILE_SHARE_MODE.FILE_SHARE_READ | FILE_SHARE_MODE.FILE_SHARE_WRITE,
             0,
