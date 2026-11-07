@@ -52,7 +52,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Markdig" Version="1.6.0" />
-		<PackageReference Include="ShellN.Extensions" Version="1.1.0" />
+		<PackageReference Include="ShellN.Extensions" Version="1.2.0" />
 		<PackageReference Include="WicNetCore" Version="1.9.9" />
 	</ItemGroup>
 
