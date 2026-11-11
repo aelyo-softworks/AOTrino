@@ -64,11 +64,11 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '26'
           # caches ~/.npm keyed on the root package-lock.json - the React/Fluent samples npm install + build
           cache: 'npm'
 
@@ -116,12 +116,12 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
 
       # the templates package carries the npm libraries as tarballs, which its pack builds with npm.
       - uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '26'
           cache: 'npm'
 
       - name: dotnet pack

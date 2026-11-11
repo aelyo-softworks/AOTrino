@@ -23,7 +23,7 @@ Or add it to a plain WinExe project:
 
 ```xml
 <PropertyGroup>
-  <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+  <TargetFramework>net11.0-windows10.0.19041.0</TargetFramework>
   <OutputType>WinExe</OutputType>
   <PublishAot>true</PublishAot>
   <!-- everything under WebRoot\dist is embedded in the exe and extracted at startup -->
@@ -53,7 +53,7 @@ projection AOTrino is compiled against.
 
 ## Requirements
 
-To **build and run**: the .NET 10 SDK. The WebView2 runtime is already on any up-to-date Windows, an AOTrino
+To **build and run**: the .NET 11 SDK. The WebView2 runtime is already on any up-to-date Windows, an AOTrino
 app offers a download link if it isn't.
 
 To **publish the single exe**: also the MSVC linker, because the SDK compiles to native code but doesn't ship a

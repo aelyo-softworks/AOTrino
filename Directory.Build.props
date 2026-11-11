@@ -9,7 +9,7 @@
 	  Same for Platforms: the solution builds them AnyCPU.
 	-->
 	<PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
-		<TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+		<TargetFramework>net11.0-windows10.0.19041.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<Platforms>x86;x64;ARM64</Platforms>

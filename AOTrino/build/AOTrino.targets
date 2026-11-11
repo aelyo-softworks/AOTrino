@@ -148,7 +148,7 @@
 		Three things this does that a ProjectReference cannot, which is why it exists at all:
 		* it takes the project's PUBLISHED output, its wwwroot, where a reference would give assemblies to link against.
 		* it strips the global properties of the host, since publishing an AOT app sets TargetFramework and RuntimeIdentifier
-		  for Windows, and a wasm project answers "assets file doesn't have a target for net10.0-windows..." when handed them.
+		  for Windows, and a wasm project answers "assets file doesn't have a target for net11.0-windows..." when handed them.
 		* it empties the publish folder first, because Blazor names assets with a content hash and publishing only adds,
 		  so every edit would otherwise leave the previous copy behind to be embedded forever after.
 

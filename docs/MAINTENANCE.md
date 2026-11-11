@@ -204,7 +204,7 @@ git status --porcelain          # must be empty: nothing generated belongs to gi
 apps that show a blank window:
 
 ```powershell
-$dll = "Samples\AOTrino.Samples.React.HelloWorld\bin\x64\Release\net10.0-windows10.0.19041.0\AOTrino.Samples.React.HelloWorld.dll"
+$dll = "Samples\AOTrino.Samples.React.HelloWorld\bin\x64\Release\net11.0-windows10.0.19041.0\AOTrino.Samples.React.HelloWorld.dll"
 ([System.Reflection.Assembly]::LoadFrom($dll)).GetManifestResourceNames()
 # expect: WebRoot\dist\index.html + assets, never an empty list
 ```

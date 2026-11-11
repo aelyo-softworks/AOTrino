@@ -13,7 +13,7 @@ It is also the only sample made of three projects, because it is the only one wh
 ## C# on both sides, without pretending they are the same side
 
 The page runs as WebAssembly inside the WebView. The host runs as native code in the process that owns the window.
-They are two runtimes, and they cannot share an assembly: one targets `net10.0` and the other `net10.0-windows`, and a
+They are two runtimes, and they cannot share an assembly: one targets `net11.0` and the other `net11.0-windows`, and a
 project reference between them would drag a Windows target framework into a build that compiles to wasm.
 
 A **shared source project** has neither problem, it contributes source rather than a reference. So the DTOs, the size

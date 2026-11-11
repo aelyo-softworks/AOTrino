@@ -21,13 +21,13 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
 
       # the npm samples build their front end during the .NET build (see AOTrino\build\AOTrino.targets);
       # the runner has Node, this just pins it rather than inheriting whatever the image ships this month
       - uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '26'
 
       - name: dotnet build (NuGet only, no npm install, no instructions)
         run: dotnet build AOTrino.slnx -c Release
@@ -41,11 +41,11 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '26'
 
       # the other README claim: one file, no runtime to install. This is also the only step that needs the MSVC
       # linker - the runner image carries it, which is the same thing the docs ask a developer to install.

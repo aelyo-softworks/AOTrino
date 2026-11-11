@@ -11,6 +11,12 @@ public partial class CaptureWindow : AOTrinoWindow
 {
     private const float _dividerWidth = 6;
 
+    // capturing a display by id, and doing it without the yellow border, arrived in Windows 10.0.20348,
+    // the 19041 target framework still admits older Windows 10 builds, where the capture pane stays empty.
+    private const string _displayCapturePlatform = "windows10.0.20348";
+    private const int _windowsMajorVersion = 10;
+    private const int _displayCaptureBuild = 20348;
+
     private readonly SpriteVisual _pageVisual; // left pane: the WebView.
     private readonly SpriteVisual _capture; // right pane: the live screen capture.
     private readonly SpriteVisual _divider; // the draggable splitter.
@@ -47,6 +53,10 @@ public partial class CaptureWindow : AOTrinoWindow
 
     protected override Visual WebViewVisualTarget => _pageVisual;
 
+    // CA1416 only reads literal arguments to IsWindowsVersionAtLeast, the attribute is what tells it this is the 20348 check.
+    [SupportedOSPlatformGuard(_displayCapturePlatform)]
+    private static bool CanCaptureDisplay => OperatingSystem.IsWindowsVersionAtLeast(_windowsMajorVersion, 0, _displayCaptureBuild);
+
     protected override void ControllerCreated()
     {
         base.ControllerCreated();
@@ -57,6 +67,9 @@ public partial class CaptureWindow : AOTrinoWindow
     private void StartCapture()
     {
         if (_disposed || !GraphicsCaptureSession.IsSupported() || GraphicsDevice == null || Device == null)
+            return;
+
+        if (!CanCaptureDisplay)
             return;
 
         var monitor = DirectN.Extensions.Utilities.Monitor.Primary ?? DirectN.Extensions.Utilities.Monitor.All.FirstOrDefault();

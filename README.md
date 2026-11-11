@@ -72,7 +72,7 @@ graph LR
 
 ## Getting started
 
-**To build and run**, the [.NET 10 SDK](https://dotnet.microsoft.com/download) is all you need. The **WebView2
+**To build and run**, the [.NET 11 SDK](https://dotnet.microsoft.com/download) is all you need. The **WebView2
 runtime** is already on any up-to-date Windows, and an AOTrino app offers a download link if it isn't.
 
 **To publish the single exe**, add the MSVC linker. The SDK compiles to native code but doesn't ship a linker,

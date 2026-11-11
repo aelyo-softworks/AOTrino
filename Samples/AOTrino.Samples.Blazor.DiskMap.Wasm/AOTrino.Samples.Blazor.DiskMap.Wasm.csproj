@@ -6,16 +6,22 @@
 		The host project builds and publishes this one, see AOTrino.Samples.Blazor.DiskMap.csproj.
 	-->
 	<PropertyGroup>
-		<TargetFramework>net10.0</TargetFramework>
+		<TargetFramework>net11.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<IsPackable>false</IsPackable>
 		<RootNamespace>AOTrino.Samples.Blazor.DiskMap.Wasm</RootNamespace>
+
+		<!--
+			BL0016 wants every JS interop call inside a try/catch. Here every call is one line of wwwroot\diskmap.js forwarding
+			to the window's own host object, so a failure is a bug to see at the call site, not something to catch and swallow.
+		-->
+		<NoWarn>$(NoWarn);BL0016</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.14" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.14" PrivateAssets="all" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="11.0.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="11.0.0" PrivateAssets="all" />
 	</ItemGroup>
 
 
@@ -23,8 +29,8 @@
 		The C# both sides share, as a Visual Studio shared source project.
 
 		This is the point of the sample. The page and the host are two runtimes, wasm in the WebView and native AOT
-		in the process that owns the window, and they cannot share an assembly: one targets net10.0 and the other
-		net10.0-windows, and a project reference between them would drag the Windows target framework into a wasm build.
+		in the process that owns the window, and they cannot share an assembly: one targets net11.0 and the other
+		net11.0-windows, and a project reference between them would drag the Windows target framework into a wasm build.
 		A shared project has neither problem, it contributes source rather than a reference,
 		so the DTOs, the size formatting and the source-generated serializer are written once and are the same on both
 		sides of the bridge by construction rather than by agreement.

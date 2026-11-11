@@ -63,8 +63,8 @@
 		The C# both sides share, as a Visual Studio shared source project.
 
 		This is the point of the sample. The page and the host are two runtimes, wasm in the WebView and native AOT
-		in the process that owns the window, and they cannot share an assembly: one targets net10.0 and the other
-		net10.0-windows, and a project reference between them would drag the Windows target framework into a wasm build.
+		in the process that owns the window, and they cannot share an assembly: one targets net11.0 and the other
+		net11.0-windows, and a project reference between them would drag the Windows target framework into a wasm build.
 		A shared project has neither problem, it contributes source rather than a reference,
 		so the DTOs, the size formatting and the source-generated serializer are written once and are the same on both
 		sides of the bridge by construction rather than by agreement.
